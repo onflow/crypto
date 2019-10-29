@@ -1,19 +1,19 @@
 #!/bin/bash
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 mkdir -p $DIR/relic/build
 cd $DIR/relic/build
 
 # set RELIC config for Flow
 
-# 
+#
 GENERAL="-DTIMER=CYCLE -DCHECK=OFF -DVERBS=OFF"
 LIBS="-DSHLIB=OFF -DSTLIB=ON"
 COMP="-DCOMP=\"-O3 -funroll-loops -fomit-frame-pointer -march=native -mtune=native\""
 RAND="-DRAND=HASHD -DSEED="
 
-# 
+#
 BN_REP="-DALLOC=AUTO -DALIGN=1 -DWSIZE=64 -DBN_PRECI=1024 -DBN_MAGNI=DOUBLE" #try larger (381*12 ?)
 ARITH="-DARITH=EASY"  # try GMP or X64-ASM-382
 PRIME="-DFP_PRIME=381"
