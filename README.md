@@ -1,252 +1,112 @@
-# Flow
+# Cryptography
 
-[![Build Status](https://travis-ci.com/dapperlabs/flow-go.svg?token=MYJ5scBoBxhZRGvDecen&branch=master)](https://travis-ci.com/dapperlabs/flow-go)
+This package contains all the cryptography tools needed in Flow across all the protocol streams.  
+Some tools offer cryptographic services that can be used in other contexts and projects while others are specific to Flow. 
 
-Flow is a fast, secure, and developer-friendly blockchain built to support the next generation of games, apps, and the digital assets that power them.
+## Hashing
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**
+A cryptographic hash function is needed in Flow to provide different services:
 
-- [Getting started](#getting-started)
-- [Documentation](#documentation)
-- [Installation](#installation)
-  - [Setting up your environment](#setting-up-your-environment)
-    - [Install Go](#install-go)
-    - [Install tooling dependencies](#install-tooling-dependencies)
-  - [Generating code](#generating-code)
-    - [Dependency injection using Wire](#dependency-injection-using-wire)
-    - [Generate gRPC stubs from protobuf files](#generate-grpc-stubs-from-protobuf-files)
-    - [Generate all code](#generate-all-code)
-- [Testing](#testing)
-- [Contributing](#contributing)
-  - [Work streams](#work-streams)
-  - [Workflow](#workflow)
-  - [Issues](#issues)
-    - [Branches](#branches)
-      - [Feature branches](#feature-branches)
-    - [Pull requests](#pull-requests)
-      - [Reviews](#reviews)
-      - [Work-In-Progress PRs](#work-in-progress-prs)
-    - [Testing](#testing-1)
-  - [Code standards](#code-standards)
-  - [Code documentation](#code-documentation)
-    - [Documentation instructions for stream owners](#documentation-instructions-for-stream-owners)
-    - [Stream package documentation](#stream-package-documentation)
-      - [Auto-generated READMEs](#auto-generated-readmes)
-    - [Documentation instructions for contributors](#documentation-instructions-for-contributors)
+- It verifies message integrity of communications and prevents some non-malicious and malicious alterations.
+- It is involved in signature schemes during signature generations and signature verifications. The signature and verification algorithms are applied over the short message digests instead of the original message. 
+- It generates pseudo random data from inputs that might have dispersed entropy and might not be distributed uniformly.
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+A more generic (non-cryptographic) hash function can be used as a data identifier where the protection against forgery is not required. Data digests used as identifiers allow services such as storage space optimization or faster data lookups.  
+A cryptographic hash function can be used in this context although it is more computationally expensive. 
 
-## Getting started
+### SHA3
 
-* Read through the [project setup](#installation) instructions to install required tools
-* Read the documentation pertaining to [your stream](#work-streams)
-* Familiarize yourself with the [workflow](#workflow) below
-* Browse the rest of this README to get up to speed on concepts like testing, code style, and common code patterns
-* Contact your stream owner to receive your first task!
+[SHA3](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf) is used as the cryptographic hash function in Flow. 
+[SHA3-384] is used to hash messages prior to applying the signature algorithm. The digest size is 384 bits which is suitable to the signature algorithm used. 
+[SHA3-256] is used when signatures are not invloved. The digest size is 256 bits while the input message can be of arbitrary size. The algorithm provides a 128-bits collision resistance, along with a 256-bits security strength for preimage and 2nd preimage.
 
-## Documentation
+### Interface
 
-You can find a high-level overview of the Flow architecture on the [documentation website](https://bamboo-docs.herokuapp.com/). Application-level documentation lives [within the packages of this repository](#code-documentation).
+The hash interface allows instantiating different hash algorithms and using them together in the same protocol flow. 
 
-## Installation
+The hashing interface mainly supports the hash computation of some arbitrary data (a byte array). The digest is of type `Hash`. 
 
-### Setting up your environment
+The interface also supports appending data to the hash state without computing the final hash. The hash computation can be finalized only when the complete data stream has been fed to the hash state. It is possible to reset the hash state to empty the previously added data. 
 
-#### Install Go
 
-- Download and install [Go 1.12](https://golang.org/doc/install)
-- Create your workspace `$GOPATH` directory and update your bash_profile to contain the following:
+## The Signature Scheme
 
-```bash
-export `$GOPATH=$HOME/path-to-your-go-workspace/`
-```
+A signature scheme is needed in Flow for several purposes:
+- The main purpose is to provide authentication to communications between nodes. 
+- It provides a way to generate a distributed random number through [threshold signatures](#Threshold-Signature). 
+- In a specific [use-case in Flow](#verification-of-ownership), it provides a verifiable proof of the ownership of some secret data without revealing the secret data itself. 
 
-It's also a good idea to update your `$PATH` to use third party GO binaries: 
+A signature scheme is defined by three functions:
+- Key generation: Given a seed, the function generates a private key and a public key.
+- Signature generation: Given a private key and a message, the function generates a signature.
+- Signature verification: Given a signature and a public key, the function verifies if the signature is valid (i.e. it was generated using the private key associated with the given public key).
 
-```bash
-export PATH="$PATH:$GOPATH/bin"
-```
+### BLS
 
-- Test that Go was installed correctly: https://golang.org/doc/install#testing
-- Clone this repository to `$GOPATH/src/github.com/dapperlabs/flow-go/`
-- Clone this repository submodules:
-```bash
-git submodule update --init --recursive
-```
+BLS is a signature scheme named after Boneh, Lynn, and Shacha.  
+The signature generated by BLS is unique (i.e. only one signature verifies per a message and a public key).   
+It provides a non-interactive threshold signature, which is also unique, along with a simple aggregation signature. 
 
-_Note: since we are using go modules and we prepend every `go` command with `GO111MODULE=on`, you can also clone this repo anywhere you want._
+In BLS, a private key is a field element while a public key is an element of a cyclic group G1. A signature is an element of a second cyclic group G2.  
+Signing is an exponentiation in G1 while a verification is an equility check of two pairings results. 
 
-#### Install tooling dependencies
+### BLS12-381
 
-First, install [CMake](https://cmake.org/install/) as it is used for code generation of some tools.
+[BLS12-381](https://github.com/zkcrypto/pairing/tree/master/src/bls12_381) is an instance of the BLS curves family named after Baretto, Lynn, and Scott. It is a pairing-friendly curve and offers a bit security level close to 128. 
 
-Additional development tools required for code generation can be installed with this command:
+### Interface
 
-```bash
-make install-tools
-```
+The signature interface allows using multiple signature schemes.
 
-### Generating code
+A key generation function generates a key pair given a seed.  
+The signature interface signs a message given a key pair (only the private key is used in BLS) and a hash algorithm instance. The signature is of a type `Signature`.  
+The signature verification interface verifies the validity of a signature given a public key and the message used for signing. 
 
-#### Dependency injection using Wire
+### Aggregation
 
-This project uses [Wire](https://github.com/google/wire) for compile-time dependency injection. Edit the `Makefile` to update the list of packages that use Wire.
+Signature aggregation means generating a single signature output in one of the following scenarios:
+- multiple signers signing the same single message
+- multiple signers signing each a different message
+- a single signer signing multiple messages
 
-```bash
-make generate-wire
-```
+Although the aggregated signature is of a size of a single signature, the aggregated signature verification is different in each scenario and can be heavier than verifying a single signature. 
 
-#### Generate gRPC stubs from protobuf files
+BLS provides a simple aggregation solution. The aggregation is non-interactive and it doesn't require knowledge of any private key or the message(s) being signed. It therefore can be performed by any party, whether they are signers or not. 
 
-```bash
-make generate-proto
-```
+The aggregation should be used in Flow in different streams, it is still not decided what scenarios will be used in what part of the streams. The interface will be defined accordingly.
+ 
 
-#### Generate all code
+## Distributed Random Generation
 
-You can run all code generators with a single command:
+Flow requires a source of randomness for several mechanisms needed in the protocol. 
 
-```bash
-make generate
-```
+At each Epoch, the generation process needs to output a sequence of pseudo-random numbers that are deterministic, unpredictable by any party until the random number itself is generated, agreed upon by all nodes, and verifiable by anyone against the commitment. 
 
-## Testing
+### Distributed Key Generation
 
-The following command will run all unit tests for this repository:
+The DKG is run every time a new pseudo-random numbers sequence is needed. It is run by a subset of _n_ nodes and generates a uniformly distributed key pair using entropy from all the _n_ nodes.  
+The private key is not known by any party while the public key is known by all _n_ parties.  
+Only shares of the private key are known by the parties, each having a secret share. 
 
-```bash
-make test
-```
+The protocol is interactive, and is robust if the number of malicious nodes does not exceed a threshold _t_. It is possible for _t+1_ parties to construct the secret private key by combining their _t+1_ secret shares. 
 
-## Contributing
+The DKG protocol to be implemented is the [Gennaro et al.](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.50.2737&rep=rep1&type=pdf) protocol.
 
-This guide provides a comprehensive overview of our development processes, guidelines, and steps required to contribute to the project.
+### Threshold Signature
 
-### Work streams
+A threshold signature is the operation of signing a message by a group of _n_ parties, given the group has already generated an unkown private key and each party got a secret share of that private key.  
+The signature can only be generated if _t+1_ parties or more have signed the message using their secret shares. The output signature is verifiable by the group public key and does not depend on the subgroup that signed the message. 
 
-Flow development is divided across several streams of work with the goal of separating concerns and facilitating rapid development. 
+BLS provides a non-interactive [protocol to generate threshold signatures](https://www.iacr.org/archive/pkc2003/25670031/25670031.pdf). These signatures inherit the uniqueness property from the single BLS signature.
 
-Each stream is owned by a Flow core team member who oversees and directs all development within that stream. As a contributor, you will communicate primarily with your stream owner.
+In Flow, the hash of the threshold signature is the distributed random output. 
 
-Stream owners will assign tasks to contributors and ensure that all TODOs are tracked.
+## Proof of ownership
 
-| Stream         | Owner(s)                    | Home directory  |
-| -------------- | --------------------------- | --------- |
-| Collection  | [Peter Siemens](https://github.com/psiemens) | [/internal/roles/collect](/internal/roles/collect) |
-| Consensus | [Alexander Hentschel](https://github.com/AlexHentschel) | [/internal/roles/consensus](/internal/roles/consensus) |
-| Execution      | [Bastian Müller](https://github.com/turbolent) | [/internal/roles/execute](/internal/roles/execute) |
-| Verification | [Moar Zamski](https://github.com/pazams) | [/internal/roles/verify](/internal/roles/verify) |
-| Observation | [Peter Siemens](https://github.com/psiemens)     | [/internal/roles/observe](/internal/roles/observe) |
-| Networking | [Yahya Hassanzadeh](https://github.com/yhassanzadeh)     | [/pkg/network](/pkg/network) |
-| Cryptography | [Tarak Ben Youssef](https://github.com/tarakby)     | [/pkg/crypto](/pkg/crypto) |
-| Emulator | [Brian Ho](https://github.com/mrbrianhobo), [Peter Siemens](https://github.com/psiemens), [Jordan Schalm](https://github.com/jordanschalm) | [/sdk/emulator](/sdk/emulator) |
-| Client Library | [Brian Ho](https://github.com/mrbrianhobo), [Peter Siemens](https://github.com/psiemens)     | [/sdk/client](/sdk/client), [/internal/cli](/internal/cli), [/cmd/flow](/cmd/flow) |
-| Ops & Performance | [Leo Zhang](https://github.com/zhangchiqing) | |
-| Language & Runtime | [Bastian Müller](https://github.com/turbolent) | [/pkg/language](/pkg/language) |
+A signature scheme can be used to prove the ownership of some secret data _Z_, known only by a limited group of parties. The proof has to be verifiable by any party inside or outside the group. This mechanism is needed in Flow for the [verification stream](/internal/roles/verify).
 
-### Workflow
+This can be achieved by using the secret data _Z_ as a source of entropy to generate a key pair following a determinstic public process. The first party to hold _Z_ publishes the generated public key.  
+Every party that claims the ownership of _Z_ needs to generate the same key pair and uses the private key to sign a message and publish the signature. The signature is the proof of ownership of _Z_. The signed message needs to be unique to the owner in order to construct a unique proof per owner.  
+Any party that challenges the ownership of _Z_ needs to use the unique message and the published public key to verify the signature. 
 
-### Issues
-
-Development tasks are assigned using GitHub issues. Each issue will contain a breakdown of the required task and any necessary background information, as well as an esitmate of the required work. You are expected to track the progress of issues assigned to you and provide updates if needed, in the form of issue comments.
-
-If you need to create a new issue, please use the provided issue templates to ensure that all necessary information is included.
-
-#### Branches
-
-Work for a specific task should be completed in a separate branch corresponding to the issue for that task.
-
-When creating a new branch, use the following convention: `<your-name>/<issue-number>-<issue-description>`
-
-For example, `peter/125-update-transaction` is the name of a branch Peter is working on, and corresponds to issue 125 regarding transaction updates.
-
-##### Feature branches
-
-When working on a larger feature, feel free to create a feature branch with the following format: `feature/<feature-name>`.
-
-#### Pull requests
-
-You should open a pull request when you have completed work for a task and would like to receive a review from teammates and stream owners. Please use the provided pull request template when opening a PR.
-
-##### Reviews
-
-You should request a review from any relevant team members who are also working within your stream. The stream owner will automatically be requested for review.
-
-A PR can be merged once all CI checks pass and it is approved by at least two people, including the stream owner.
-
-If you are reviewing another team member's PR, please keep feedback constructive and friendly.
-
-##### Work-In-Progress PRs
-
-You can open a WIP pull request to track ongoing work for a task.
-
-#### Testing
-
-Each PR that you open should include necessary tests to ensure the correctness and stability of your code. The specific testing requirements for each task will be defined in the issue itself.
-
-### Code standards
-
-The Flow project has a high standard for code quality and expects all submitted PRs to meet the guidelines outlined in our [code style guide](code-style.md).
-
-To develop in _production level_ standard of the Flow project, the following best practice set is recommended:
-- Please think as a user of your code, and optimize the interface for as easy and error-prone experience as possible.
-	- TODO: add example(s)
-- Please optimize the time, memory, and communication overhead of our code.
-	- TODO: add example(s) 
-- Please properly identify the possible errors and make sure that they are handled.
-	- TODO: add example(s)
-- Please properly identify the corner cases and edge cases and handle them on our happy path.
-	- TODO: add example(s)
-- Please make sure that the packages you developed are independent and portable.
-	- TODO: add example(s)
-- Please make sure that variables, functions, packages, etc, are well-named.
-	- TODO: add example(s)
-- Please write tests for your code that covers all possible range of inputs. 
-	- TODO: add example(s)
-- Please test each (tiny) module individually, and then move to the composability testing. 
-	- TODO: add example(s)
-- Please break your implementation into as concise and precise modules, functions, and methods as possible.
-	- TODO: add example(s)
-- Please make sure that your code is well-documented with a proper quick start that helps other engineers to quickly utilize your code without any hard effort. 
-	- TODO: add example(s)
-- Please append your suggestions to this list, advertise them within the team, and replace the _"TODO: add example"_ parts with the code pieces you think are exemplary and worthy to share. 
-
-TODO: add style guide
-
-### Code documentation
-
-The application-level documentation for Flow lives inside each of the sub-packages of this repository.
-
-#### Documentation instructions for stream owners
-
-Stream owners are responsible for ensuring that all code owned by their stream is well-documented. Documentation for a stream should accomplish the following:
-
-1. Provide an overview of all stream functions
-2. Outline the different packages used by the stream
-3. Highlight dependencies on other streams
-
-Each stream should contain a README in its home directory. This page, which acts as a jumping-off point for new contributors, should list each function of the stream along with a short description and links to relevant packages.
-
-Here's an example: [internal/roles/collect/README.md](internal/roles/collect/README.md)
-
-#### Stream package documentation 
-
-All packages owned by a stream should be documented using `godoc`.
-
-Here's an example: [internal/roles/collect/clusters](internal/roles/collect/clusters)
-
-##### Auto-generated READMEs
-
-A `README.md` can be generated from the `godoc` output by updating [godoc.sh](/godoc.sh) with the path of your package. The above example was generated by this line:
-
-```bash
-godoc2md github.com/dapperlabs/flow-go/internal/roles/collect/clusters > internal/roles/collect/clusters/README.md
-```
-
-Once your package is added to that file, running `go generate` in the root of this repo will generate a new `README.md`.
-
-#### Documentation instructions for contributors
-
-TODO: describe documentation standards for all code
+There is no specific interface for this purpose, the same signature scheme interface described above is enough to achieve this service. 
