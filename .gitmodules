@@ -1,3 +1,0 @@
-[submodule "pkg/crypto/relic"]
-	path = pkg/crypto/relic
-	url = https://github.com/relic-toolkit/relic
