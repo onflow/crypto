@@ -31,8 +31,8 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: true
-    - name: Run go generate
-      run: go generate
+    - name: Setup Relic
+      run: make setup
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
@@ -54,7 +54,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: Run tidy
-        run: go mod tidy -v
+        run: make tidy
 
   shell-check:
     name: ShellCheck
@@ -68,31 +68,30 @@ jobs:
         scandir: './'
         ignore: 'relic'
 
-  unit-test:
+unit-tests:
     name: Unit Tests
     strategy:
       fail-fast: false
-    # need to set image explicitly due to GitHub logging issue as described in https://github.com/onflow/flow-go/pull/3087#issuecomment-1234383202
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
-    - name: Setup Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: ${{ env.GO_VERSION }}
-        cache: true
-    - name: Run tests (${{ matrix.targets.name }})
-      uses: nick-fields/retry@v2
-      with:
-        timeout_minutes: 25
-        max_attempts: 3
-        command: VERBOSE=1 make test
-      #env:
-      #  RACE_DETECTOR: 1
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.txt
-        flags: unittests
-        name: codecov-umbrella
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Run tests
+        env:
+          RACE_DETECTOR: 1
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 25
+          max_attempts: 1
+          command: VERBOSE=1 make test
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.txt
+          flags: unittests
+          name: codecov-umbrella
