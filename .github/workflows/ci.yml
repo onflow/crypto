@@ -68,7 +68,7 @@ jobs:
         scandir: './'
         ignore: 'relic'
 
-unit-tests:
+  unit-tests:
     name: Unit Tests
     strategy:
       fail-fast: false
