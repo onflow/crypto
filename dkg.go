@@ -1,7 +1,7 @@
 package crypto
 
 /*
- * Flow Go Crypto
+ * Flow Crypto
  *
  * Copyright Dapper Labs, Inc.
  *

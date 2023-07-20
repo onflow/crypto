@@ -1,30 +1,29 @@
 # Flow Cryptography
 
 This Go package provides the cryptography tools needed by the Flow blockchain.
-Most of the primitives and protocols can be used in other projects and are not specific to Flow.
+The primitives and protocols can be used in other projects and are not specific to Flow.
 
 Flow is an ongoing project, which means that new features will still be added and modifications will still be made to improve security and performance of the cryptography package.
 
 Notes:
-   - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/tree/2707acdabb851138e298b2d186e73f47df8a14dd). The package had a few improvements since. 
+   - This package has been copied from its original [flow-go](https://github.com/onflow/flow-go) repository.  
+   - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/flow-go/tree/2707acdabb851138e298b2d186e73f47df8a14dd). The package had a few improvements since. 
    - The package does not provide security against side channel or fault attacks.
 
 ## Package import
 
-Cloning Flow repository and following the [installation steps](https://github.com/onflow/flow-go) builds the necessary tools to use Flow cryptography.
-
-If you wish to only import the Flow cryptography package into your Go project, please follow the following steps:
+If you wish to import the Flow cryptography package into your Go project, please follow the following steps:
 
 - Get Flow cryptography package 
 ```
 go get github.com/onflow/crypto
 ```
-or simply import the package to your Go project
+or simply import the package in your Go project files
  ```
 import "github.com/onflow/crypto"
 ```
 
-This is enough to run the package code for many functionalities. However, this isn't enough if BLS signature related functionalities are used. The BLS features rely on an extrnal C library ([Relic](https://github.com/relic-toolkit/relic)) for lower level mathematical operations. Building your project at this stage including BLS functionalities would result in build errors related to missing "relic" files. For instance:
+This is enough to run the package code for many functionalities. However, this isn't enough if BLS signature related functionalities are used. The BLS features rely on an external C library ([Relic](https://github.com/relic-toolkit/relic)) for lower level mathematical operations. Building your project at this stage including BLS functionalities would result in build errors related to missing "relic" files. For instance:
 ```
 fatal error: 'relic.h' file not found
 #include "relic.h"
@@ -42,15 +41,12 @@ go generate
 ```
 
 Below is a bash script example to automate the above steps. The script can be copied into your Go project root directory.
-It extracts the imported pacakage version from your project's go.mod file and performs the remaining steps. 
+It extracts the imported package version from your project's go.mod file and performs the remaining steps. 
 ```bash
 #!/bin/bash
 
 # crypto package 
 PKG_NAME="github.com/onflow/crypto"
-
-# go get the package
-go get ${PKG_NAME}
 
 # go.mod
 MOD_FILE="./go.mod"
@@ -59,7 +55,9 @@ MOD_FILE="./go.mod"
 if [ -f "${MOD_FILE}" ]
 then
     # extract the version from the go.mod file
-    VERSION="$(grep ${PKG_NAME} < ${MOD_FILE} | cut -d' ' -f 2)"
+    VERSION="$(go list -f '{{.Version}}' -m ${PKG_NAME})"
+    # go get the package
+    go get "${PKG_NAME}@${VERSION}" || { echo "go get the package failed"; exit 1; }
     # using the right version, get the package directory path
     PKG_DIR="$(go env GOPATH)/pkg/mod/${PKG_NAME}@${VERSION}"
 else 

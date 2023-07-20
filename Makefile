@@ -16,6 +16,12 @@ ADX_SUPPORT := $(shell if ([ -f "/proc/cpuinfo" ] && grep -q -e '^flags.*\badx\b
 setup:
 	go generate
 
+# this ensures there is no unused dependency being added by accident
+.PHONY: tidy
+tidy:
+	go mod tidy -v
+	git diff --exit-code
+
 # test BLS-related functionalities requiring the Relic library (and hence relic Go build flag)
 .PHONY: relic_tests
 relic_tests:
