@@ -24,8 +24,8 @@ import "C"
 import (
 	"fmt"
 
-	"github.com/onflow/flow-go/crypto/hash"
-	"github.com/onflow/flow-go/crypto/random"
+	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/random"
 )
 
 // Implements Feldman Verifiable Secret Sharing using

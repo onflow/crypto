@@ -1,4 +1,4 @@
-module github.com/onflow/flow-go/crypto
+module github.com/onflow/crypto
 
 go 1.20
 

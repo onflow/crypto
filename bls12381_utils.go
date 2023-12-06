@@ -51,7 +51,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/onflow/flow-go/crypto/random"
+	"github.com/onflow/crypto/random"
 )
 
 // Go wrappers around BLST C types

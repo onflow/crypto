@@ -15,11 +15,11 @@ To use the Flow cryptography package, you can:
 
 - get the package 
 ```
-go get github.com/onflow/flow-go/crypto
+go get github.com/onflow/crypto
 ```
 - or simply import the package to your Go project
  ```
-import "github.com/onflow/flow-go/crypto"
+import "github.com/onflow/crypto"
 ```
 
 ## Algorithms

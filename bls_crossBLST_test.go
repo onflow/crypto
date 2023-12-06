@@ -38,7 +38,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
-	"github.com/onflow/flow-go/crypto/internal/blst"
+	"github.com/onflow/crypto/internal/blst"
 )
 
 // validPrivateKeyBytesFlow generates bytes of a valid private key in Flow library
