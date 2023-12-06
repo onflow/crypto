@@ -1,6 +1,3 @@
-//go:build relic
-// +build relic
-
 /*
  * Flow Crypto
  *
@@ -310,7 +307,7 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 
 	// start DKG in all participants
 	// start listening on the channels
-	seed := make([]byte, SeedMinLenDKG)
+	seed := make([]byte, KeyGenSeedMinLen)
 	sync.Add(n)
 
 	log.Info("DKG protocol starts")
@@ -384,7 +381,6 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 				"2 group public keys are mismatching")
 		}
 	}
-
 }
 
 // time after which a silent channel causes switching to the next dkg phase
@@ -609,13 +605,12 @@ func (proc *testDKGProcessor) invalidShareSend(dest int, data []byte) {
 		}
 
 	} else {
-		gt.Logf("turns out to be a honest send\n%x\n", data)
+		gt.Logf("%d to %d: turns out to be a honest send\n%x\n", data, proc.current, dest)
 	}
 	// honest send case: this is the only message sent
 	// malicious send case: this is a second correct send, to test the second message gets ignored
 	// by the receiver (sender has been tagged malicious after the first send)
 	proc.chans[dest] <- originalMsg
-
 }
 
 // This is a testing function
@@ -789,7 +784,7 @@ func TestDKGTransitionErrors(t *testing.T) {
 	threshold := 3
 	myIndex := 0
 	dealer := 1
-	seed := make([]byte, SeedMinLenDKG)
+	seed := make([]byte, KeyGenSeedMinLen)
 
 	t.Run("feldman VSS", func(t *testing.T) {
 		state, err := NewFeldmanVSS(n, threshold, myIndex, dummyTestDKGProcessor{}, dealer)
