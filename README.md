@@ -3,15 +3,14 @@
 This Go package provides the cryptography tools needed by the Flow blockchain.
 The primitives and protocols can be used in other projects and are not specific to Flow.
 
-Flow is an ongoing project, which means that new features will still be added and modifications will still be made to improve security and performance of the cryptography package.
-
 Notes:
-   - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/flow-go/tree/2707acdabb851138e298b2d186e73f47df8a14dd). The package had a major refactor to switch all the BLS12-381 curve implementation to use [BLST](https://github.com/supranational/blst/tree/master/src) starting from version `v0.25.0`. 
+   - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/crypto/tree/bc6bbd277994d5d50ca3b777bd6747f555629c18). The package had a major refactor to switch all the BLS12-381 curve implementation to use [BLST](https://github.com/supranational/blst/tree/master/src) starting from version `v0.25.0`. 
+   - The package used to live under the [flow-go](https://github.com/onflow/flow-go) before being moved out as a separate repository while maintaining all the module Git history.
    - The package does not provide security against side channel or fault attacks.
 
 ## Package import
 
-To use the Flow cryptography package, you can:
+To use the Flow cryptography package:
 
 - get the package 
 ```
