@@ -11,7 +11,7 @@ on:
       - v[0-9]+.[0-9]+
 
 env:
-  GO_VERSION: 1.20
+  GO_VERSION: "1.20"
 
 concurrency: 
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -21,7 +21,7 @@ jobs:
   golangci:
     strategy:
       fail-fast: false
-    name: Go Lint
+    name: Go lint
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -40,7 +40,7 @@ jobs:
         skip-cache: true
 
   tidy:
-    name: Go/C tidy
+    name: Go-C tidy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -52,6 +52,8 @@ jobs:
           cache: true
       - name: run Go tidy
         run: make go-tidy
+      - name: Install C formatter
+        run: sudo apt-get install -y clang-format
       - name: run C format
         run: make c-format
       - name: run C sanitizers
