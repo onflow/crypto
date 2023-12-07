@@ -11,7 +11,7 @@ on:
       - v[0-9]+.[0-9]+
 
 env:
-  GO_VERSION: 1.19
+  GO_VERSION: 1.20
 
 concurrency: 
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -21,7 +21,7 @@ jobs:
   golangci:
     strategy:
       fail-fast: false
-    name: Lint
+    name: Go Lint
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -35,12 +35,12 @@ jobs:
       uses: golangci/golangci-lint-action@v3
       with:
         # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-        version: v1.49
+        version: v1.54
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
 
   tidy:
-    name: Tidy
+    name: Go/C tidy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -50,8 +50,13 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Run tidy
-        run: make tidy
+      - name: run Go tidy
+        run: make go-tidy
+      - name: run C format
+        run: make c-format
+      - name: run C sanitizers
+        run: make c-sanitize
+      
 
   unit-tests:
     name: Unit Tests
@@ -71,7 +76,7 @@ jobs:
           RACE_DETECTOR: 1
         uses: nick-fields/retry@v2
         with:
-          timeout_minutes: 25
+          timeout_minutes: 10
           max_attempts: 1
           command: VERBOSE=1 make test
       - name: Upload coverage report
