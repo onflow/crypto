@@ -132,13 +132,6 @@ func invalidSK(t *testing.T) PrivateKey {
 	return sk
 }
 
-// Utility function that flips a point sign bit to negate the point
-// this is shortcut which works only for zcash BLS12-381 compressed serialization
-// Applicable to both signatures and public keys
-func negatePoint(pointbytes []byte) {
-	pointbytes[0] ^= 0x20
-}
-
 // BLS tests
 func TestBLSBLS12381Hasher(t *testing.T) {
 	rand := getPRG(t)
