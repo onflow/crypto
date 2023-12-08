@@ -1,5 +1,3 @@
-package crypto
-
 /*
  * Flow Crypto
  *
@@ -17,6 +15,8 @@ package crypto
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package crypto
 
 import (
 	"errors"
@@ -40,7 +40,7 @@ import (
 // Flow uses DKG with the value t = floor((n-1)/2) to optimize for unforgeability and robustness
 // of the threshold signature scheme using the output keys.
 //
-// Private keys are scalar in Zr, where r is the group order of G1/G2.
+// Private keys are scalar in Fr, where r is the group order of G1/G2.
 // Public keys are in G2.
 
 const (
@@ -52,9 +52,6 @@ const (
 	DKGMinSize int = MinimumThreshold + 1
 	// DKGMaxSize is the maximum size of a group participating in a DKG protocol
 	DKGMaxSize int = 254
-	// SeedMinLenDKG is the minumum seed length required to participate in a DKG protocol
-	SeedMinLenDKG = securityBits / 8
-	SeedMaxLenDKG = maxRelicPrgSeed
 )
 
 type DKGState interface {
