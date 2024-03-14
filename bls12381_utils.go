@@ -32,7 +32,7 @@ package crypto
 // # include <unistd.h>
 // # include <string.h>
 // static void handler(int signum)
-// {	char text[1024] = "Caught SIGILL in blst_cgo_init, BLST library (used by flow-go/crypto) requires ADX support, build with CGO_CFLAGS=\"-O -D__BLST_PORTABLE__\"\n";
+// {	char text[1024] = "Caught SIGILL in flow_crypto_cgo_init, the BLST library (used by onflow/crypto) requires ADX support, build with CGO_CFLAGS=\"-O2 -D__BLST_PORTABLE__\" to disable ADX code.\n";
 //		ssize_t n = write(2, &text, strlen(text));
 //      _exit(128+SIGILL);
 //      (void)n;

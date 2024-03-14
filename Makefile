@@ -28,7 +28,7 @@ ifeq ($(ADX_SUPPORT), 1)
 	CRYPTO_FLAG := ""
 else
 # if ADX instructions aren't supported, this CGO flags uses a slower non-ADX BLST implementation 
-	CRYPTO_FLAG := "-O -D__BLST_PORTABLE__"
+	CRYPTO_FLAG := "-O2 -D__BLST_PORTABLE__"
 endif
 CGO_FLAG := CGO_CFLAGS=$(CRYPTO_FLAG)
 
