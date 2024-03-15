@@ -1,25 +1,42 @@
 # Flow Cryptography
 
-This Go package provides the cryptography tools needed by the Flow blockchain.
+The Flow crypto Go module provides the cryptography tools needed by the Flow blockchain.
 The primitives and protocols can be used in other projects and are not specific to Flow.
 
 Notes:
    - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/crypto/tree/bc6bbd277994d5d50ca3b777bd6747f555629c18). The package had a major refactor to switch all the BLS12-381 curve implementation to use [BLST](https://github.com/supranational/blst/tree/master/src) starting from version `v0.25.0`. 
-   - The package used to live under the [flow-go](https://github.com/onflow/flow-go) before being moved out as a separate repository while maintaining all the module Git history.
-   - The package does not provide security against side channel or fault attacks.
+   - The package used to live under the [flow-go](https://github.com/onflow/flow-go) repository before being moved out as a separate repository. The move preserved all the module Git history.
+   - The module does not provide security against side channel or fault attacks.
 
-## Package import
+## Module import
 
-To use the Flow cryptography package:
+Flow cryptography can be imported as any other Go package and does not require extra setup or build (from v0.25.0):
 
-- get the package 
+get the package
 ```
 go get github.com/onflow/crypto
 ```
-- or simply import the package to your Go project
+import the package into your Go code
  ```
 import "github.com/onflow/crypto"
 ```
+
+## Build
+
+Building your project with Flow crypto requires using cgo to compile the C code underneath. `GCO_ENABLED` environment variable should therefore not be set to `0`.
+
+If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. 
+
+```
+CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go test 
+```
+
+If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`. For example, to compile the test program for linux arm64:
+
+```
+GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
+```
+
 
 ## Algorithms
 
