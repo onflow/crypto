@@ -25,7 +25,7 @@ import "github.com/onflow/crypto"
 
 Building your project with Flow crypto requires using cgo to compile the C code underneath. If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
 
-If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. The runtime error can happen if the CPU doesn't support certain instructions. Building with this flag results in slower performance, it is therefore recommended to not use it when possible for optimal performance. 
+If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. The runtime error can happen if the CPU doesn't support certain instructions. Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
 
 ```
 CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go test 
