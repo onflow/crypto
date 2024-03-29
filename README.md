@@ -10,7 +10,7 @@ Notes:
 
 ## Module import
 
-Flow cryptography can be imported as any other Go package and does not require extra setup or build (from v0.25.0):
+Flow cryptography can be imported as any other Go package and does not require extra setup or pre-build (it used to require a pre-build up to version v0.24.9):
 
 get the package
 ```
@@ -23,15 +23,15 @@ import "github.com/onflow/crypto"
 
 ## Build
 
-Building your project with Flow crypto requires using cgo to compile the C code underneath. `GCO_ENABLED` environment variable should therefore not be set to `0`.
+Building your project with Flow crypto requires using cgo to compile the C code underneath. If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
 
-If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. 
+If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. The runtime error can happen if the CPU doesn't support certain instructions. Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
 
 ```
 CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go test 
 ```
 
-If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`. For example, to compile the test program for linux arm64:
+If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`. You also need to set the `GOOS` and `GOARCH` variables.For example, to compile the test program for linux arm64:
 
 ```
 GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
