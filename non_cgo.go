@@ -1,5 +1,5 @@
-//go:build !cgo
-// +build !cgo
+//go:build !cgo && no_cgo
+// +build !cgo,no_cgo
 
 package crypto
 

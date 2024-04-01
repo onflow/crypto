@@ -30,14 +30,14 @@ It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disabl
 ### Build with cgo
 
 Building with cgo is required to support all the algorithms including the algorithms based on the BLS12-381 curve.
-Refer to #Algorithms for the list of all algorithms. 
+Refer to #algorithms for the list of all algorithms. 
 
 If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code.
 The runtime error can happen if the CPU doesn't support certain instructions.
 Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
 
 ```
-CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go test 
+CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go build 
 ```
 
 If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`.
@@ -48,10 +48,15 @@ GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
 ```
 ### Build without cgo
 
-Building without cgo succeeds but disables all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
+It is possible to build without cgo but this requires disabling all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
+Refer to #algorithms for the list of supported algorithms.
 Calling any of the non-supported features would panic.
-It is important to run the necessary tests in your project to make sure cgo isn't mistakenly disabled.
-Refer to #Algorithms for the list of supported algorithms.
+In order to avoid accidental builds that result in unwanted crashes, disabling cgo must be confirmed with the `no_cgo` build tag.  
+
+```
+CGO_ENABLED=0 go build -tags=no_cgo
+```
+
 
 ## Algorithms
 
