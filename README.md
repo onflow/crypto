@@ -23,26 +23,35 @@ import "github.com/onflow/crypto"
 
 ## Build
 
-Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath. If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`. It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some algorithms (the ones related to BLS).
+Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath.
+If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
+It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some algorithms (the ones related to BLS).
 
 ### Build with cgo
 
-Building with cgo is required to support all the algorithms including the algorithms based on the BLS12-381 curve. Refer to #Algorithms for the list of all algorithms. 
+Building with cgo is required to support all the algorithms including the algorithms based on the BLS12-381 curve.
+Refer to #Algorithms for the list of all algorithms. 
 
-If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. The runtime error can happen if the CPU doesn't support certain instructions. Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
+If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code.
+The runtime error can happen if the CPU doesn't support certain instructions.
+Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
 
 ```
 CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" go test 
 ```
 
-If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`. You also need to set the `GOOS` and `GOARCH` variables.For example, to compile the test program for linux arm64:
+If you're cross-compiling, you need to set the `CC` environment variable to the target C cross-compiler and set `CGO_ENABLED` to `1`.
+You also need to set the `GOOS` and `GOARCH` variables.For example, to compile the test program for linux arm64:
 
 ```
 GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
 ```
 ### Build without cgo
 
-Building without cgo succeeds but disables all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK). Calling any of the non-supported features would panic. Refer to #Algorithms for the list of supported algorithms.
+Building without cgo succeeds but disables all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
+Calling any of the non-supported features would panic.
+It is important to run the necessary tests in your project to make sure cgo isn't mistakenly disabled.
+Refer to #Algorithms for the list of supported algorithms.
 
 ## Algorithms
 
