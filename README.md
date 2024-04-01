@@ -25,12 +25,11 @@ import "github.com/onflow/crypto"
 
 Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath.
 If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
-It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some algorithms (the ones related to BLS).
+It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some primitives (the ones related to BLS).
 
 ### Build with cgo
 
-Building with cgo is required to support all the algorithms including the algorithms based on the BLS12-381 curve.
-Refer to #algorithms for the list of all algorithms. 
+Building with cgo is required to support all the algorithms of the module, including the algorithms based on the BLS12-381 curve.
 
 If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code.
 The runtime error can happen if the CPU doesn't support certain instructions.
@@ -48,9 +47,9 @@ GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
 ```
 ### Build without cgo
 
-It is possible to build without cgo but this requires disabling all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
-Refer to #algorithms for the list of supported algorithms.
-Calling any of the non-supported features would panic.
+It is possible to build without cgo but this requires disabling all primitives based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
+Refer to [algorithms](#algorithms) and [protocols](#protocols) to check the supported features.
+Calling any of the non-supported primitives would panic.
 In order to avoid accidental builds that result in unwanted crashes, disabling cgo must be confirmed with the `no_cgo` build tag.  
 
 ```
@@ -131,8 +130,3 @@ All supported Distributed Key Generation protocols are [discrete log based](http
     * distributed generation.
     * based on multiple parallel instances of Feldman VSS Qual with multiple dealers.
     * same assumptions about the communication channels as in Feldman VSS.
-
-
-
-
-
