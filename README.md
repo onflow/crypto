@@ -23,7 +23,11 @@ import "github.com/onflow/crypto"
 
 ## Build
 
-Building your project with Flow crypto requires using cgo to compile the C code underneath. If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
+Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath. If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`. It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some algorithms (the ones related to BLS).
+
+### Build with cgo
+
+Building with cgo is required to support all the algorithms including the algorithms based on the BLS12-381 curve. Refer to #Algorithms for the list of all algorithms. 
 
 If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code. The runtime error can happen if the CPU doesn't support certain instructions. Building with this flag results in a slower performance, it is therefore recommended to not use it when possible for an optimal performance.
 
@@ -36,7 +40,9 @@ If you're cross-compiling, you need to set the `CC` environment variable to the 
 ```
 GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
 ```
+### Build without cgo
 
+Building without cgo succeeds but disables all algorithms based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK). Calling any of the non-supported features would panic. Refer to #Algorithms for the list of supported algorithms.
 
 ## Algorithms
 
@@ -58,7 +64,7 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
     * ephemeral key is derived from the private key, hash and the system entropy (based on https://golang.org/pkg/crypto/ecdsa/).
     * supports NIST P-256 (secp256r1) and secp256k1 curves.
 
- * BLS
+ * BLS (requires cgo)
     * supports [BLS12-381](https://electriccoin.co/blog/new-snark-curve/) curve.
     * is implementing the minimal-signature-size variant:
     signatures in G1 and public keys in G2.
@@ -86,7 +92,7 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
 
 ### Threshold Signature
 
- * BLS-based threshold signature
+ * BLS-based threshold signature (requires cgo)
     * [non interactive](https://www.iacr.org/archive/pkc2003/25670031/25670031.pdf) threshold signature reconstruction.
     * supports only BLS 12-381 curve with the same features above.
     * (t+1) signatures are required to reconstruct the threshold signature.
@@ -98,16 +104,16 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
 
 All supported Distributed Key Generation protocols are [discrete log based](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.50.2737&rep=rep1&type=pdf) and are implemented for the same BLS setup on the BLS 12-381 curve. The protocols generate key sets for the BLS-based threshold signature.
 
- * Feldman VSS
+ * Feldman VSS (requires cgo)
     * simple verifiable secret sharing with a single dealer.
     * the library does not implement the communication channels between participants. The caller should implement the methods `PrivateSend` (1-to-1 messaging) and `Broadcast` (1-to-n messaging)
     * 1-to-1 messaging must be a private channel, the caller must make sure the channel preserves confidentialiy and authenticates the sender.
     * 1-to-n broadcasting is a reliable broadcast, where honest senders are able to reach all honest receivers, and where all honest receivers end up with the same received messages. The channel should also authenticate the broadcaster.
     * It is recommended that both communication channels are unique per protocol instance. This could be achieved by prepending the messages to send/broadcast by a unique protocol instance ID.
- * Feldman VSS Qual.
+ * Feldman VSS Qual (requires cgo)
     * an extension of the simple Feldman VSS.
     * implements a complaint mechanism to qualify/disqualify the dealer.
- * Joint Feldman (Pedersen)
+ * Joint Feldman (Pedersen) (requires cgo)
     * distributed generation.
     * based on multiple parallel instances of Feldman VSS Qual with multiple dealers.
     * same assumptions about the communication channels as in Feldman VSS.
