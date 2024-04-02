@@ -82,8 +82,7 @@ go-tidy:
 
 # Go lint
 .PHONY: go-lint
-go-lint:
-lint: go-tidy
+go-lint: go-tidy
 	# revive -config revive.toml
 	golangci-lint run -v ./...
 	
