@@ -128,3 +128,61 @@ func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac has
 func SPOCKVerify(pk1 PublicKey, proof1 Signature, pk2 PublicKey, proof2 Signature) (bool, error) {
 	panic(withFeature("BLS-SPoCK"))
 }
+
+func BLSGeneratePOP(sk PrivateKey) (Signature, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func BLSVerifyPOP(pk PublicKey, s Signature) (bool, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func AggregateBLSSignatures(sigs []Signature) (Signature, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func AggregateBLSPrivateKeys(keys []PrivateKey) (PrivateKey, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func AggregateBLSPublicKeys(keys []PublicKey) (PublicKey, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func IdentityBLSPublicKey() PublicKey {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func RemoveBLSPublicKeys(aggKey PublicKey, keysToRemove []PublicKey) (PublicKey, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func VerifyBLSSignatureOneMessage(
+	pks []PublicKey, s Signature, message []byte, kmac hash.Hasher,
+) (bool, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func VerifyBLSSignatureManyMessages(
+	pks []PublicKey, s Signature, messages [][]byte, kmac []hash.Hasher,
+) (bool, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func BatchVerifyBLSSignaturesOneMessage(
+	pks []PublicKey, sigs []Signature, message []byte, kmac hash.Hasher,
+) ([]bool, error) {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func IsBLSAggregateEmptyListError(err error) bool {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func IsNotBLSKeyError(err error) bool {
+	panic(withFeature("BLS multi-sig"))
+}
+
+func IsInvalidSignatureError(err error) bool {
+	panic(withFeature("BLS multi-sig"))
+}
