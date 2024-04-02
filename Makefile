@@ -98,11 +98,9 @@ test:
 	go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./hash
 	go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./random
 
-.PHONY: docker-build
-docker-build:
-	docker build -t gcr.io/dl-flow/golang-cmake:latest -t gcr.io/dl-flow/golang-cmake:$(IMAGE_TAG) .
-
-.PHONY: docker-push
-docker-push:
-	docker push gcr.io/dl-flow/golang-cmake:latest 
-	docker push "gcr.io/dl-flow/golang-cmake:$(IMAGE_TAG)"
+# test incorrect builds and make sure they fail
+.PHONY: incorrect_builds
+incorrect_builds:
+# both tests should fail
+	! CGO_ENABLED=0 go test
+	! CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -tags=no_cgo

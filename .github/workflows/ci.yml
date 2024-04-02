@@ -58,6 +58,8 @@ jobs:
         run: make c-format
       - name: run C sanitizers
         run: make c-sanitize
+      - nam: check incorrect builds
+        run: make incorrect_builds
       
 
   unit-tests:
