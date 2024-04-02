@@ -90,6 +90,8 @@ func NewBLSThresholdSignatureInspector(
 
 func BLSReconstructThresholdSignature(size int, threshold int,
 	shares []Signature, signers []int) (Signature, error) {
+	_ = duplicatedSignerErrorf("")
+	_ = notEnoughSharesErrorf("")
 	panic(withFeature("BLS threshold signature"))
 }
 
@@ -104,16 +106,21 @@ func BLSThresholdKeyGen(size int, threshold int, seed []byte) ([]PrivateKey,
 
 func NewFeldmanVSS(size int, threshold int, myIndex int,
 	processor DKGProcessor, dealerIndex int) (DKGState, error) {
+	_, _ = newDKGCommon(size, threshold, myIndex,
+		processor, dealerIndex)
 	panic(withFeature("BLS-DKG"))
 }
 
 func NewFeldmanVSSQual(size int, threshold int, myIndex int,
 	processor DKGProcessor, dealerIndex int) (DKGState, error) {
+	_ = dkgFailureErrorf("")
+	_ = dkgInvalidStateTransitionErrorf("")
 	panic(withFeature("BLS-DKG"))
 }
 
 func NewJointFeldman(size int, threshold int, myIndex int,
 	processor DKGProcessor) (DKGState, error) {
+	_ = feldmanVSSShare | feldmanVSSVerifVec | feldmanVSSComplaint | feldmanVSSComplaintAnswer
 	panic(withFeature("BLS-DKG"))
 }
 
