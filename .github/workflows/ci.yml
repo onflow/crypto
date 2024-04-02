@@ -69,7 +69,9 @@ jobs:
       - name: run C sanitizers
         run: make c-sanitize
       - name: check incorrect builds
-        run: make incorrect_builds
+        run: |
+          echo "::remove-matcher owner=go::" \
+          make incorrect_builds
       
 
   unit-tests:
