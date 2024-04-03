@@ -18,10 +18,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  golangci:
+  go-code:
     strategy:
       fail-fast: false
-    name: Go lint
+    name: Go code checks
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -31,6 +31,8 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: true
+    - name: run Go tidy
+      run: make go-tidy
     - name: Run golangci-lint with cgo
       env:
         CGO_ENABLED: 1
@@ -48,30 +50,23 @@ jobs:
         args: --build-tags no_cgo
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
+    - name: Run incorrect builds
+      run: |
+        echo "::remove-matcher owner=go::" \
+        make incorrect_builds
 
-  tidy:
-    name: Go-C tidy
+  c-code:
+    name: C code checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-      - name: run Go tidy
-        run: make go-tidy
       - name: Install C formatter
         run: sudo apt-get install -y clang-format
       - name: run C format
         run: make c-format
       - name: run C sanitizers
         run: make c-sanitize
-      - name: check incorrect builds
-        run: |
-          echo "::remove-matcher owner=go::" \
-          make incorrect_builds
       
 
   unit-tests:
