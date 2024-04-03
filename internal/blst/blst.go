@@ -1,3 +1,5 @@
+// +build cgo
+
 // DO NOT EDIT
 // File is copied from https://github.com/supranational/blst/blob/master/bindings/go/blst.go
 //
