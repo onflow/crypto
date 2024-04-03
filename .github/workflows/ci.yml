@@ -52,7 +52,7 @@ jobs:
         skip-cache: true
     - name: Run incorrect builds
       run: |
-        echo "::remove-matcher owner=go::" \
+        echo "::remove-matcher owner=go::"
         make incorrect_builds
 
   c-code:
