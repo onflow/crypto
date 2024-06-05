@@ -57,11 +57,18 @@ jobs:
         make incorrect_builds
 
   c-code:
+    strategy:
+      fail-fast: false
     name: C code checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: Install C formatter
         run: sudo apt-get install -y clang-format
       - name: run C format
