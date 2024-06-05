@@ -12,6 +12,7 @@ on:
 
 env:
   GO_VERSION: "1.22"
+  LINT_VERSION: "1.59"
 
 concurrency: 
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -38,7 +39,7 @@ jobs:
         CGO_ENABLED: 1
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.54
+        version: ${{ env.LINT_VERSION }}
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
     - name: Run golangci-lint without cgo
@@ -46,7 +47,7 @@ jobs:
         CGO_ENABLED: 0
       uses: golangci/golangci-lint-action@v3
       with:
-        version: v1.54
+        version: ${{ env.LINT_VERSION }}
         args: --build-tags no_cgo
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
