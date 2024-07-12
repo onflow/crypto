@@ -39,8 +39,8 @@ import (
 // `t` is the threshold parameter.
 //
 // Re-using the same BLS public parameters of the package (see bls.go):
-// - private keys are scalar in `F_r`
-// - public keys are elements in G2
+// - private keys are scalars in `F_r`
+// - public keys are points in G2
 
 const (
 	// DKG and Threshold Signatures
