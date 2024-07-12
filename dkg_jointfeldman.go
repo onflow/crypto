@@ -27,28 +27,35 @@ import (
 
 // Implements Joint Feldman (Pedersen) protocol using
 // the BLS set up on the BLS12-381 curve.
-// The protocol runs (n) parallel instances of Feldman vss with
+//
+// The secret is a BLS private key generated
+// jointly by all the participants.
+// The secret key is shared for a BLS-based
+// `t`-threshold signature scheme (see dkg.go for details on the value `t`).
+//
+// The protocol runs multiple parallel instances of Feldman VSS with
 // the complaints mechanism, each participant being a dealer
-// once.
-
-// This is a fully distributed generation. The secret is a BLS
-// private key generated jointly by all the participants.
-
+// exactly once.
+//
 // (t) is the threshold parameter. Although the API allows using arbitrary values of (t),
 // the DKG protocol is secure in the presence of up to (t) malicious participants
 // when (t < n/2).
-// Joint-Feldman is the protocol implemented in Flow, (t) being set to the maximum value
-// t = floor((n-1)/2) to optimize for unforgeability and robustness of the threshold
-// signature scheme using the output keys.
-
-// In each feldman VSS instance, the dealer generates a chunk of the
-// the private key of a BLS threshold signature scheme.
-// Using the complaints mechanism, each dealer is qualified or disqualified
-// from the protocol, and the overall key is taking into account
-// all chunks from qualified dealers.
-
-// Private keys are scalar in Fr, where r is the group order of G1/G2
-// Public keys are in G2.
+//
+// In each Feldman VSS instance, the dealer generates a chunk of the group
+// private key.
+// Each dealer is qualified or disqualified
+// from the protocol Using the complaints mechanism.
+// The overall group key is derived from all chunks of qualified dealers. All qualified
+// dealers therefore contribute to the entropy of the resulting key.
+//
+// The `n` participants are referred to using their unique public index, serving as
+// their public identifier. The public index is used to define the Shamir
+// Secret Sharing (SSS) polynomial input by all dealers. Although it's enough to use distinct indices,
+// the current implementation assumes the indices are the set `[0..n-1]`.
+//
+// Re-using the same BLS public parameters of the package (see bls.go):
+// - private keys are scalars in `F_r`
+// - public keys are points in G2
 
 // Joint Feldman protocol, with complaint mechanism, implements DKGState
 type JointFeldmanState struct {
@@ -67,22 +74,22 @@ type JointFeldmanState struct {
 
 // NewJointFeldman creates a new instance of a Joint Feldman protocol.
 //
-// size if the total number of participants (n).
-// threshold is the threshold parameter (t). the DKG protocol is secure in the
-// presence of up to (t) malicious participants when (t < n/2).
-// myIndex is the index of the participant creating the new DKG instance.
-// processor is the DKGProcessor instance required to connect the participant to the
-// communication channels.
+// - `size` is the total number of participants `n`
+// - `threshold` is the threshold parameter `t`. the DKG protocol is secure in the
+// presence of up to `t` malicious participants when `t < n/2`.
+// - `myIndex` is the index of the current participant, in `[0, size-1]`
+// - `processor` is the DKGProcessor instance required to implement
+// the communication channels (see dkg.go)
 //
-// An instance is run by a single participant and is usable for only one protocol.
+// An instance is run by a single participant and is usable for only one protocol run.
 // In order to run the protocol again, a new instance needs to be created.
 //
 // The function returns:
 // - (nil, InvalidInputsError) if:
-//   - size if not in [DKGMinSize, DKGMaxSize]
-//   - threshold is not in [MinimumThreshold, size-1]
-//   - myIndex is not in [0, size-1]
-//   - dealerIndex is not in [0, size-1]
+//   - `size` if not in `[DKGMinSize, DKGMaxSize]`
+//   - `threshold` is not in `[MinimumThreshold, size-1]`
+//   - `myIndex` is not in `[0, size-1]`
+//   - `dealerIndex` is not in `[0, size-1]`
 //
 // - (dkgInstance, nil) otherwise
 func NewJointFeldman(size int, threshold int, myIndex int,
