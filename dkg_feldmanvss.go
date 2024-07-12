@@ -88,8 +88,13 @@ type feldmanVSSstate struct {
 //   - `dealerIndex` is not in `[0, size-1]`
 //
 // - (dkgInstance, nil) otherwise
-func NewFeldmanVSS(size int, threshold int, myIndex int,
-	processor DKGProcessor, dealerIndex int) (DKGState, error) {
+func NewFeldmanVSS(
+	size int,
+	threshold int,
+	myIndex int,
+	processor DKGProcessor,
+	dealerIndex int,
+) (DKGState, error) {
 
 	common, err := newDKGCommon(size, threshold, myIndex, processor, dealerIndex)
 	if err != nil {

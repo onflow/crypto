@@ -92,8 +92,12 @@ type JointFeldmanState struct {
 //   - `dealerIndex` is not in `[0, size-1]`
 //
 // - (dkgInstance, nil) otherwise
-func NewJointFeldman(size int, threshold int, myIndex int,
-	processor DKGProcessor) (DKGState, error) {
+func NewJointFeldman(
+	size int,
+	threshold int,
+	myIndex int,
+	processor DKGProcessor,
+) (DKGState, error) {
 
 	common, err := newDKGCommon(size, threshold, myIndex, processor, 0)
 	if err != nil {
