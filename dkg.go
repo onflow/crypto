@@ -252,7 +252,7 @@ type DKGProcessor interface {
 	// Disqualify flags that the current instance detected that
 	// another participant has misbehaved and that they got
 	// disqualified from the protocol. Such misbehavior is
-	// detected by all the honest participants.
+	// detected by all honest participants.
 	// `log` is a string describing the disqualification reason.
 	// The disqualified participant is referred to using its public index `index`.
 	Disqualify(index int, log string)

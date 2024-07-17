@@ -41,9 +41,9 @@ import (
 // - a stateful api where an object holds all information
 //  of the protocol, implementing `ThresholdSignatureInspector`
 //  and `ThresholdSignatureParticipant`. This is the recommended safe way
-//  to guarantee correctness and reduce integration vulnerabilities.
+//  to guarantee correctness and reduce potential integration vulnerabilities.
 // - stateless api with signature reconstruction. Verifying and storing
-//  the message as well as the signature shares has to be managed by
+//  the message as well as the signature shares have to be managed by
 //  the upper layer outside of the package.
 
 // blsThresholdSignatureParticipant implements ThresholdSignatureParticipant
@@ -64,7 +64,7 @@ var _ ThresholdSignatureParticipant = (*blsThresholdSignatureParticipant)(nil)
 type blsThresholdSignatureInspector struct {
 	// size `n` of the group
 	size int
-	// the threshold `t` of the scheme where (t+1) shares are
+	// the threshold `t` of the scheme where `t+1` shares are
 	// required to reconstruct a signature
 	threshold int
 	// the group public key (a threshold KG output)
@@ -95,7 +95,7 @@ var _ ThresholdSignatureInspector = (*blsThresholdSignatureInspector)(nil)
 // If the key set or message change, a new structure needs to be instantiated.
 // The `n` participants are identified using their public indices in the range `[0, n-1]`,
 // as well as their public key shares.
-// The input public shares is an array of `n` keys ordered following the public indices:
+// The input `sharePublicKeys` is an array of `n` keys ordered following the public indices:
 // a participant assigned to index `i` uses the public key `sharePublicKeys[i]`.
 // The current participant is defined by `myIndex` and holds the input private key
 // corresponding to `sharePublicKeys[myIndex]`.
@@ -155,7 +155,7 @@ func NewBLSThresholdSignatureParticipant(
 // If the key set or message change, a new structure needs to be instantiated.
 // The `n` participants are identified using their public indices in the range `[0, n-1]`,
 // as well as their public key shares.
-// The input public shares is an array of `n` keys ordered following the public indices:
+// The input `sharePublicKeys` is an array of `n` keys ordered following the public indices:
 // a participant assigned to index `i` uses the public key `sharePublicKeys[i]`.
 //
 // The function returns:

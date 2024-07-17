@@ -46,15 +46,15 @@ import (
 // along with the output public key share constitute the public identity of the
 // participant. The same public info must be used by the threshold signature
 // functions to guarantee correctness of the scheme. In this package, indices
-// are assumed to be in the range `[0..n-1]` where `n` is the participant group
-// size.
+// are in the range `[0..n-1]` where `n` is the participant group size.
 //
 // In this package, it is assumed that any public party is able to verify
 // signature shares and groups signatures, and reconstruct a group signature
 // from signature shares using the public info only, in a
 // non-interactive manner. Only threshold-signature schemes providing this
-// feature are provided by this package. This feature is represented by
-// the `ThresholdSignatureInspector` interface. An active participant in the protocol holding
+// feature are supported by the package. This feature is represented by
+// the `ThresholdSignatureInspector` interface, while
+// an active participant in the protocol holding
 // a private key share is represented by `ThresholdSignatureParticipant`.
 //
 //
@@ -64,7 +64,7 @@ import (
 //
 // The choice of input threshold `t` adjusts the tradeoff between unforgeability and robustness
 // of the overall scheme.
-// In order to equally optimize unforgeability and robustness,
+// In order to equally prioritize unforgeability and robustness,
 // `t` should be set to `floor((n-1)/2)`.
 
 const (
