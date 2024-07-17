@@ -39,7 +39,10 @@ import (
 // locally using a public verification vector broadcasted by the dealer.
 //
 // The `n` participants are referred to using their unique public index, serving as
-// their public identifier. The public index is used to define the Shamir
+// their public identifier.
+// The distinct indices are assigned to participants
+// and agreed upon prior to running the protocol.
+// The public index is used to define the Shamir
 // Secret Sharing (SSS) polynomial input. Although it's enough to use distinct indices,
 // the current implementation assumes the indices are the set `[0..n-1]`.
 //
@@ -72,7 +75,8 @@ type feldmanVSSstate struct {
 // NewFeldmanVSS creates a new instance of Feldman VSS protocol.
 //
 // An instance is run by a single participant and is usable for only one protocol run.
-// In order to run the protocol again, a new instance needs to be created.
+// In order to run the protocol again, a new instance needs to be created. The current
+// participant uses the pre-agreed public index `myIndex`.
 //
 // - `size` is the group size
 // - `threshold` is the threshold value `t`

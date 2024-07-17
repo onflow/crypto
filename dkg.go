@@ -25,18 +25,22 @@ import (
 
 // DKG stands for distributed key generation. In this package, DKG
 // refers to discrete-log based protocols.
-// The protocols implemented generate keys for a BLS-based
-// threshold signature scheme.
+// The protocols currently implemented generate keys for a BLS-based threshold signature scheme.
 // BLS is used with the BLS12-381 curve.
 //
-// These protocols generate a BLS key pair and share the secret key
+// The protocols generate a BLS key pair and share the secret key
 // among `n` participants in a way that any `t+1` key shares allow reconstructing
-// the private key (and also reconstructing a BLS threshold signature under the key).
+// the private key (and also reconstructing a BLS signature under the key).
 // Up to `t` shares don't reveal any information about the initial key (or a signature generated
-// by that key).
+// under the key).
 //
-// We refer to the initial key pair by group private and group public key.
+// We refer to the initial key pair by group private key and group public key.
 // `t` is the threshold parameter.
+//
+// The `n` participants are referred to using their unique public index, serving as
+// their public identifier.
+// The distinct indices are assigned to participants
+// and agreed upon prior to running the protocol.
 //
 // Re-using the same BLS public parameters of the package (see bls.go):
 // - private keys are scalars in `F_r`
@@ -61,10 +65,10 @@ type DKGState interface {
 	// Start starts running a DKG in the current participant
 	Start(seed []byte) error
 	// HandleBroadcastMsg processes a new broadcasted message received by the current participant.
-	// orig is the message origin index
+	// `orig` is the public index of the message sender.
 	HandleBroadcastMsg(orig int, msg []byte) error
 	// HandlePrivateMsg processes a new private message received by the current participant.
-	// orig is the message origin index
+	// `orig` is the public index of the message sender.
 	HandlePrivateMsg(orig int, msg []byte) error
 	// End ends a DKG protocol in the current participant.
 	// It returns the finalized public data and participant private key share.
@@ -216,7 +220,12 @@ const (
 	feldmanVSSComplaintAnswer
 )
 
-// DKGProcessor is an interface that implements the DKG output actions.
+// DKGProcessor is an interface that implements the DKG actions by a DKG participant
+// during the protocol run.
+//
+// In particular, it implements the communication channels with
+// the other participants, taking into account their pre-agreed
+// public indices.
 //
 // An instance of a DKGProcessor is needed for each participant in order to
 // participate in a DKG protocol
@@ -228,7 +237,7 @@ type DKGProcessor interface {
 	// It is recommended to use a unique private channel per
 	// protocol instance. This can be achieved by prepending all
 	// messages by a unique instance ID.
-	// The message destination is referred to using the destination index `dest`.
+	// The message destination is specified using the destination index `dest`.
 	PrivateSend(dest int, data []byte)
 	// Broadcast broadcasts a message to all participants.
 	// The function must implement a reliable broadcast
@@ -240,20 +249,23 @@ type DKGProcessor interface {
 	// protocol instance. This can be achieved by prepending all
 	// messages by a unique instance ID.
 	Broadcast(data []byte)
-	// Disqualify flags that a participant is misbehaving and that it got
-	// disqualified from the protocol. Such behavior deserves
-	// disqualifying as it is flagged to all honest participants in
-	// the protocol.
+	// Disqualify flags that the current instance detected that
+	// another participant has misbehaved and that they got
+	// disqualified from the protocol. Such misbehavior is
+	// detected by all the honest participants.
 	// `log` is a string describing the disqualification reason.
-	// The disqualified participant is referred to using the destination index `dest`.
-	Disqualify(participant int, log string)
-	// FlagMisbehavior warns that a participant is misbehaving.
-	// Such behavior is not necessarily flagged to all participants and therefore
-	// the participant is not disqualified from the protocol. Other mechanisms
-	// outside DKG could be implemented to synchronize slashing the misbehaving
-	// participant by all participating participants, using the api `ForceDisqualify`. Failing to
-	// do so, the protocol can be broken.
+	// The disqualified participant is referred to using its public index `index`.
+	Disqualify(index int, log string)
+	// FlagMisbehavior warns that the current instance detected that
+	// another participant has misbehaved.
+	// Such misbehavior is not necessarily detected by other participants and therefore
+	// the participant is not disqualified from the protocol.
+	// Other mechanisms outside DKG could be implemented to
+	// synchronize slashing the misbehaving participant,
+	// using the function `ForceDisqualify`.
+	// Failing to synchronize the action properly by all honest participants
+	// may break the protocol.
 	// `log` is a string describing the misbehavior.
-	// The disqualified participant is referred to using the destination index `dest`.
-	FlagMisbehavior(participant int, log string)
+	// The disqualified participant is referred to using its public index `index`.
+	FlagMisbehavior(index int, log string)
 }
