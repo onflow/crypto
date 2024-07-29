@@ -78,11 +78,11 @@ type feldmanVSSstate struct {
 // In order to run the protocol again, a new instance needs to be created. The current
 // participant uses the pre-agreed public index `myIndex`.
 //
-// - `size` is the group size
-// - `threshold` is the threshold value `t`
-// - `myIndex` is the index of the current participant, in `[0, size-1]`
-// - `dealerIndex` is the index of the dealer, in `[0, size-1]`
-// - `processor` is an implementation of [DKGProcessor] (see dkg.go)
+//   - `size` is the group size
+//   - `threshold` is the threshold value `t`
+//   - `myIndex` is the index of the current participant, in `[0, size-1]`
+//   - `dealerIndex` is the index of the dealer, in `[0, size-1]`
+//   - `processor` is an implementation of [DKGProcessor] (see dkg.go)
 //
 // The function returns:
 // - (nil, InvalidInputsError) if:

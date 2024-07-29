@@ -83,11 +83,11 @@ type JointFeldmanState struct {
 // In order to run the protocol again, a new instance needs to be created. The current
 // participant uses the pre-agreed public index `myIndex`.
 //
-// - `size` is the total number of participants `n`
-// - `threshold` is the threshold parameter `t`. the DKG protocol is secure in the
-// presence of up to `t` malicious participants when `t < n/2`.
-// - `myIndex` is the index of the current participant, in `[0, n-1]`
-// - `processor` is the [DKGProcessor] instance required to implement
+//   - `size` is the total number of participants `n`
+//   - `threshold` is the threshold parameter `t`. the DKG protocol is secure in the presence of up to `t` malicious participants when `t < n/2`.
+//   - `myIndex` is the index of the current participant, in `[0, n-1]`
+//   - `processor` is the [DKGProcessor] instance required to implement
+//
 // the communication channels with other participants (see dkg.go).
 //
 // The function returns:
