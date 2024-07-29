@@ -31,26 +31,20 @@ import (
 	"github.com/onflow/crypto/hash"
 )
 
-// BLS-based threshold signature on BLS 12-381 curve
+// BLS-based threshold signature is an implementation of
+// a threshold signature scheme using BLS signatures
+// on the BLS 12-381 curve.
 // The BLS settings are the same as in the signature
 // scheme defined in the package.
-
-// A threshold signature scheme allows any subset of (t+1)
-// valid signature shares to reconstruct the threshold signature.
-// Up to (t) shares do not reveal any information about the threshold
-// signature.
-// Although the API allows using arbitrary values of (t),
-// the threshold signature scheme is secure in the presence of up to (t)
-// malicious participants when (t < n/2).
-// In order to optimize equally for unforgeability and robustness,
-// the input threshold value (t) should be set to t = floor((n-1)/2).
-
-// The package offers two api for BLS threshold signature:
-// - stateful api where a structure holds all information
-//  of the threshold signature protocols and is recommended
-//  to be used for safety and to reduce protocol inconsistencies.
+//
+// The package provides two ways to use BLS-based threshold signature:
+// - a stateful api where an object holds all information
+//  of the protocol, implementing [ThresholdSignatureInspector]
+//  and [ThresholdSignatureParticipant]. This is the recommended safe way
+//  to guarantee correctness and reduce potential integration vulnerabilities.
 // - stateless api with signature reconstruction. Verifying and storing
-// the signature shares has to be managed outside of the library.
+//  the message as well as the signature shares have to be managed by
+//  the upper layer outside of the package.
 
 // blsThresholdSignatureParticipant implements ThresholdSignatureParticipant
 // based on the BLS signature scheme
@@ -68,9 +62,9 @@ var _ ThresholdSignatureParticipant = (*blsThresholdSignatureParticipant)(nil)
 // blsThresholdSignatureInspector implements ThresholdSignatureInspector
 // based on the BLS signature scheme
 type blsThresholdSignatureInspector struct {
-	// size of the group
+	// size `n` of the group
 	size int
-	// the threshold t of the scheme where (t+1) shares are
+	// the threshold `t` of the scheme where `t+1` shares are
 	// required to reconstruct a signature
 	threshold int
 	// the group public key (a threshold KG output)
@@ -82,10 +76,10 @@ type blsThresholdSignatureInspector struct {
 	// the message to be signed. Signature shares and the threshold signature
 	// are verified against this message
 	message []byte
-	// the valid signature shares received from other participants
+	// the valid signature shares collected from other participants
 	shares map[index]Signature
-	// the threshold signature. It is equal to nil if less than (t+1) shares are
-	// received
+	// the threshold group signature.
+	// It is equal to nil if the collected shares are less than `t+1`.
 	thresholdSignature Signature
 	// lock for atomic operations
 	lock sync.RWMutex
@@ -93,20 +87,23 @@ type blsThresholdSignatureInspector struct {
 
 var _ ThresholdSignatureInspector = (*blsThresholdSignatureInspector)(nil)
 
-// NewBLSThresholdSignatureParticipant creates a new instance of Threshold signature Participant using BLS.
-// A participant is able to participate in a threshold signing protocol as well as following the
-// protocol.
+// NewBLSThresholdSignatureParticipant creates a new instance of a protocol participant using BLS.
+// A participant is able to follow the protocol as well as contribute to the threshold signing.
+// It implements the [ThresholdSignatureParticipant] interface.
 //
 // A new instance is needed for each set of public keys and message.
 // If the key set or message change, a new structure needs to be instantiated.
-// Participants are defined by their public key share, and are indexed from 0 to n-1. The current
-// participant is indexed by `myIndex` and holds the input private key
-// where n is the length of the public key shares slice.
+// The `n` participants are identified using their public indices in the range `[0, n-1]`,
+// as well as their public key shares.
+// The input `sharePublicKeys` is an array of `n` keys ordered following the public indices:
+// a participant assigned to index `i` uses the public key `sharePublicKeys[i]`.
+// The current participant is defined by `myIndex` and holds the input private key
+// corresponding to `sharePublicKeys[myIndex]`.
 //
 // The function returns:
 // - (nil, invalidInputsError) if:
-//   - n is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
-//   - threshold value is not in interval [1, n-1]
+//   - `n` is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
+//   - threshold value is not in interval `[1, n-1]`
 //   - input private key and public key at my index do not match
 //   - (nil, notBLSKeyError) if the private or at least one public key is not of type BLS BLS12-381.
 //   - (pointer, nil) otherwise
@@ -151,18 +148,20 @@ func NewBLSThresholdSignatureParticipant(
 	}, nil
 }
 
-// NewBLSThresholdSignatureInspector creates a new instance of Threshold signature follower using BLS.
-// It only allows following the threshold signing protocol .
+// NewBLSThresholdSignatureInspector creates a new instance of the protocol follower using BLS.
+// The returned instance implements [ThresholdSignatureInspector].
 //
 // A new instance is needed for each set of public keys and message.
 // If the key set or message change, a new structure needs to be instantiated.
-// Participants are defined by their public key share, and are indexed from 0 to n-1
-// where n is the length of the public key shares slice.
+// The `n` participants are identified using their public indices in the range `[0, n-1]`,
+// as well as their public key shares.
+// The input `sharePublicKeys` is an array of `n` keys ordered following the public indices:
+// a participant assigned to index `i` uses the public key `sharePublicKeys[i]`.
 //
 // The function returns:
 // - (nil, invalidInputsError) if:
-//   - n is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
-//   - threshold value is not in interval [1, n-1]
+//   - `n` is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
+//   - threshold value is not in interval `[1, n-1]`
 //   - (nil, notBLSKeyError) at least one public key is not of type pubKeyBLSBLS12381
 //   - (pointer, nil) otherwise
 func NewBLSThresholdSignatureInspector(
@@ -556,12 +555,21 @@ func EnoughShares(threshold int, sharesNumber int) (bool, error) {
 // BLSThresholdKeyGen is a key generation for a BLS-based
 // threshold signature scheme with a trusted dealer.
 //
+// The generation takes the group size `n` as an input and assigns
+// participants to the public indices `[0,n-1]`.
+//
+// The secret key is not returned, the function returns the corresponding
+// public key, the private key shares, and their corresponding public key
+// shares. The key shares are ordered arrays following the public index: a participant
+// assigned to index `i` uses the private key share at index `i`, corresponding
+// to the public key share at index `i`.
+//
 // The function returns:
 // - (nil, nil, nil, invalidInputsErrorf) if:
-//   - seed is too short
-//   - n is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
-//   - threshold value is not in interval [1, n-1]
-//   - (groupPrivKey, []pubKeyShares, groupPubKey, nil) otherwise
+//   - `seed` is too short
+//   - `size` is not in `[`ThresholdSignMinSize`, `ThresholdSignMaxSize`]`
+//   - `threshold` value is not in interval `[1, size-1]`
+//   - ([]privKeyShares, []pubKeyShares, groupPubKey, nil) otherwise
 func BLSThresholdKeyGen(size int, threshold int, seed []byte) ([]PrivateKey,
 	[]PublicKey, PublicKey, error) {
 
