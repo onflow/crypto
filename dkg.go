@@ -139,7 +139,7 @@ func IsDKGInvalidStateTransitionError(err error) bool {
 
 // `index` is the node index type used as public participant IDs.
 //
-// This is currently set to `byte` since `DKGMaxSize` fits into a byte.
+// This is currently set to `byte` since [DKGMaxSize] fits into a byte.
 // The current underlying implementation takes into account the current type
 // and is not generalized for larger types.
 type index byte

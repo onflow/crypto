@@ -176,7 +176,7 @@ func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (Signature, erro
 // subgroup point, the function returns false without an error.
 //
 // The function assumes the public key is in the valid G2 subgroup because
-// all the package functions generating a BLS `PublicKey` include a G2-membership check.
+// all the package functions generating a BLS [PublicKey] include a G2-membership check.
 // The public keys are not guaranteed to be non-identity, and therefore the function
 // includes an identity comparison. Verifications against an identity public key
 // are invalid to avoid equivocation issues.
@@ -329,7 +329,7 @@ func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (PrivateKey, 
 // This function includes a membership check in G2.
 //
 // Note the function does not reject the infinity point (identity element of G2).
-// However, the comparison to identity is cached in the `PublicKey` structure for
+// However, the comparison to identity is cached in the [PublicKey] structure for
 // a faster check during signature verifications. Any verification against an identity
 // public key outputs `false`.
 func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (PublicKey, error) {

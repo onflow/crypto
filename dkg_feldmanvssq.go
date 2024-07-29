@@ -94,7 +94,7 @@ type complaint struct {
 // - `threshold` is the threshold value `t`
 // - `myIndex` is the index of the current participant, in `[0, size-1]`
 // - `dealerIndex` is the index of the dealer, in `[0, size-1]`
-// - `processor` is an implementation of `DKGProcessor` (see dkg.go)
+// - `processor` is an implementation of [DKGProcessor] (see dkg.go)
 //
 // The function returns:
 // - (nil, InvalidInputsError) if:

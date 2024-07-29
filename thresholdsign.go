@@ -53,9 +53,9 @@ import (
 // from signature shares using the public info only, in a
 // non-interactive manner. Only threshold-signature schemes providing this
 // feature are supported by the package. This feature is represented by
-// the `ThresholdSignatureInspector` interface, while
+// the [ThresholdSignatureInspector] interface, while
 // an active participant in the protocol holding
-// a private key share is represented by `ThresholdSignatureParticipant`.
+// a private key share is represented by [ThresholdSignatureParticipant].
 //
 //
 // Although the package allows using arbitrary values of `t`,

@@ -23,6 +23,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,7 +99,7 @@ func TestSanityKmac128(t *testing.T) {
 		[]byte(""),
 		[]byte("My Tagged Application"),
 	}
-	outputSize := 32
+	outputSize := 48
 
 	alg, err := NewKMAC_128(key, customizers[0], outputSize)
 	require.Nil(t, err)
@@ -112,6 +113,7 @@ func TestSanityKmac128(t *testing.T) {
 		require.Nil(t, err)
 		hash = alg.ComputeHash(input)
 		assert.Equal(t, expected[i], hash)
+		fmt.Println(hash)
 	}
 
 	// test short key length

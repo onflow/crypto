@@ -87,7 +87,7 @@ type JointFeldmanState struct {
 // - `threshold` is the threshold parameter `t`. the DKG protocol is secure in the
 // presence of up to `t` malicious participants when `t < n/2`.
 // - `myIndex` is the index of the current participant, in `[0, n-1]`
-// - `processor` is the `DKGProcessor` instance required to implement
+// - `processor` is the [DKGProcessor] instance required to implement
 // the communication channels with other participants (see dkg.go).
 //
 // The function returns:

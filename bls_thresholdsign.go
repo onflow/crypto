@@ -39,8 +39,8 @@ import (
 //
 // The package provides two ways to use BLS-based threshold signature:
 // - a stateful api where an object holds all information
-//  of the protocol, implementing `ThresholdSignatureInspector`
-//  and `ThresholdSignatureParticipant`. This is the recommended safe way
+//  of the protocol, implementing [ThresholdSignatureInspector]
+//  and [ThresholdSignatureParticipant]. This is the recommended safe way
 //  to guarantee correctness and reduce potential integration vulnerabilities.
 // - stateless api with signature reconstruction. Verifying and storing
 //  the message as well as the signature shares have to be managed by
@@ -89,7 +89,7 @@ var _ ThresholdSignatureInspector = (*blsThresholdSignatureInspector)(nil)
 
 // NewBLSThresholdSignatureParticipant creates a new instance of a protocol participant using BLS.
 // A participant is able to follow the protocol as well as contribute to the threshold signing.
-// It implements the `ThresholdSignatureParticipant` interface.
+// It implements the [ThresholdSignatureParticipant] interface.
 //
 // A new instance is needed for each set of public keys and message.
 // If the key set or message change, a new structure needs to be instantiated.
@@ -149,7 +149,7 @@ func NewBLSThresholdSignatureParticipant(
 }
 
 // NewBLSThresholdSignatureInspector creates a new instance of the protocol follower using BLS.
-// The returned instance implements `ThresholdSignatureInspector`.
+// The returned instance implements [ThresholdSignatureInspector].
 //
 // A new instance is needed for each set of public keys and message.
 // If the key set or message change, a new structure needs to be instantiated.
