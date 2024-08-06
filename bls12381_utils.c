@@ -37,7 +37,7 @@ void types_sanity(void) {
   assert(sizeof(Fp12) == sizeof(vec384fp12));
 }
 
-// ------------------- Fr utilities
+// ------------------- F_r utilities
 
 // Montgomery constant R related to the curve order r
 // R = (1<<256) mod r
@@ -151,11 +151,11 @@ static void pow256_from_Fr(pow256 ret, const Fr *in) {
   le_bytes_from_limbs(ret, (limb_t *)in, Fr_BYTES);
 }
 
-// reads a scalar in `a` and checks it is a valid Fr element (a < r).
+// reads a scalar in `a` and checks it is a valid F_r canonical representation (a < r).
 // input is bytes-big-endian.
 // returns:
 //    - BAD_ENCODING if the length is invalid
-//    - BAD_VALUE if the scalar isn't in Fr
+//    - BAD_VALUE if the scalar isn't in F_r
 //    - VALID if the scalar is valid
 ERROR Fr_read_bytes(Fr *a, const byte *in, int in_len) {
   if (in_len != Fr_BYTES) {
@@ -191,14 +191,14 @@ ERROR Fr_star_read_bytes(Fr *a, const byte *in, int in_len) {
   return VALID;
 }
 
-// write Fr element `a` in big endian bytes.
+// write F_r element `a` in big endian bytes.
 void Fr_write_bytes(byte *out, const Fr *a) {
   // be_bytes_from_limbs works for both limb endianness types
   be_bytes_from_limbs(out, (limb_t *)a, Fr_BYTES);
 }
 
-// maps big-endian bytes of any size into an Fr element using modular reduction.
-// Input is byte-big-endian, output is Fr (internally vec256).
+// maps big-endian bytes of any size into an F_r element using modular reduction.
+// Input is byte-big-endian, output is F_r (internally vec256).
 //
 // Note: could use redc_mont_256(vec256 ret, const vec512 a, const vec256 p,
 // limb_t n0) to reduce 512 bits at a time.
@@ -233,7 +233,7 @@ static void Fr_from_be_bytes(Fr *out, const byte *in, const int in_len) {
   Fr_set_zero(&digit);
 }
 
-// Reads a scalar from an array and maps it to Fr using modular reduction.
+// Reads a scalar from an array and maps it to F_r using modular reduction.
 // Input is byte-big-endian as used by the external APIs.
 // It returns true if scalar is zero and false otherwise.
 bool map_bytes_to_Fr(Fr *a, const byte *in, int in_len) {
@@ -708,7 +708,7 @@ int map_to_G1(E1 *h, const byte *hash, const int hash_len) {
 // this is a testing file only, should not be used in any protocol!
 void unsafe_map_bytes_to_G1(E1 *p, const byte *bytes, int len) {
   assert(len >= Fr_BYTES);
-  // map to Fr
+  // map to F_r
   Fr log;
   map_bytes_to_Fr(&log, bytes, len);
   // multiplies G1 generator by a random scalar
@@ -1012,7 +1012,7 @@ void E2_subtract_vector(E2 *res, const E2 *x, const E2 *y, const int y_len) {
 // this is a testing tool only, it should not be used in any protocol!
 void unsafe_map_bytes_to_G2(E2 *p, const byte *in, int in_len) {
   assert(in_len >= Fr_BYTES);
-  // map to Fr
+  // map to F_r
   Fr log;
   map_bytes_to_Fr(&log, in, in_len);
   // multiplies G2 generator by a random scalar

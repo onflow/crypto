@@ -19,7 +19,7 @@
 #include "bytes.h"
 
 /*
- * BLS12-381-specific Fr shortcuts to assembly.
+ * BLS12-381-specific `Fr` shortcuts to assembly.
  */
 void blst_fr_add(vec256 ret, const vec256 a, const vec256 b)
 {   add_mod_256(ret, a, b, BLS12_381_r);   }
@@ -167,7 +167,7 @@ void blst_sk_inverse(pow256 ret, const pow256 a)
 }
 
 /*
- * BLS12-381-specific Fp shortcuts to assembly.
+ * BLS12-381-specific F_p shortcuts to assembly.
  */
 void blst_fp_add(vec384 ret, const vec384 a, const vec384 b)
 {   add_fp(ret, a, b);   }
