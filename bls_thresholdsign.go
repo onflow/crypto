@@ -593,7 +593,7 @@ func BLSThresholdKeyGen(size int, threshold int, seed []byte) ([]PrivateKey,
 	y := make([]pointE2, size)
 	var X0 pointE2
 
-	// Generate a polynomial P in Fr[X] of degree t
+	// Generate a polynomial P in F_r[X] of degree t
 	a, err := generateFrPolynomial(seed, threshold)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to generate random polynomial: %w", err)
