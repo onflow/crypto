@@ -526,7 +526,8 @@ func (s *feldmanVSSstate) verifyShare() bool {
 // computePublicKeys extracts the participants public keys from the verification vector
 // y[i] = Q(i+1) for all participants i, with:
 //
-//	Q(x) = A_0 + A_1*x + ... +  A_n*x^n  in G2
+//	Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2,
+//	 where `t+1` is the length of coefficients A_i.
 func (s *feldmanVSSstate) computePublicKeys() {
 	C.E2_polynomial_images(
 		(*C.E2)(&s.y[0]), (C.int)(len(s.y)),
