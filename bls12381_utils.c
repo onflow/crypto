@@ -151,9 +151,8 @@ static void pow256_from_Fr(pow256 ret, const Fr *in) {
   le_bytes_from_limbs(ret, (limb_t *)in, Fr_BYTES);
 }
 
-// reads a scalar in `a` and checks it is a valid F_r canonical representation (a < r).
-// input is bytes-big-endian.
-// returns:
+// reads a scalar in `a` and checks it is a valid F_r canonical representation
+// (a < r). input is bytes-big-endian. returns:
 //    - BAD_ENCODING if the length is invalid
 //    - BAD_VALUE if the scalar isn't in F_r
 //    - VALID if the scalar is valid
@@ -197,8 +196,8 @@ void Fr_write_bytes(byte *out, const Fr *a) {
   be_bytes_from_limbs(out, (limb_t *)a, Fr_BYTES);
 }
 
-// maps big-endian bytes of any size into an F_r element using modular reduction.
-// Input is byte-big-endian, output is F_r (internally vec256).
+// maps big-endian bytes of any size into an F_r element using modular
+// reduction. Input is byte-big-endian, output is F_r (internally vec256).
 //
 // Note: could use redc_mont_256(vec256 ret, const vec512 a, const vec256 p,
 // limb_t n0) to reduce 512 bits at a time.
