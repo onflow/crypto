@@ -51,7 +51,8 @@ void Fr_polynomial_image(Fr *image, E2 *y, const Fr *a, const int degree,
   }
 }
 
-// computes Q(x) = A_0 + A_1*x + ... +  A_n*x^n  in G2
+// computes Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2
+// where `degree` is the degree `t`.
 // and stores the point in y.
 //  - A_i being G2 points
 //  - x being a small scalar (less than `MAX_IND`)
@@ -65,7 +66,8 @@ static void E2_polynomial_image(E2 *y, const E2 *A, const int degree,
 }
 
 // computes y[i] = Q(i+1) for all participants i ( 0 <= i < len_y)
-// where Q(x) = A_0 + A_1*x + ... +  A_n*x^n
+// where Q(x) = A_0 + A_1*x + ... +  A_t*x^t
+//  - `degree` is the degree `t`
 //  - A_i being G2 points
 //  - x being a small scalar (less than `MAX_IND`)
 void E2_polynomial_images(E2 *y, const int len_y, const E2 *A,
