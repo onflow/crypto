@@ -18,8 +18,8 @@
 
 #include "dkg_include.h"
 
-// computes P(x) = a_0 + a_1*x + .. + a_t x^t in F_r[X]
-// where `x` is a small integer (byte) and `degree` is P's degree t.
+// computes P(x) = a_0 + a_1*x + .. + a_n x^n in F_r
+// where `x` is a small integer (byte) and `degree` is P's degree n.
 // P(x) is written in `out` and P(x).g2 is written in `y` if `y` is non NULL.
 void Fr_polynomial_image_write(byte *out, E2 *y, const Fr *a, const int degree,
                                const byte x) {
@@ -29,8 +29,8 @@ void Fr_polynomial_image_write(byte *out, E2 *y, const Fr *a, const int degree,
   Fr_write_bytes(out, &image);
 }
 
-// computes P(x) = a_0 + a_1 * x + .. + a_t * x^t  where P is in F_r[X].
-// a_i are all in F_r, `degree` is P's degree, x is a small integer less than
+// computes P(x) = a_0 + a_1 * x + .. + a_n * x^n  where P is in Fr[X].
+// a_i are all in Fr, `degree` is P's degree, x is a small integer less than
 // `MAX_IND` (currently 255).
 // The function writes P(x) in `image` and P(x).g2 in `y` if `y` is non NULL.
 void Fr_polynomial_image(Fr *image, E2 *y, const Fr *a, const int degree,

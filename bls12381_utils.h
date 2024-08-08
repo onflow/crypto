@@ -53,10 +53,10 @@ typedef enum {
 #define Fp_BITS 381
 #define Fp2_BYTES (2 * Fp_BYTES)
 #define Fp_LIMBS BITS_TO_LIMBS(Fp_BITS)
-#define Fp_BYTES LIMBS_TO_BYTES(Fp_LIMBS) // BLST implements F_p as a limb array
+#define Fp_BYTES LIMBS_TO_BYTES(Fp_LIMBS) // BLST implements Fp as a limb array
 #define Fr_BITS 255
 #define Fr_LIMBS BITS_TO_LIMBS(Fr_BITS)
-#define Fr_BYTES LIMBS_TO_BYTES(Fr_LIMBS) // BLST implements F_r as a limb array
+#define Fr_BYTES LIMBS_TO_BYTES(Fr_LIMBS) // BLST implements Fr as a limb array
 
 #define G1_BYTES (2 * Fp_BYTES)
 #define G2_BYTES (2 * Fp2_BYTES)
@@ -74,7 +74,7 @@ typedef enum {
 // init-related functions
 void types_sanity(void);
 
-// F_r utilities
+// Fr utilities
 extern const Fr BLS12_381_rR;
 bool Fr_is_zero(const Fr *a);
 bool Fr_is_equal(const Fr *a, const Fr *b);
