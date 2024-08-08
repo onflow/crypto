@@ -241,7 +241,7 @@ bool map_bytes_to_Fr(Fr *a, const byte *in, int in_len) {
   return Fr_is_zero(a);
 }
 
-// ------------------- Fp utilities
+// ------------------- F_p utilities
 
 // Montgomery constants related to the prime p
 const Fp BLS12_381_pR = {ONE_MONT_P}; /* R mod p = (1<<384)%p */
@@ -274,7 +274,7 @@ static void Fp_neg(Fp *res, const Fp *a) {
   cneg_mod_384((limb_t *)res, (limb_t *)a, 1, BLS12_381_P);
 }
 
-// checks if `a` is a quadratic residue in Fp. If yes, it computes
+// checks if `a` is a quadratic residue in F_p. If yes, it computes
 // the square root in `res`.
 //
 // The boolean output is valid whether `a` is in Montgomery form or not,
@@ -333,7 +333,7 @@ ERROR Fp_read_bytes(Fp *out, const byte *in, int in_len) {
   return VALID;
 }
 
-// write Fp element to `out`,
+// write F_p element to `out`,
 // assuming `out` has  `Fp_BYTES` allocated bytes.
 void Fp_write_bytes(byte *out, const Fp *a) {
   be_bytes_from_limbs(out, (limb_t *)a, Fp_BYTES);
@@ -348,7 +348,7 @@ static byte Fp_get_sign(const Fp *y) {
   return (sgn0_pty_mont_384((const limb_t *)y, BLS12_381_P, p0) >> 1) & 1;
 }
 
-// ------------------- Fp^2 utilities
+// ------------------- F_p^2 utilities
 
 // sets `a` to limb `l`
 static void Fp2_set_limb(Fp2 *a, const limb_t l) {
@@ -399,12 +399,12 @@ static byte Fp2_get_sign(Fp2 *y) {
   return (sgn0_pty_mont_384x((vec384 *)y, BLS12_381_P, p0) >> 1) & 1;
 }
 
-// reads an Fp^2 element in `a`.
+// reads an F_p^2 element in `a`.
 // input is a serialization of real(a) concatenated to serializetion of imag(a).
-// a[i] are both Fp elements.
+// a[i] are both F_p elements.
 // returns:
 //    - BAD_ENCODING if the length is invalid
-//    - BAD_VALUE if the scalar isn't in Fp
+//    - BAD_VALUE if the scalar isn't in F_p
 //    - VALID if the scalar is valid
 static ERROR Fp2_read_bytes(Fp2 *a, const byte *in, int in_len) {
   if (in_len != Fp2_BYTES) {
@@ -478,7 +478,7 @@ bool E1_in_G1(const E1 *p) {
   return POINTonE1_in_G1((const POINTonE1 *)p);
 }
 
-// E1_read_bytes imports a E1(Fp) point from a buffer in a compressed or
+// E1_read_bytes imports a E1(F_p) point from a buffer in a compressed or
 // uncompressed form. The resulting point is guaranteed to be on curve E1 (no G1
 // check is included). Expected serialization follows:
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-zcash-serialization-format-)
@@ -486,7 +486,7 @@ bool E1_in_G1(const E1 *p) {
 // returns:
 //    - BAD_ENCODING if the length is invalid or serialization header bits are
 //    invalid
-//    - BAD_VALUE if Fp coordinates couldn't deserialize
+//    - BAD_VALUE if F_p coordinates couldn't deserialize
 //    - POINT_NOT_ON_CURVE if deserialized point isn't on E1
 //    - VALID if deserialization is valid
 
@@ -734,7 +734,7 @@ void unsafe_map_bytes_to_G1complement(E1 *p, const byte *in, int in_len) {
 const E2 *BLS12_381_g2 = (const E2 *)&BLS12_381_G2;
 const E2 *BLS12_381_minus_g2 = (const E2 *)&BLS12_381_NEG_G2;
 
-// E2_read_bytes imports a E2(Fp^2) point from a buffer in a compressed or
+// E2_read_bytes imports a E2(F_p^2) point from a buffer in a compressed or
 // uncompressed form. The resulting point is guaranteed to be on curve E2 (no G2
 // check is included).
 // E2 point is in affine coordinates. This avoids further conversions
@@ -829,7 +829,7 @@ ERROR E2_read_bytes(E2 *a, const byte *in, const int in_len) {
   return VALID;
 }
 
-// E2_write_bytes exports a point in E2(Fp^2) to a buffer in a compressed or
+// E2_write_bytes exports a point in E2(F_p^2) to a buffer in a compressed or
 // uncompressed form. It assumes buffer is of length G2_SER_BYTES The
 // serialization follows:
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-zcash-serialization-format-)
