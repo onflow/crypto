@@ -41,9 +41,6 @@ $L$SEH_body_ctx_inverse_mod_383::
 	mov	QWORD PTR[32+rsp],rdi
 	mov	QWORD PTR[40+rsp],rcx
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	r8,QWORD PTR[rsi]
 	mov	r9,QWORD PTR[8+rsi]
 	mov	r10,QWORD PTR[16+rsi]
@@ -845,9 +842,6 @@ endif
 	mov	r8,rax
 	mov	r9,rax
 	mov	r10,rax
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	and	r8,QWORD PTR[rsi]
 	and	r9,QWORD PTR[8+rsi]
 	mov	r11,rax
@@ -890,15 +884,7 @@ $L$SEH_epilogue_ctx_inverse_mod_383::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_ctx_inverse_mod_383::
 ctx_inverse_mod_383	ENDP
@@ -1065,15 +1051,7 @@ __smulx_767x63	PROC PRIVATE
 	mov	QWORD PTR[80+rdx],rcx
 	mov	QWORD PTR[88+rdx],rax
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulx_767x63	ENDP
 
 ALIGN	32
@@ -1181,15 +1159,7 @@ __smulx_383x63	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r12
 	mov	QWORD PTR[40+rdi],r13
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulx_383x63	ENDP
 
 ALIGN	32
@@ -1335,15 +1305,7 @@ __smulx_383_n_shift_by_31	PROC PRIVATE
 	add	rdx,rbp
 	add	rcx,rbp
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulx_383_n_shift_by_31	ENDP
 
 ALIGN	32
@@ -1435,15 +1397,7 @@ __smulx_191_n_shift_by_31	PROC PRIVATE
 	add	rdx,rbp
 	add	rcx,rbp
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulx_191_n_shift_by_31	ENDP
 
 ALIGN	32
@@ -1514,15 +1468,7 @@ __ab_approximation_31	PROC PRIVATE
 
 	jmp	__inner_loop_31
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __ab_approximation_31	ENDP
 
 ALIGN	32
@@ -1570,15 +1516,7 @@ $L$oop_31::
 	sub	r12,r15
 	sub	r13,r15
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_31	ENDP
 
 
@@ -1620,15 +1558,7 @@ $L$oop_53::
 	sub	edi,1
 	jnz	$L$oop_53
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __tail_loop_53	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)

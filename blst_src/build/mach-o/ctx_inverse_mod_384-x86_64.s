@@ -9,7 +9,7 @@ _ctx_inverse_mod_383:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$ct_inverse_mod_383$1:
+ct_inverse_mod_383$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -37,9 +37,6 @@ L$ct_inverse_mod_383$1:
 	movq	%rdi,32(%rsp)
 	movq	%rcx,40(%rsp)
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -841,9 +838,6 @@ L$ct_inverse_mod_383$1:
 	movq	%rax,%r8
 	movq	%rax,%r9
 	movq	%rax,%r10
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	andq	0(%rsi),%r8
 	andq	8(%rsi),%r9
 	movq	%rax,%r11
@@ -883,15 +877,7 @@ L$ct_inverse_mod_383$1:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-1112-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1058,15 +1044,7 @@ __smulx_767x63:
 	movq	%rcx,80(%rdx)
 	movq	%rax,88(%rdx)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1176,15 +1154,7 @@ __smulx_383x63:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1332,15 +1302,7 @@ __smulx_383_n_shift_by_31:
 	addq	%rbp,%rdx
 	addq	%rbp,%rcx
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1434,15 +1396,7 @@ __smulx_191_n_shift_by_31:
 	addq	%rbp,%rdx
 	addq	%rbp,%rcx
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1515,15 +1469,7 @@ __ab_approximation_31:
 
 	jmp	__inner_loop_31
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1573,15 +1519,7 @@ L$oop_31:
 	subq	%r15,%r12
 	subq	%r15,%r13
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1625,14 +1563,6 @@ L$oop_53:
 	subl	$1,%edi
 	jnz	L$oop_53
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 

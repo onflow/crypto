@@ -1,9 +1,9 @@
 OPTION	DOTNAME
 _DATA	SEGMENT
 COMM	__blst_platform_cap:DWORD:1
-
 _DATA	ENDS
-.rdata	SEGMENT READONLY ALIGN(256)
+.text$	SEGMENT ALIGN(256) 'CODE'
+
 ALIGN	64
 
 K256::
@@ -31,8 +31,6 @@ DB	83,72,65,50,53,54,32,98,108,111,99,107,32,116,114,97
 DB	110,115,102,111,114,109,32,102,111,114,32,120,56,54,95,54
 DB	52,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121
 DB	32,64,100,111,116,45,97,115,109,0
-.rdata	ENDS
-.text$	SEGMENT ALIGN(256) 'CODE'
 PUBLIC	blst_sha256_block_data_order_shaext
 
 
@@ -63,9 +61,6 @@ $L$blst_sha256_block_data_order$2::
 
 $L$SEH_body_blst_sha256_block_data_order_shaext::
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	lea	rcx,QWORD PTR[((K256+128))]
 	movdqu	xmm1,XMMWORD PTR[rdi]
 	movdqu	xmm2,XMMWORD PTR[16+rdi]
@@ -280,15 +275,7 @@ $L$SEH_epilogue_blst_sha256_block_data_order_shaext::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_blst_sha256_block_data_order_shaext::
 blst_sha256_block_data_order_shaext	ENDP
@@ -311,10 +298,8 @@ $L$SEH_begin_blst_sha256_block_data_order::
 	mov	rdi,rcx
 	mov	rsi,rdx
 	mov	rdx,r8
-ifndef	__SGX_LVI_HARDENING__
 	test	DWORD PTR[__blst_platform_cap],2
 	jnz	$L$blst_sha256_block_data_order$2
-endif
 	push	rbx
 
 	push	r12
@@ -341,9 +326,6 @@ $L$SEH_body_blst_sha256_block_data_order::
 
 
 	lea	rsp,QWORD PTR[((-64))+rsp]
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	eax,DWORD PTR[rdi]
 	and	rsp,-64
 	mov	ebx,DWORD PTR[4+rdi]
@@ -1388,9 +1370,6 @@ DB	102,15,58,15,249,4
 	mov	eax,r14d
 	mov	rsi,QWORD PTR[((-56))+rbp]
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	add	eax,DWORD PTR[rdi]
 	add	ebx,DWORD PTR[4+rdi]
 	add	ecx,DWORD PTR[8+rdi]
@@ -1435,15 +1414,7 @@ $L$SEH_epilogue_blst_sha256_block_data_order::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_blst_sha256_block_data_order::
 blst_sha256_block_data_order	ENDP
@@ -1454,9 +1425,6 @@ ALIGN	16
 blst_sha256_emit	PROC PUBLIC
 	DB	243,15,30,250
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	r8,QWORD PTR[rdx]
 	mov	r9,QWORD PTR[8+rdx]
 	mov	r10,QWORD PTR[16+rdx]
@@ -1477,15 +1445,7 @@ endif
 	shr	r11,32
 	mov	DWORD PTR[16+rcx],r10d
 	mov	DWORD PTR[24+rcx],r11d
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 blst_sha256_emit	ENDP
 
 PUBLIC	blst_sha256_bcopy
@@ -1495,9 +1455,6 @@ ALIGN	16
 blst_sha256_bcopy	PROC PUBLIC
 	DB	243,15,30,250
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	sub	rcx,rdx
 $L$oop_bcopy::
 	movzx	eax,BYTE PTR[rdx]
@@ -1505,15 +1462,7 @@ $L$oop_bcopy::
 	mov	BYTE PTR[((-1))+rdx*1+rcx],al
 	dec	r8
 	jnz	$L$oop_bcopy
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 blst_sha256_bcopy	ENDP
 
 PUBLIC	blst_sha256_hcopy
@@ -1523,9 +1472,6 @@ ALIGN	16
 blst_sha256_hcopy	PROC PUBLIC
 	DB	243,15,30,250
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	r8,QWORD PTR[rdx]
 	mov	r9,QWORD PTR[8+rdx]
 	mov	r10,QWORD PTR[16+rdx]
@@ -1534,15 +1480,7 @@ endif
 	mov	QWORD PTR[8+rcx],r9
 	mov	QWORD PTR[16+rcx],r10
 	mov	QWORD PTR[24+rcx],r11
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 blst_sha256_hcopy	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)

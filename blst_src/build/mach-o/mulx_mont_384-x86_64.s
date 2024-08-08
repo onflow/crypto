@@ -71,15 +71,7 @@ __subx_mod_384x384:
 	movq	%rbp,80(%rdi)
 	movq	%rsi,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -89,9 +81,6 @@ __addx_mod_384:
 .cfi_startproc
 	.byte	0xf3,0x0f,0x1e,0xfa
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -134,15 +123,7 @@ __addx_mod_384:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -152,9 +133,6 @@ __subx_mod_384:
 .cfi_startproc
 	.byte	0xf3,0x0f,0x1e,0xfa
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -197,15 +175,7 @@ __subx_mod_384_a_is_loaded:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_mulx_mont_384x
@@ -217,7 +187,7 @@ _mulx_mont_384x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$mul_mont_384x$1:
+mul_mont_384x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -251,9 +221,6 @@ L$mul_mont_384x$1:
 
 
 	leaq	40(%rsp),%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_384
 
 
@@ -267,17 +234,11 @@ L$mul_mont_384x$1:
 	leaq	(%rbx),%rsi
 	leaq	-48(%rbx),%rdx
 	leaq	40+192+48(%rsp),%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__addx_mod_384
 
 	movq	24(%rsp),%rsi
 	leaq	48(%rsi),%rdx
 	leaq	-48(%rdi),%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__addx_mod_384
 
 	leaq	(%rdi),%rbx
@@ -288,9 +249,6 @@ L$mul_mont_384x$1:
 	leaq	(%rdi),%rsi
 	leaq	40(%rsp),%rdx
 	movq	8(%rsp),%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__subx_mod_384x384
 
 	leaq	(%rdi),%rsi
@@ -335,15 +293,7 @@ L$mul_mont_384x$1:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-328-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqrx_mont_384x
@@ -355,7 +305,7 @@ _sqrx_mont_384x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_mont_384x$1:
+sqr_mont_384x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -399,9 +349,6 @@ L$sqr_mont_384x$1:
 	movq	24(%rsp),%rsi
 	leaq	48(%rsi),%rbx
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	48(%rsi),%rdx
 	movq	0(%rsi),%r14
 	movq	8(%rsi),%r15
@@ -481,15 +428,7 @@ L$sqr_mont_384x$1:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -502,7 +441,7 @@ _mulx_382x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$mul_382x$1:
+mul_382x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -532,9 +471,6 @@ L$mul_382x$1:
 	movq	%rcx,24(%rsp)
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -587,9 +523,6 @@ L$mul_382x$1:
 	movq	0(%rsp),%rsi
 	movq	8(%rsp),%rbx
 	leaq	-96(%rdi),%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_384
 
 
@@ -603,9 +536,6 @@ L$mul_382x$1:
 	leaq	32(%rsp),%rdx
 	movq	24(%rsp),%rcx
 	movq	%rsi,%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__subx_mod_384x384
 
 
@@ -635,15 +565,7 @@ L$mul_382x$1:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqrx_382x
@@ -655,7 +577,7 @@ _sqrx_382x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_382x$1:
+sqr_382x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -681,9 +603,6 @@ L$sqr_382x$1:
 	movq	%rdx,%rcx
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r14
 	movq	8(%rsi),%r15
 	movq	16(%rsi),%rax
@@ -726,9 +645,6 @@ L$sqr_382x$1:
 	movq	(%rsp),%rsi
 	leaq	48(%rsi),%rbx
 	leaq	96(%rdi),%rdi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_384
 
 	movq	0(%rdi),%r8
@@ -783,15 +699,7 @@ L$sqr_382x$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*7
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_mulx_384
@@ -803,7 +711,7 @@ _mulx_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$mul_384$1:
+mul_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -825,9 +733,6 @@ L$mul_384$1:
 
 
 	movq	%rdx,%rbx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_384
 
 	movq	0(%rsp),%r15
@@ -845,15 +750,7 @@ L$mul_384$1:
 	leaq	48(%rsp),%rsp
 .cfi_adjust_cfa_offset	-48
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1029,15 +926,7 @@ __mulx_384:
 	movq	%r12,80(%rdi)
 	movq	%r13,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_sqrx_384
@@ -1049,7 +938,7 @@ _sqrx_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_384$1:
+sqr_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1072,9 +961,6 @@ L$sqr_384$1:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__sqrx_384
 
 	movq	8(%rsp),%r15
@@ -1092,15 +978,7 @@ L$sqr_384$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1240,15 +1118,7 @@ __sqrx_384:
 	movq	%rbx,80(%rdi)
 	movq	%rbp,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1263,7 +1133,7 @@ _redcx_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$redc_mont_384$1:
+redc_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1287,9 +1157,6 @@ L$redc_mont_384$1:
 
 
 	movq	%rdx,%rbx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_by_1_mont_384
 	call	__redx_tail_mont_384
 
@@ -1308,15 +1175,7 @@ L$redc_mont_384$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1332,7 +1191,7 @@ _fromx_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$from_mont_384$1:
+from_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1356,9 +1215,6 @@ L$from_mont_384$1:
 
 
 	movq	%rdx,%rbx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_by_1_mont_384
 
 
@@ -1406,15 +1262,7 @@ L$from_mont_384$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1604,15 +1452,7 @@ __mulx_by_1_mont_384:
 	adcxq	%rax,%r10
 	adoxq	%r11,%rbp
 	adcxq	%rbp,%r11
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1661,15 +1501,7 @@ __redx_tail_mont_384:
 	movq	%r10,32(%rdi)
 	movq	%r11,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1682,7 +1514,7 @@ _sgn0x_pty_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sgn0_pty_mont_384$1:
+sgn0_pty_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1708,9 +1540,6 @@ L$sgn0_pty_mont_384$1:
 	movq	%rsi,%rbx
 	leaq	0(%rdi),%rsi
 	movq	%rdx,%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_by_1_mont_384
 
 	xorq	%rax,%rax
@@ -1751,15 +1580,7 @@ L$sgn0_pty_mont_384$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1772,7 +1593,7 @@ _sgn0x_pty_mont_384x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sgn0_pty_mont_384x$1:
+sgn0_pty_mont_384x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1798,9 +1619,6 @@ L$sgn0_pty_mont_384x$1:
 	movq	%rsi,%rbx
 	leaq	48(%rdi),%rsi
 	movq	%rdx,%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	call	__mulx_by_1_mont_384
 
 	movq	%r14,%r12
@@ -1891,15 +1709,7 @@ L$sgn0_pty_mont_384x$1:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_mulx_mont_384
@@ -1911,7 +1721,7 @@ _mulx_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$mul_mont_384$1:
+mul_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -1935,9 +1745,6 @@ L$mul_mont_384$1:
 
 
 	movq	%rdx,%rbx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rdx),%rdx
 	movq	0(%rsi),%r14
 	movq	8(%rsi),%r15
@@ -1968,15 +1775,7 @@ L$mul_mont_384$1:
 	leaq	72(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*9
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -2378,15 +2177,7 @@ __mulx_mont_384:
 	movq	%rdi,32(%rbx)
 	movq	%rbp,40(%rbx)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rsi
-	lfence
-	jmpq	*%rsi
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqrx_mont_384
@@ -2398,7 +2189,7 @@ _sqrx_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_mont_384$1:
+sqr_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -2423,9 +2214,6 @@ L$sqr_mont_384$1:
 
 	movq	%rcx,%r8
 	leaq	-128(%rdx),%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%rdx
 	movq	8(%rsi),%r15
 	movq	16(%rsi),%rax
@@ -2456,15 +2244,7 @@ L$sqr_mont_384$1:
 	leaq	72(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*9
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -2477,7 +2257,7 @@ _sqrx_n_mul_mont_384:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_n_mul_mont_384$1:
+sqr_n_mul_mont_384$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -2501,9 +2281,6 @@ L$sqr_n_mul_mont_384$1:
 
 
 	movq	%rdx,%r10
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%rdx
 	movq	8(%rsi),%r15
 	movq	16(%rsi),%rax
@@ -2553,15 +2330,7 @@ L$oop_sqrx_384:
 	leaq	88(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*11
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -2574,7 +2343,7 @@ _sqrx_n_mul_mont_383:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_n_mul_mont_383$1:
+sqr_n_mul_mont_383$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -2598,9 +2367,6 @@ L$sqr_n_mul_mont_383$1:
 
 
 	movq	%rdx,%r10
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%rdx
 	movq	8(%rsi),%r15
 	movq	16(%rsi),%rax
@@ -2649,15 +2415,7 @@ L$oop_sqrx_383:
 	leaq	88(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*11
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -3020,15 +2778,7 @@ __mulx_mont_383_nonred:
 	movq	%r10,40(%rbx)
 	movq	%r10,%rbp
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rsi
-	lfence
-	jmpq	*%rsi
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqrx_mont_382x
@@ -3040,7 +2790,7 @@ _sqrx_mont_382x:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-L$sqr_mont_382x$1:
+sqr_mont_382x$1:
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
 .cfi_offset	%rbp,-16
@@ -3069,9 +2819,6 @@ L$sqr_mont_382x$1:
 	movq	%rsi,24(%rsp)
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -3223,14 +2970,6 @@ L$sqr_mont_382x$1:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 

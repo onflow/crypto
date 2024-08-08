@@ -72,15 +72,7 @@ __subq_mod_384x384:
 	movq	%rbp,80(%rdi)
 	movq	%rsi,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -132,15 +124,7 @@ __addq_mod_384:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -192,15 +176,7 @@ __subq_mod_384_a_is_loaded:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_mul_mont_384x
@@ -214,7 +190,7 @@ _mul_mont_384x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$mul_mont_384x$1
+	jnz	mul_mont_384x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -320,15 +296,7 @@ _mul_mont_384x:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-328-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqr_mont_384x
@@ -342,7 +310,7 @@ _sqr_mont_384x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_mont_384x$1
+	jnz	sqr_mont_384x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -455,15 +423,7 @@ _sqr_mont_384x:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -478,7 +438,7 @@ _mul_382x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$mul_382x$1
+	jnz	mul_382x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -603,15 +563,7 @@ _mul_382x:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_sqr_382x
@@ -625,7 +577,7 @@ _sqr_382x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_382x$1
+	jnz	sqr_382x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -748,15 +700,7 @@ _sqr_382x:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-8*7
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_mul_384
@@ -770,7 +714,7 @@ _mul_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$mul_384$1
+	jnz	mul_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -795,15 +739,7 @@ _mul_384:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1092,15 +1028,7 @@ __mulq_384:
 	movq	%r11,80(%rdi)
 	movq	%r12,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_sqr_384
@@ -1114,7 +1042,7 @@ _sqr_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_384$1
+	jnz	sqr_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -1155,15 +1083,7 @@ _sqr_384:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1357,15 +1277,7 @@ __sqrq_384:
 	movq	%rax,80(%rdi)
 	movq	%rdx,88(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1380,7 +1292,7 @@ _sqr_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_mont_384$1
+	jnz	sqr_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -1434,15 +1346,7 @@ _sqr_mont_384:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-8*21
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1459,7 +1363,7 @@ _redc_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$redc_mont_384$1
+	jnz	redc_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -1502,15 +1406,7 @@ _redc_mont_384:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1528,7 +1424,7 @@ _from_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$from_mont_384$1
+	jnz	from_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -1600,15 +1496,7 @@ _from_mont_384:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -1907,15 +1795,7 @@ __mulq_by_1_mont_384:
 	addq	%r11,%r10
 	adcq	$0,%rdx
 	movq	%rdx,%r11
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1964,15 +1844,7 @@ __redq_tail_mont_384:
 	movq	%r10,32(%rdi)
 	movq	%r11,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -1987,7 +1859,7 @@ _sgn0_pty_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sgn0_pty_mont_384$1
+	jnz	sgn0_pty_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -2054,15 +1926,7 @@ _sgn0_pty_mont_384:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -2077,7 +1941,7 @@ _sgn0_pty_mont_384x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sgn0_pty_mont_384x$1
+	jnz	sgn0_pty_mont_384x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -2194,15 +2058,7 @@ _sgn0_pty_mont_384x:
 	leaq	56(%rsp),%rsp
 .cfi_adjust_cfa_offset	-56
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 .globl	_mul_mont_384
@@ -2216,7 +2072,7 @@ _mul_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$mul_mont_384$1
+	jnz	mul_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -2266,15 +2122,7 @@ _mul_mont_384:
 	leaq	72(%rsp),%rsp
 .cfi_adjust_cfa_offset	-72
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -2878,15 +2726,7 @@ __mulq_mont_384:
 	movq	%r10,32(%rdi)
 	movq	%r11,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_sqr_n_mul_mont_384
@@ -2900,7 +2740,7 @@ _sqr_n_mul_mont_384:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_n_mul_mont_384$1
+	jnz	sqr_n_mul_mont_384$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -2977,15 +2817,7 @@ L$oop_sqr_384:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-8*23
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -3000,7 +2832,7 @@ _sqr_n_mul_mont_383:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_n_mul_mont_383$1
+	jnz	sqr_n_mul_mont_383$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -3090,15 +2922,7 @@ L$oop_sqr_383:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-8*23
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -3659,15 +3483,7 @@ __mulq_mont_383_nonred:
 	adcq	$0,%rdx
 	addq	%r12,%r10
 	adcq	%rdx,%r11
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 .globl	_sqr_mont_382x
@@ -3681,7 +3497,7 @@ _sqr_mont_382x:
 
 #ifdef __BLST_PORTABLE__
 	testl	$1,___blst_platform_cap(%rip)
-	jnz	L$sqr_mont_382x$1
+	jnz	sqr_mont_382x$1
 #endif
 	pushq	%rbp
 .cfi_adjust_cfa_offset	8
@@ -3852,14 +3668,6 @@ _sqr_mont_382x:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-136-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 

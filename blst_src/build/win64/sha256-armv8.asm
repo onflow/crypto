@@ -1,21 +1,19 @@
- GBLA __SIZEOF_POINTER__
-__SIZEOF_POINTER__ SETA 64/8
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//
+// Copyright Supranational LLC
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// ====================================================================
+// Written by Andy Polyakov, @dot-asm, initially for the OpenSSL
+// project.
+// ====================================================================
+//
+// sha256_block procedure for ARMv8.
+//
+// This module is stripped of scalar code paths, with rationale that all
+// known processors are NEON-capable.
+//
+// See original module at CRYPTOGAMS for further details.
 
 	COMMON	|__blst_platform_cap|,4
 	AREA	|.text|,CODE,ALIGN=8,ARM64
@@ -39,7 +37,7 @@ __SIZEOF_POINTER__ SETA 64/8
 	DCDU	0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3
 	DCDU	0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208
 	DCDU	0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
-	DCDU	0
+	DCDU	0	//terminator
 
 	DCB	"SHA256 block transform for ARMv8, CRYPTOGAMS by @dot-asm",0
 	ALIGN	4
@@ -49,7 +47,7 @@ __SIZEOF_POINTER__ SETA 64/8
 	ALIGN	64
 |blst_sha256_block_armv8| PROC
 |$Lv8_entry|
-	stp	x29,x30,[sp,#-2*__SIZEOF_POINTER__]!
+	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
 
 	ld1	{v0.4s,v1.4s},[x0]
@@ -63,115 +61,115 @@ __SIZEOF_POINTER__ SETA 64/8
 	rev32	v5.16b,v5.16b
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
-	orr	v18.16b,v0.16b,v0.16b
+	orr	v18.16b,v0.16b,v0.16b		// offload
 	orr	v19.16b,v1.16b,v1.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v4.4s
-	DCDU	0x5e2828a4
+	DCDU	0x5e2828a4	//sha256su0 v4.16b,v5.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e0760c4
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e0760c4	//sha256su1 v4.16b,v6.16b,v7.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v5.4s
-	DCDU	0x5e2828c5
+	DCDU	0x5e2828c5	//sha256su0 v5.16b,v6.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0460e5
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0460e5	//sha256su1 v5.16b,v7.16b,v4.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v6.4s
-	DCDU	0x5e2828e6
+	DCDU	0x5e2828e6	//sha256su0 v6.16b,v7.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e056086
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e056086	//sha256su1 v6.16b,v4.16b,v5.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v7.4s
-	DCDU	0x5e282887
+	DCDU	0x5e282887	//sha256su0 v7.16b,v4.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0660a7
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0660a7	//sha256su1 v7.16b,v5.16b,v6.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v4.4s
-	DCDU	0x5e2828a4
+	DCDU	0x5e2828a4	//sha256su0 v4.16b,v5.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e0760c4
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e0760c4	//sha256su1 v4.16b,v6.16b,v7.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v5.4s
-	DCDU	0x5e2828c5
+	DCDU	0x5e2828c5	//sha256su0 v5.16b,v6.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0460e5
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0460e5	//sha256su1 v5.16b,v7.16b,v4.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v6.4s
-	DCDU	0x5e2828e6
+	DCDU	0x5e2828e6	//sha256su0 v6.16b,v7.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e056086
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e056086	//sha256su1 v6.16b,v4.16b,v5.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v7.4s
-	DCDU	0x5e282887
+	DCDU	0x5e282887	//sha256su0 v7.16b,v4.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0660a7
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0660a7	//sha256su1 v7.16b,v5.16b,v6.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v4.4s
-	DCDU	0x5e2828a4
+	DCDU	0x5e2828a4	//sha256su0 v4.16b,v5.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e0760c4
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e0760c4	//sha256su1 v4.16b,v6.16b,v7.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v5.4s
-	DCDU	0x5e2828c5
+	DCDU	0x5e2828c5	//sha256su0 v5.16b,v6.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0460e5
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0460e5	//sha256su1 v5.16b,v7.16b,v4.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v6.4s
-	DCDU	0x5e2828e6
+	DCDU	0x5e2828e6	//sha256su0 v6.16b,v7.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
-	DCDU	0x5e056086
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
+	DCDU	0x5e056086	//sha256su1 v6.16b,v4.16b,v5.16b
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v7.4s
-	DCDU	0x5e282887
+	DCDU	0x5e282887	//sha256su0 v7.16b,v4.16b
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
-	DCDU	0x5e0660a7
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
+	DCDU	0x5e0660a7	//sha256su1 v7.16b,v5.16b,v6.16b
 	ld1	{v17.4s},[x3],#16
 	add	v16.4s,v16.4s,v4.4s
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
 
 	ld1	{v16.4s},[x3],#16
 	add	v17.4s,v17.4s,v5.4s
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
 
 	ld1	{v17.4s},[x3]
 	add	v16.4s,v16.4s,v6.4s
-	sub	x3,x3,#64*4-16
+	sub	x3,x3,#64*4-16	// rewind
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e104020
-	DCDU	0x5e105041
+	DCDU	0x5e104020	//sha256h v0.16b,v1.16b,v16.4s
+	DCDU	0x5e105041	//sha256h2 v1.16b,v2.16b,v16.4s
 
 	add	v17.4s,v17.4s,v7.4s
 	orr	v2.16b,v0.16b,v0.16b
-	DCDU	0x5e114020
-	DCDU	0x5e115041
+	DCDU	0x5e114020	//sha256h v0.16b,v1.16b,v17.4s
+	DCDU	0x5e115041	//sha256h2 v1.16b,v2.16b,v17.4s
 
 	add	v0.4s,v0.4s,v18.4s
 	add	v1.4s,v1.4s,v19.4s
@@ -180,7 +178,7 @@ __SIZEOF_POINTER__ SETA 64/8
 
 	st1	{v0.4s,v1.4s},[x0]
 
-	ldr	x29,[sp],#2*__SIZEOF_POINTER__
+	ldr	x29,[sp],#16
 	ret
 	ENDP
 
@@ -192,12 +190,12 @@ __SIZEOF_POINTER__ SETA 64/8
 	tst	w16,#1
 	bne	|$Lv8_entry|
 
-	stp	x29, x30, [sp, #-2*__SIZEOF_POINTER__]!
+	stp	x29, x30, [sp, #-16]!
 	mov	x29, sp
 	sub	sp,sp,#16*4
 
 	adr	x16,|$LK256|
-	add	x2,x1,x2,lsl#6
+	add	x2,x1,x2,lsl#6	// len to point at the end of inp
 
 	ld1	{v0.16b},[x1], #16
 	ld1	{v1.16b},[x1], #16
@@ -207,8 +205,8 @@ __SIZEOF_POINTER__ SETA 64/8
 	ld1	{v5.4s},[x16], #16
 	ld1	{v6.4s},[x16], #16
 	ld1	{v7.4s},[x16], #16
-	rev32	v0.16b,v0.16b
-	rev32	v1.16b,v1.16b
+	rev32	v0.16b,v0.16b		// yes, even on
+	rev32	v1.16b,v1.16b		// big-endian
 	rev32	v2.16b,v2.16b
 	rev32	v3.16b,v3.16b
 	mov	x17,sp
@@ -668,16 +666,16 @@ __SIZEOF_POINTER__ SETA 64/8
 	add	w7,w7,w3
 	eor	w13,w13,w5
 	st1	{v4.4s},[x17], #16
-	cmp	w12,#0
+	cmp	w12,#0				// check for K256 terminator
 	ldr	w12,[sp,#0]
 	sub	x17,x17,#64
 	bne	|$L_00_48|
 
-	sub	x16,x16,#256
+	sub	x16,x16,#256		// rewind x16
 	cmp	x1,x2
-	mov	x17, #-64
+	mov	x17, #64
 	cseleq	x17,x17,xzr
-	add	x1,x1,x17
+	sub	x1,x1,x17			// avoid SEGV
 	mov	x17,sp
 	add	w10,w10,w12
 	add	w3,w3,w15
@@ -1002,11 +1000,11 @@ __SIZEOF_POINTER__ SETA 64/8
 	add	w7,w7,w3
 	eor	w13,w13,w5
 	st1	{v4.4s},[x17], #16
-	add	w3,w3,w15
+	add	w3,w3,w15			// h+=Sigma0(a) from the past
 	ldp	w11,w12,[x0,#0]
-	add	w3,w3,w13
+	add	w3,w3,w13			// h+=Maj(a,b,c) from the past
 	ldp	w13,w14,[x0,#8]
-	add	w3,w3,w11
+	add	w3,w3,w11			// accumulate
 	add	w4,w4,w12
 	ldp	w11,w12,[x0,#16]
 	add	w5,w5,w13
@@ -1028,7 +1026,7 @@ __SIZEOF_POINTER__ SETA 64/8
 	bne	|$L_00_48|
 
 	ldr	x29,[x29]
-	add	sp,sp,#16*4+2*__SIZEOF_POINTER__
+	add	sp,sp,#16*4+16
 	ret
 	ENDP
 
@@ -1038,12 +1036,12 @@ __SIZEOF_POINTER__ SETA 64/8
 |blst_sha256_emit| PROC
 	ldp	x4,x5,[x1]
 	ldp	x6,x7,[x1,#16]
- if :lnot::def:	__AARCH64EB__
+#ifndef	__AARCH64EB__
 	rev	x4,x4
 	rev	x5,x5
 	rev	x6,x6
 	rev	x7,x7
- endif
+#endif
 	str	w4,[x0,#4]
 	lsr	x4,x4,#32
 	str	w5,[x0,#12]

@@ -89,15 +89,7 @@ __subq_mod_384x384	PROC PRIVATE
 	mov	QWORD PTR[80+rdi],rbp
 	mov	QWORD PTR[88+rdi],rsi
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __subq_mod_384x384	ENDP
 
 
@@ -147,15 +139,7 @@ __addq_mod_384	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r12
 	mov	QWORD PTR[40+rdi],r13
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __addq_mod_384	ENDP
 
 
@@ -205,15 +189,7 @@ __subq_mod_384_a_is_loaded::
 	mov	QWORD PTR[32+rdi],r12
 	mov	QWORD PTR[40+rdi],r13
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __subq_mod_384	ENDP
 PUBLIC	mul_mont_384x
 
@@ -338,15 +314,7 @@ $L$SEH_epilogue_mul_mont_384x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_mul_mont_384x::
 mul_mont_384x	ENDP
@@ -479,15 +447,7 @@ $L$SEH_epilogue_sqr_mont_384x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_mont_384x::
 sqr_mont_384x	ENDP
@@ -633,15 +593,7 @@ $L$SEH_epilogue_mul_382x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_mul_382x::
 mul_382x	ENDP
@@ -783,15 +735,7 @@ $L$SEH_epilogue_sqr_382x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_382x::
 sqr_382x	ENDP
@@ -838,15 +782,7 @@ $L$SEH_epilogue_mul_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_mul_384::
 mul_384	ENDP
@@ -1135,15 +1071,7 @@ __mulq_384	PROC PRIVATE
 	mov	QWORD PTR[80+rdi],r11
 	mov	QWORD PTR[88+rdi],r12
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __mulq_384	ENDP
 PUBLIC	sqr_384
 
@@ -1200,15 +1128,7 @@ $L$SEH_epilogue_sqr_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_384::
 sqr_384	ENDP
@@ -1402,15 +1322,7 @@ __sqrq_384	PROC PRIVATE
 	mov	QWORD PTR[80+rdi],rax
 	mov	QWORD PTR[88+rdi],rdx
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __sqrq_384	ENDP
 
 PUBLIC	sqr_mont_384
@@ -1483,15 +1395,7 @@ $L$SEH_epilogue_sqr_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_mont_384::
 sqr_mont_384	ENDP
@@ -1557,15 +1461,7 @@ $L$SEH_epilogue_redc_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_redc_mont_384::
 redc_mont_384	ENDP
@@ -1661,15 +1557,7 @@ $L$SEH_epilogue_from_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_from_mont_384::
 from_mont_384	ENDP
@@ -1968,15 +1856,7 @@ __mulq_by_1_mont_384	PROC PRIVATE
 	add	r10,r11
 	adc	rdx,0
 	mov	r11,rdx
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __mulq_by_1_mont_384	ENDP
 
 
@@ -2023,15 +1903,7 @@ __redq_tail_mont_384	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r10
 	mov	QWORD PTR[40+rdi],r11
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __redq_tail_mont_384	ENDP
 
 PUBLIC	sgn0_pty_mont_384
@@ -2116,15 +1988,7 @@ $L$SEH_epilogue_sgn0_pty_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sgn0_pty_mont_384::
 sgn0_pty_mont_384	ENDP
@@ -2261,15 +2125,7 @@ $L$SEH_epilogue_sgn0_pty_mont_384x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sgn0_pty_mont_384x::
 sgn0_pty_mont_384x	ENDP
@@ -2340,15 +2196,7 @@ $L$SEH_epilogue_mul_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_mul_mont_384::
 mul_mont_384	ENDP
@@ -2952,15 +2800,7 @@ __mulq_mont_384	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r10
 	mov	QWORD PTR[40+rdi],r11
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __mulq_mont_384	ENDP
 PUBLIC	sqr_n_mul_mont_384
 
@@ -3057,15 +2897,7 @@ $L$SEH_epilogue_sqr_n_mul_mont_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_n_mul_mont_384::
 sqr_n_mul_mont_384	ENDP
@@ -3178,15 +3010,7 @@ $L$SEH_epilogue_sqr_n_mul_mont_383::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_n_mul_mont_383::
 sqr_n_mul_mont_383	ENDP
@@ -3747,15 +3571,7 @@ __mulq_mont_383_nonred	PROC PRIVATE
 	adc	rdx,0
 	add	r10,r12
 	adc	r11,rdx
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __mulq_mont_383_nonred	ENDP
 PUBLIC	sqr_mont_382x
 
@@ -3944,15 +3760,7 @@ $L$SEH_epilogue_sqr_mont_382x::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_mont_382x::
 sqr_mont_382x	ENDP

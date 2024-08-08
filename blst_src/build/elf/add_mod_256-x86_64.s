@@ -19,9 +19,6 @@ add_mod_256:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -60,15 +57,7 @@ add_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	add_mod_256,.-add_mod_256
 
@@ -94,9 +83,6 @@ mul_by_3_mod_256:
 
 
 	movq	%rdx,%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -115,15 +101,7 @@ mul_by_3_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	mul_by_3_mod_256,.-mul_by_3_mod_256
 
@@ -154,15 +132,7 @@ __lshift_mod_256:
 	cmovcq	%rbx,%r10
 	cmovcq	%rbp,%r11
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rax
-	lfence
-	jmpq	*%rax
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 .size	__lshift_mod_256,.-__lshift_mod_256
 
@@ -187,9 +157,6 @@ lshift_mod_256:
 .cfi_offset	%r12,-32
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -214,15 +181,7 @@ lshift_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	lshift_mod_256,.-lshift_mod_256
 
@@ -246,9 +205,6 @@ rshift_mod_256:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%rbp
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -305,15 +261,7 @@ rshift_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	rshift_mod_256,.-rshift_mod_256
 
@@ -338,9 +286,6 @@ cneg_mod_256:
 .cfi_offset	%r12,-32
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r12
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -386,15 +331,7 @@ cneg_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	cneg_mod_256,.-cneg_mod_256
 
@@ -418,9 +355,6 @@ sub_mod_256:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -457,15 +391,7 @@ sub_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	sub_mod_256,.-sub_mod_256
 
@@ -479,9 +405,6 @@ check_mod_256:
 	.byte	0xf3,0x0f,0x1e,0xfa
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rdi),%rax
 	movq	8(%rdi),%r9
 	movq	16(%rdi),%r10
@@ -503,15 +426,7 @@ check_mod_256:
 	cmovneq	%rdx,%rax
 	andq	%rsi,%rax
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	check_mod_256,.-check_mod_256
 
@@ -535,9 +450,6 @@ add_n_check_mod_256:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -581,15 +493,7 @@ add_n_check_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	add_n_check_mod_256,.-add_n_check_mod_256
 
@@ -613,9 +517,6 @@ sub_n_check_mod_256:
 .cfi_adjust_cfa_offset	8
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -658,24 +559,14 @@ sub_n_check_mod_256:
 	leaq	24(%rsp),%rsp
 .cfi_adjust_cfa_offset	-24
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 .size	sub_n_check_mod_256,.-sub_n_check_mod_256
 
 .section	.note.GNU-stack,"",@progbits
-#ifndef	__SGX_LVI_HARDENING__
 .section	.note.gnu.property,"a",@note
 	.long	4,2f-1f,5
 	.byte	0x47,0x4E,0x55,0
 1:	.long	0xc0000002,4,3
 .align	8
 2:
-#endif

@@ -39,9 +39,6 @@ $L$SEH_body_ct_inverse_mod_256::
 	mov	QWORD PTR[32+rsp],rdi
 	mov	QWORD PTR[40+rsp],rcx
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	r8,QWORD PTR[rsi]
 	mov	r9,QWORD PTR[8+rsi]
 	mov	r10,QWORD PTR[16+rsi]
@@ -573,9 +570,6 @@ endif
 
 	mov	r8,rdx
 	mov	r9,rdx
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	and	r8,QWORD PTR[rsi]
 	mov	r10,rdx
 	and	r9,QWORD PTR[8+rsi]
@@ -641,15 +635,7 @@ $L$SEH_epilogue_ct_inverse_mod_256::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_ct_inverse_mod_256::
 ct_inverse_mod_256	ENDP
@@ -799,15 +785,7 @@ __smulq_512x63	PROC PRIVATE
 	mov	QWORD PTR[48+rdi],r14
 	mov	QWORD PTR[56+rdi],r15
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_512x63	ENDP
 
 
@@ -916,15 +894,7 @@ __smulq_256x63	PROC PRIVATE
 	mov	QWORD PTR[24+rdi],r11
 	mov	QWORD PTR[32+rdi],rbp
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_256x63	ENDP
 
 ALIGN	32
@@ -1053,15 +1023,7 @@ __smulq_256_n_shift_by_31	PROC PRIVATE
 	add	rdx,rax
 	add	rcx,rax
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_256_n_shift_by_31	ENDP
 
 ALIGN	32
@@ -1115,15 +1077,7 @@ __ab_approximation_31_256	PROC PRIVATE
 
 	jmp	__inner_loop_31_256
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __ab_approximation_31_256	ENDP
 
 ALIGN	32
@@ -1171,15 +1125,7 @@ $L$oop_31_256::
 	sub	r12,r15
 	sub	r13,r15
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_31_256	ENDP
 
 
@@ -1223,15 +1169,7 @@ $L$oop_62_256::
 	sub	r15d,1
 	jnz	$L$oop_62_256
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_62_256	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)

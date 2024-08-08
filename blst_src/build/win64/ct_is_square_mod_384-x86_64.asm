@@ -35,9 +35,6 @@ $L$SEH_body_ct_is_square_mod_384::
 	lea	rax,QWORD PTR[((24+255))+rsp]
 	and	rax,-256
 
-ifdef	__SGX_LVI_HARDENING__
-	lfence
-endif
 	mov	r8,QWORD PTR[rdi]
 	mov	r9,QWORD PTR[8+rdi]
 	mov	r10,QWORD PTR[16+rdi]
@@ -127,15 +124,7 @@ $L$SEH_epilogue_ct_is_square_mod_384::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_ct_is_square_mod_384::
 ct_is_square_mod_384	ENDP
@@ -311,15 +300,7 @@ __smulq_384_n_shift_by_30	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r12
 	mov	QWORD PTR[40+rdi],r13
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_384_n_shift_by_30	ENDP
 
 ALIGN	32
@@ -384,15 +365,7 @@ __ab_approximation_30	PROC PRIVATE
 
 	jmp	__inner_loop_30
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __ab_approximation_30	ENDP
 
 ALIGN	32
@@ -453,15 +426,7 @@ $L$oop_30::
 	sub	rdx,r15
 	sub	rcx,r15
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_30	ENDP
 
 
@@ -500,15 +465,7 @@ $L$oop_48::
 	sub	edi,1
 	jnz	$L$oop_48
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_48	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)

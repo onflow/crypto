@@ -78,15 +78,7 @@ $L$SEH_epilogue_mul_mont_sparse_256::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_mul_mont_sparse_256::
 mul_mont_sparse_256	ENDP
@@ -161,15 +153,7 @@ $L$SEH_epilogue_sqr_mont_sparse_256::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_sqr_mont_sparse_256::
 sqr_mont_sparse_256	ENDP
@@ -451,15 +435,7 @@ __mulq_mont_sparse_256	PROC PRIVATE
 	mov	QWORD PTR[16+rsi],r15
 	mov	QWORD PTR[24+rsi],r9
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 __mulq_mont_sparse_256	ENDP
 PUBLIC	from_mont_256
@@ -542,15 +518,7 @@ $L$SEH_epilogue_from_mont_256::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_from_mont_256::
 from_mont_256	ENDP
@@ -641,15 +609,7 @@ $L$SEH_epilogue_redc_mont_256::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_redc_mont_256::
 redc_mont_256	ENDP
@@ -788,15 +748,7 @@ __mulq_by_1_mont_256	PROC PRIVATE
 	add	r15,r9
 	adc	rdx,0
 	mov	r9,rdx
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __mulq_by_1_mont_256	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)

@@ -38,9 +38,6 @@ ct_inverse_mod_256:
 	movq	%rdi,32(%rsp)
 	movq	%rcx,40(%rsp)
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -572,9 +569,6 @@ ct_inverse_mod_256:
 
 	movq	%rdx,%r8
 	movq	%rdx,%r9
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	andq	0(%rsi),%r8
 	movq	%rdx,%r10
 	andq	8(%rsi),%r9
@@ -640,15 +634,7 @@ ct_inverse_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_ct_inverse_mod_256:
 .def	__smulq_512x63;	.scl 3;	.type 32;	.endef
@@ -797,15 +783,7 @@ __smulq_512x63:
 	movq	%r14,48(%rdi)
 	movq	%r15,56(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 
 .def	__smulq_256x63;	.scl 3;	.type 32;	.endef
@@ -914,15 +892,7 @@ __smulq_256x63:
 	movq	%r11,24(%rdi)
 	movq	%rbp,32(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .def	__smulq_256_n_shift_by_31;	.scl 3;	.type 32;	.endef
 .p2align	5
@@ -1051,15 +1021,7 @@ __smulq_256_n_shift_by_31:
 	addq	%rax,%rdx
 	addq	%rax,%rcx
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .def	__ab_approximation_31_256;	.scl 3;	.type 32;	.endef
 .p2align	5
@@ -1113,15 +1075,7 @@ __ab_approximation_31_256:
 
 	jmp	__inner_loop_31_256
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .def	__inner_loop_31_256;	.scl 3;	.type 32;	.endef
 .p2align	5
@@ -1169,15 +1123,7 @@ __inner_loop_31_256:
 	subq	%r15,%r12
 	subq	%r15,%r13
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 
 .def	__inner_loop_62_256;	.scl 3;	.type 32;	.endef
@@ -1221,15 +1167,7 @@ __inner_loop_62_256:
 	subl	$1,%r15d
 	jnz	.Loop_62_256
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .section	.pdata
 .p2align	2

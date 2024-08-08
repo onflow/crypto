@@ -1,7 +1,6 @@
 .text
 
 .globl	div_3_limbs
-.hidden	div_3_limbs
 .type	div_3_limbs,%function
 .align	5
 div_3_limbs:
@@ -35,7 +34,6 @@ div_3_limbs:
 	ret
 .size	div_3_limbs,.-div_3_limbs
 .globl	quot_rem_128
-.hidden	quot_rem_128
 .type	quot_rem_128,%function
 .align	5
 quot_rem_128:
@@ -72,7 +70,6 @@ quot_rem_128:
 .size	quot_rem_128,.-quot_rem_128
 
 .globl	quot_rem_64
-.hidden	quot_rem_64
 .type	quot_rem_64,%function
 .align	5
 quot_rem_64:

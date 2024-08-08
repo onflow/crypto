@@ -1,20 +1,20 @@
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// DO NOT MODIFY THIS FILE!!
-// The file is generated from *.tgo by generate.py
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// +build cgo
+
+// DO NOT EDIT
+// File is copied from https://github.com/supranational/blst/blob/master/bindings/go/blst.go
+//
 /*
  * Copyright Supranational LLC
  * Licensed under the Apache License, Version 2.0, see LICENSE for details.
  * SPDX-License-Identifier: Apache-2.0
+ *
  */
 
 package blst
 
 // #cgo CFLAGS: -I${SRCDIR}/.. -I${SRCDIR}/../../build -I${SRCDIR}/../../src -D__BLST_CGO__ -fno-builtin-memcpy -fno-builtin-memset
 // #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
-// // no-asm 64-bit platforms from https://go.dev/doc/install/source
-// #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
-//
+// #cgo mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
 // #include "blst.h"
 //
 // #if defined(__x86_64__) && (defined(__unix__) || defined(__APPLE__))
@@ -35,6 +35,10 @@ package blst
 // }
 // #endif
 //
+// static size_t go_pairing_sizeof(size_t DST_len)
+// {   return (blst_pairing_sizeof() + DST_len + sizeof(blst_pairing) - 1) /
+//            sizeof(blst_pairing);
+// }
 // static void go_pairing_init(blst_pairing *new_ctx, bool hash_or_encode,
 //                             const byte *DST, size_t DST_len)
 // {   if (DST != NULL) {
@@ -141,18 +145,7 @@ package blst
 //     for (i = 2; i < n; i++)
 //         blst_fp12_mul(dst, dst, &in[i]);
 // }
-// static bool go_p1_affine_validate(const blst_p1_affine *p, bool infcheck)
-// {   if (infcheck && blst_p1_affine_is_inf(p))
-//         return 0;
-//     return blst_p1_affine_in_g1(p);
-// }
-// static bool go_p2_affine_validate(const blst_p2_affine *p, bool infcheck)
-// {   if (infcheck && blst_p2_affine_is_inf(p))
-//         return 0;
-//     return blst_p2_affine_in_g2(p);
-// }
 import "C"
-
 import (
 	"fmt"
 	"math/bits"
@@ -212,27 +205,6 @@ func SetMaxProcs(max int) {
 	maxProcs = max
 }
 
-func numThreads(maxThreads int) int {
-	numThreads := maxProcs
-
-	// take into consideration the possility that application reduced
-	// GOMAXPROCS after |maxProcs| was initialized
-	numProcs := runtime.GOMAXPROCS(0)
-	if maxProcs > numProcs {
-		numThreads = numProcs
-	}
-
-	if maxThreads > 0 && numThreads > maxThreads {
-		return maxThreads
-	}
-	return numThreads
-}
-
-var cgo_pairingSizeOf = C.blst_pairing_sizeof()
-var cgo_p1Generator = *C.blst_p1_generator()
-var cgo_p2Generator = *C.blst_p2_generator()
-var cgo_fp12One = *C.blst_fp12_one()
-
 // Secret key
 func (sk *SecretKey) Zeroize() {
 	var zero SecretKey
@@ -242,14 +214,18 @@ func (sk *SecretKey) Zeroize() {
 func KeyGen(ikm []byte, optional ...[]byte) *SecretKey {
 	var sk SecretKey
 	var info []byte
+	var infoP *C.byte
 	if len(optional) > 0 {
 		info = optional[0]
+		if len(info) > 0 {
+			infoP = (*C.byte)(&info[0])
+		}
 	}
 	if len(ikm) < 32 {
 		return nil
 	}
 	C.blst_keygen(&sk, (*C.byte)(&ikm[0]), C.size_t(len(ikm)),
-		ptrOrNil(info), C.size_t(len(info)))
+		infoP, C.size_t(len(info)))
 	// Postponing secret key zeroing till garbage collection can be too
 	// late to be effective, but every little bit helps...
 	runtime.SetFinalizer(&sk, func(sk *SecretKey) { sk.Zeroize() })
@@ -262,11 +238,15 @@ func KeyGenV3(ikm []byte, optional ...[]byte) *SecretKey {
 	}
 	var sk SecretKey
 	var info []byte
+	var infoP *C.byte
 	if len(optional) > 0 {
 		info = optional[0]
+		if len(info) > 0 {
+			infoP = (*C.byte)(&info[0])
+		}
 	}
 	C.blst_keygen_v3(&sk, (*C.byte)(&ikm[0]), C.size_t(len(ikm)),
-		ptrOrNil(info), C.size_t(len(info)))
+		infoP, C.size_t(len(info)))
 	// Postponing secret key zeroing till garbage collection can be too
 	// late to be effective, but every little bit helps...
 	runtime.SetFinalizer(&sk, func(sk *SecretKey) { sk.Zeroize() })
@@ -279,12 +259,16 @@ func KeyGenV45(ikm []byte, salt []byte, optional ...[]byte) *SecretKey {
 	}
 	var sk SecretKey
 	var info []byte
+	var infoP *C.byte
 	if len(optional) > 0 {
 		info = optional[0]
+		if len(info) > 0 {
+			infoP = (*C.byte)(&info[0])
+		}
 	}
 	C.blst_keygen_v4_5(&sk, (*C.byte)(&ikm[0]), C.size_t(len(ikm)),
 		(*C.byte)(&salt[0]), C.size_t(len(salt)),
-		ptrOrNil(info), C.size_t(len(info)))
+		infoP, C.size_t(len(info)))
 	// Postponing secret key zeroing till garbage collection can be too
 	// late to be effective, but every little bit helps...
 	runtime.SetFinalizer(&sk, func(sk *SecretKey) { sk.Zeroize() })
@@ -297,12 +281,16 @@ func KeyGenV5(ikm []byte, salt []byte, optional ...[]byte) *SecretKey {
 	}
 	var sk SecretKey
 	var info []byte
+	var infoP *C.byte
 	if len(optional) > 0 {
 		info = optional[0]
+		if len(info) > 0 {
+			infoP = (*C.byte)(&info[0])
+		}
 	}
 	C.blst_keygen_v5(&sk, (*C.byte)(&ikm[0]), C.size_t(len(ikm)),
 		(*C.byte)(&salt[0]), C.size_t(len(salt)),
-		ptrOrNil(info), C.size_t(len(info)))
+		infoP, C.size_t(len(info)))
 	// Postponing secret key zeroing till garbage collection can be too
 	// late to be effective, but every little bit helps...
 	runtime.SetFinalizer(&sk, func(sk *SecretKey) { sk.Zeroize() })
@@ -331,14 +319,14 @@ func (master *SecretKey) DeriveChildEip2333(child_index uint32) *SecretKey {
 }
 
 // Pairing
-func pairingSizeOf(DST_len C.size_t) int {
-	return int((cgo_pairingSizeOf + DST_len + 7) / 8)
-}
-
 func PairingCtx(hash_or_encode bool, DST []byte) Pairing {
 	DST_len := C.size_t(len(DST))
-	ctx := make([]C.blst_pairing, pairingSizeOf(DST_len))
-	C.go_pairing_init(&ctx[0], C.bool(hash_or_encode), ptrOrNil(DST), DST_len)
+	ctx := make([]C.blst_pairing, int(C.go_pairing_sizeof(DST_len)))
+	var uDST *C.byte
+	if DST_len > 0 {
+		uDST = (*C.byte)(&DST[0])
+	}
+	C.go_pairing_init(&ctx[0], C.bool(hash_or_encode), uDST, DST_len)
 	return ctx
 }
 
@@ -352,7 +340,7 @@ func PairingMerge(ctx Pairing, ctx1 Pairing) int {
 }
 
 func PairingFinalVerify(ctx Pairing, optional ...*Fp12) bool {
-	var gtsig *Fp12
+	var gtsig *Fp12 = nil
 	if len(optional) > 0 {
 		gtsig = optional[0]
 	}
@@ -370,7 +358,7 @@ func PairingAsFp12(ctx Pairing) *Fp12 {
 }
 
 func Fp12One() Fp12 {
-	return cgo_fp12One
+	return *C.blst_fp12_one()
 }
 
 func Fp12FinalVerify(pt1 *Fp12, pt2 *Fp12) bool {
@@ -463,14 +451,6 @@ func (pt1 *Fp12) Equals(pt2 *Fp12) bool {
 	return *pt1 == *pt2
 }
 
-func ptrOrNil(bytes []byte) *C.byte {
-	var ptr *C.byte
-	if len(bytes) > 0 {
-		ptr = (*C.byte)(&bytes[0])
-	}
-	return ptr
-}
-
 //
 // MIN-PK
 //
@@ -485,7 +465,8 @@ func (pk *P1Affine) From(s *Scalar) *P1Affine {
 }
 
 func (pk *P1Affine) KeyValidate() bool {
-	return bool(C.go_p1_affine_validate(pk, true))
+	return !bool(C.blst_p1_affine_is_inf(pk)) &&
+		bool(C.blst_p1_affine_in_g1(pk))
 }
 
 // sigInfcheck, check for infinity, is a way to avoid going
@@ -493,7 +474,10 @@ func (pk *P1Affine) KeyValidate() bool {
 // always cryptographically safe, but application might want
 // to guard against obviously bogus individual[!] signatures.
 func (sig *P2Affine) SigValidate(sigInfcheck bool) bool {
-	return bool(C.go_p2_affine_validate(sig, C.bool(sigInfcheck)))
+	if sigInfcheck && bool(C.blst_p2_affine_is_inf(sig)) {
+		return false
+	}
+	return bool(C.blst_p2_affine_in_g2(sig))
 }
 
 //
@@ -577,8 +561,9 @@ func (sig *P2Affine) AggregateVerify(sigGroupcheck bool,
 	pkFn := func(i uint32, _ *P1Affine) (*P1Affine, []byte) {
 		if useAugs {
 			return pks[i], augs[i]
+		} else {
+			return pks[i], nil
 		}
-		return pks[i], nil
 	}
 
 	return coreAggregateVerifyPkInG1(sigFn, sigGroupcheck, pkFn, pksVerify,
@@ -587,7 +572,7 @@ func (sig *P2Affine) AggregateVerify(sigGroupcheck bool,
 
 // Aggregate verify with compressed signature and public keys
 // Uses a dummy signature to get the correct type
-func (_ *P2Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
+func (dummy *P2Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
 	pks [][]byte, pksVerify bool, msgs []Message, dst []byte,
 	optional ...bool) bool { // useHash bool, usePksAsAugs bool
 
@@ -649,8 +634,13 @@ func coreAggregateVerifyPkInG1(sigFn sigGetterP2, sigGroupcheck bool,
 	}
 
 	numCores := runtime.GOMAXPROCS(0)
-	numThreads := numThreads(n)
-
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding pk,msg[,aug] tuple and
 	// repeat until n is exceeded.  The resulting accumulations will be
@@ -676,7 +666,7 @@ func coreAggregateVerifyPkInG1(sigFn sigGetterP2, sigGroupcheck bool,
 					// main thread has completed its miller loop before
 					// proceeding.
 					mutex.Lock()
-					mutex.Unlock() //nolint:staticcheck
+					mutex.Unlock()
 				}
 
 				// Pull Public Key and augmentation blob
@@ -747,8 +737,12 @@ func CoreVerifyPkInG1(pk *P1Affine, sig *P2Affine, hash_or_encode bool,
 	msg Message, dst []byte, optional ...[]byte) int {
 
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
 	}
 
 	if runtime.NumGoroutine() < maxProcs {
@@ -765,10 +759,19 @@ func CoreVerifyPkInG1(pk *P1Affine, sig *P2Affine, hash_or_encode bool,
 		return C.BLST_SUCCESS
 	}
 
+	var udst *C.byte
+	if len(dst) > 0 {
+		udst = (*C.byte)(&dst[0])
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
+	}
+
 	return int(C.blst_core_verify_pk_in_g1(pk, sig, C.bool(hash_or_encode),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug))))
+		umsg, C.size_t(len(msg)),
+		udst, C.size_t(len(dst)),
+		uaug, C.size_t(len(aug))))
 }
 
 // pks are assumed to be verified for proof of possession,
@@ -793,7 +796,7 @@ func (sig *P2Affine) FastAggregateVerify(sigGroupcheck bool,
 	return sig.Verify(sigGroupcheck, pkAff, false, msg, dst, optional...)
 }
 
-func (_ *P2Affine) MultipleAggregateVerify(sigs []*P2Affine,
+func (dummy *P2Affine) MultipleAggregateVerify(sigs []*P2Affine,
 	sigsGroupcheck bool, pks []*P1Affine, pksVerify bool,
 	msgs []Message, dst []byte, randFn func(*Scalar), randBits int,
 	optional ...interface{}) bool { // useHash
@@ -810,7 +813,7 @@ func (_ *P2Affine) MultipleAggregateVerify(sigs []*P2Affine,
 	}
 
 	paramsFn :=
-		func(work uint32, _ *P2Affine, _ *P1Affine, rand *Scalar) (
+		func(work uint32, sig *P2Affine, pk *P1Affine, rand *Scalar) (
 			*P2Affine, *P1Affine, *Scalar, []byte) {
 			randFn(rand)
 			var aug []byte
@@ -841,8 +844,14 @@ func multipleAggregateVerifyPkInG1(paramsFn mulAggGetterPkInG1,
 		useHash = optional[0]
 	}
 
-	numThreads := numThreads(n)
-
+	numCores := runtime.GOMAXPROCS(0)
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding pk,msg[,aug] tuple and
 	// repeat until n is exceeded.  The resulting accumulations will be
@@ -925,16 +934,7 @@ func (agg *P2Aggregate) Aggregate(elmts []*P2Affine,
 		return true
 	}
 	getter := func(i uint32, _ *P2Affine) *P2Affine { return elmts[i] }
-	return agg.coreAggregate(getter, groupcheck, len(elmts))
-}
-
-func (agg *P2Aggregate) AggregateWithRandomness(pointsIf interface{},
-	scalarsIf interface{}, nbits int, groupcheck bool) bool {
-	if groupcheck && !P2AffinesValidate(pointsIf) {
-		return false
-	}
-	agg.v = P2AffinesMult(pointsIf, scalarsIf, nbits)
-	return true
+	return agg.aggregate(getter, groupcheck, len(elmts))
 }
 
 // Aggregate compressed elements
@@ -950,7 +950,7 @@ func (agg *P2Aggregate) AggregateCompressed(elmts [][]byte,
 		}
 		return p
 	}
-	return agg.coreAggregate(getter, groupcheck, len(elmts))
+	return agg.aggregate(getter, groupcheck, len(elmts))
 }
 
 func (agg *P2Aggregate) AddAggregate(other *P2Aggregate) {
@@ -983,7 +983,7 @@ func (agg *P2Aggregate) ToAffine() *P2Affine {
 	return agg.v.ToAffine()
 }
 
-func (agg *P2Aggregate) coreAggregate(getter aggGetterP2, groupcheck bool,
+func (agg *P2Aggregate) aggregate(getter aggGetterP2, groupcheck bool,
 	n int) bool {
 
 	if n == 0 {
@@ -1085,7 +1085,8 @@ func (pk *P2Affine) From(s *Scalar) *P2Affine {
 }
 
 func (pk *P2Affine) KeyValidate() bool {
-	return bool(C.go_p2_affine_validate(pk, true))
+	return !bool(C.blst_p2_affine_is_inf(pk)) &&
+		bool(C.blst_p2_affine_in_g2(pk))
 }
 
 // sigInfcheck, check for infinity, is a way to avoid going
@@ -1093,7 +1094,10 @@ func (pk *P2Affine) KeyValidate() bool {
 // always cryptographically safe, but application might want
 // to guard against obviously bogus individual[!] signatures.
 func (sig *P1Affine) SigValidate(sigInfcheck bool) bool {
-	return bool(C.go_p1_affine_validate(sig, C.bool(sigInfcheck)))
+	if sigInfcheck && bool(C.blst_p1_affine_is_inf(sig)) {
+		return false
+	}
+	return bool(C.blst_p1_affine_in_g1(sig))
 }
 
 //
@@ -1177,8 +1181,9 @@ func (sig *P1Affine) AggregateVerify(sigGroupcheck bool,
 	pkFn := func(i uint32, _ *P2Affine) (*P2Affine, []byte) {
 		if useAugs {
 			return pks[i], augs[i]
+		} else {
+			return pks[i], nil
 		}
-		return pks[i], nil
 	}
 
 	return coreAggregateVerifyPkInG2(sigFn, sigGroupcheck, pkFn, pksVerify,
@@ -1187,7 +1192,7 @@ func (sig *P1Affine) AggregateVerify(sigGroupcheck bool,
 
 // Aggregate verify with compressed signature and public keys
 // Uses a dummy signature to get the correct type
-func (_ *P1Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
+func (dummy *P1Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
 	pks [][]byte, pksVerify bool, msgs []Message, dst []byte,
 	optional ...bool) bool { // useHash bool, usePksAsAugs bool
 
@@ -1249,8 +1254,13 @@ func coreAggregateVerifyPkInG2(sigFn sigGetterP1, sigGroupcheck bool,
 	}
 
 	numCores := runtime.GOMAXPROCS(0)
-	numThreads := numThreads(n)
-
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding pk,msg[,aug] tuple and
 	// repeat until n is exceeded.  The resulting accumulations will be
@@ -1276,7 +1286,7 @@ func coreAggregateVerifyPkInG2(sigFn sigGetterP1, sigGroupcheck bool,
 					// main thread has completed its miller loop before
 					// proceeding.
 					mutex.Lock()
-					mutex.Unlock() //nolint:staticcheck
+					mutex.Unlock()
 				}
 
 				// Pull Public Key and augmentation blob
@@ -1347,8 +1357,12 @@ func CoreVerifyPkInG2(pk *P2Affine, sig *P1Affine, hash_or_encode bool,
 	msg Message, dst []byte, optional ...[]byte) int {
 
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
 	}
 
 	if runtime.NumGoroutine() < maxProcs {
@@ -1365,10 +1379,19 @@ func CoreVerifyPkInG2(pk *P2Affine, sig *P1Affine, hash_or_encode bool,
 		return C.BLST_SUCCESS
 	}
 
+	var udst *C.byte
+	if len(dst) > 0 {
+		udst = (*C.byte)(&dst[0])
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
+	}
+
 	return int(C.blst_core_verify_pk_in_g2(pk, sig, C.bool(hash_or_encode),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug))))
+		umsg, C.size_t(len(msg)),
+		udst, C.size_t(len(dst)),
+		uaug, C.size_t(len(aug))))
 }
 
 // pks are assumed to be verified for proof of possession,
@@ -1393,7 +1416,7 @@ func (sig *P1Affine) FastAggregateVerify(sigGroupcheck bool,
 	return sig.Verify(sigGroupcheck, pkAff, false, msg, dst, optional...)
 }
 
-func (_ *P1Affine) MultipleAggregateVerify(sigs []*P1Affine,
+func (dummy *P1Affine) MultipleAggregateVerify(sigs []*P1Affine,
 	sigsGroupcheck bool, pks []*P2Affine, pksVerify bool,
 	msgs []Message, dst []byte, randFn func(*Scalar), randBits int,
 	optional ...interface{}) bool { // useHash
@@ -1410,7 +1433,7 @@ func (_ *P1Affine) MultipleAggregateVerify(sigs []*P1Affine,
 	}
 
 	paramsFn :=
-		func(work uint32, _ *P1Affine, _ *P2Affine, rand *Scalar) (
+		func(work uint32, sig *P1Affine, pk *P2Affine, rand *Scalar) (
 			*P1Affine, *P2Affine, *Scalar, []byte) {
 			randFn(rand)
 			var aug []byte
@@ -1441,8 +1464,14 @@ func multipleAggregateVerifyPkInG2(paramsFn mulAggGetterPkInG2,
 		useHash = optional[0]
 	}
 
-	numThreads := numThreads(n)
-
+	numCores := runtime.GOMAXPROCS(0)
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding pk,msg[,aug] tuple and
 	// repeat until n is exceeded.  The resulting accumulations will be
@@ -1525,16 +1554,7 @@ func (agg *P1Aggregate) Aggregate(elmts []*P1Affine,
 		return true
 	}
 	getter := func(i uint32, _ *P1Affine) *P1Affine { return elmts[i] }
-	return agg.coreAggregate(getter, groupcheck, len(elmts))
-}
-
-func (agg *P1Aggregate) AggregateWithRandomness(pointsIf interface{},
-	scalarsIf interface{}, nbits int, groupcheck bool) bool {
-	if groupcheck && !P1AffinesValidate(pointsIf) {
-		return false
-	}
-	agg.v = P1AffinesMult(pointsIf, scalarsIf, nbits)
-	return true
+	return agg.aggregate(getter, groupcheck, len(elmts))
 }
 
 // Aggregate compressed elements
@@ -1550,7 +1570,7 @@ func (agg *P1Aggregate) AggregateCompressed(elmts [][]byte,
 		}
 		return p
 	}
-	return agg.coreAggregate(getter, groupcheck, len(elmts))
+	return agg.aggregate(getter, groupcheck, len(elmts))
 }
 
 func (agg *P1Aggregate) AddAggregate(other *P1Aggregate) {
@@ -1583,7 +1603,7 @@ func (agg *P1Aggregate) ToAffine() *P1Affine {
 	return agg.v.ToAffine()
 }
 
-func (agg *P1Aggregate) coreAggregate(getter aggGetterP1, groupcheck bool,
+func (agg *P1Aggregate) aggregate(getter aggGetterP1, groupcheck bool,
 	n int) bool {
 
 	if n == 0 {
@@ -1674,15 +1694,23 @@ func PairingAggregatePkInG1(ctx Pairing, PK *P1Affine, pkValidate bool,
 	sig *P2Affine, sigGroupcheck bool, msg []byte,
 	optional ...[]byte) int { // aug
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
 	}
 
 	r := C.blst_pairing_chk_n_aggr_pk_in_g1(&ctx[0],
 		PK, C.bool(pkValidate),
 		sig, C.bool(sigGroupcheck),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+		umsg, C.size_t(len(msg)),
+		uaug, C.size_t(len(aug)))
 
 	return int(r)
 }
@@ -1692,16 +1720,24 @@ func PairingMulNAggregatePkInG1(ctx Pairing, PK *P1Affine, pkValidate bool,
 	rand *Scalar, randBits int, msg []byte,
 	optional ...[]byte) int { // aug
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
 	}
 
 	r := C.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(&ctx[0],
 		PK, C.bool(pkValidate),
 		sig, C.bool(sigGroupcheck),
 		&rand.b[0], C.size_t(randBits),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+		umsg, C.size_t(len(msg)),
+		uaug, C.size_t(len(aug)))
 
 	return int(r)
 }
@@ -1746,7 +1782,7 @@ func (p1 *P1Affine) InG1() bool {
 	return bool(C.blst_p1_affine_in_g1(p1))
 }
 
-func (_ *P1Affine) BatchUncompress(in [][]byte) []*P1Affine {
+func (dummy *P1Affine) BatchUncompress(in [][]byte) []*P1Affine {
 	// Allocate space for all of the resulting points. Later we'll save pointers
 	// and return those so that the result could be used in other functions,
 	// such as MultipleAggregateVerify.
@@ -1754,8 +1790,14 @@ func (_ *P1Affine) BatchUncompress(in [][]byte) []*P1Affine {
 	points := make([]P1Affine, n)
 	pointsPtrs := make([]*P1Affine, n)
 
-	numThreads := numThreads(n)
-
+	numCores := runtime.GOMAXPROCS(0)
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding point, and
 	// repeat until n is exceeded. Each thread will send a result (true for
@@ -1874,7 +1916,7 @@ func (p1 *P1) Sub(pointIf interface{}) *P1 {
 }
 
 func P1Generator() *P1 {
-	return &cgo_p1Generator
+	return C.blst_p1_generator()
 }
 
 // 'acc += point * scalar', passing 'nil' for 'point' means "use the
@@ -1934,14 +1976,29 @@ func HashToG1(msg []byte, dst []byte,
 	optional ...[]byte) *P1 { // aug
 	var q P1
 
-	var aug []byte
-	if len(optional) > 0 {
-		aug = optional[0]
+	// Handle zero length message
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
 	}
 
-	C.blst_hash_to_g1(&q, ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
+	var aug []byte
+	var augC *C.byte
+	if len(optional) > 0 {
+		aug = optional[0]
+		if len(aug) > 0 {
+			augC = (*C.byte)(&aug[0])
+		}
+	}
+
+	C.blst_hash_to_g1(&q, msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst)),
+		augC, C.size_t(len(aug)))
 	return &q
 }
 
@@ -1949,14 +2006,29 @@ func EncodeToG1(msg []byte, dst []byte,
 	optional ...[]byte) *P1 { // aug
 	var q P1
 
-	var aug []byte
-	if len(optional) > 0 {
-		aug = optional[0]
+	// Handle zero length message
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
 	}
 
-	C.blst_encode_to_g1(&q, ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
+	var aug []byte
+	var augC *C.byte
+	if len(optional) > 0 {
+		aug = optional[0]
+		if len(aug) > 0 {
+			augC = (*C.byte)(&aug[0])
+		}
+	}
+
+	C.blst_encode_to_g1(&q, msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst)),
+		augC, C.size_t(len(aug)))
 	return &q
 }
 
@@ -2128,9 +2200,13 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 		panic(fmt.Sprintf("unsupported type %T", val))
 	}
 
-	numThreads := numThreads(0)
+	numThreads := maxProcs
+	numCores := runtime.GOMAXPROCS(0)
+	if numCores < maxProcs {
+		numThreads = numCores
+	}
 
-	if numThreads < 2 {
+	if numThreads < 2 || npoints < 32 {
 		sz := int(C.blst_p1s_mult_pippenger_scratch_sizeof(C.size_t(npoints))) / 8
 		scratch := make([]uint64, sz)
 
@@ -2157,7 +2233,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 			p_scalars = &scalars[0]
 		case []Scalar:
 			if nbits > 248 {
-				scalarsBySlice[0] = &val[0].b[0]
+				scalarsBySlice[0] = (*C.byte)(&val[0].b[0])
 				p_scalars = &scalarsBySlice[0]
 			} else {
 				p_scalars = &scalars[0]
@@ -2171,71 +2247,6 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 		C.blst_p1s_mult_pippenger(&ret, p_points, C.size_t(npoints),
 			p_scalars, C.size_t(nbits),
 			(*C.limb_t)(&scratch[0]))
-
-		for i := range scalars {
-			scalars[i] = nil
-		}
-
-		return &ret
-	}
-
-	if npoints < 32 {
-		if numThreads > npoints {
-			numThreads = npoints
-		}
-
-		curItem := uint32(0)
-		msgs := make(chan P1, numThreads)
-
-		for tid := 0; tid < numThreads; tid++ {
-			go func() {
-				var acc P1
-
-				for {
-					workItem := int(atomic.AddUint32(&curItem, 1) - 1)
-					if workItem >= npoints {
-						break
-					}
-
-					var point *P1Affine
-					switch val := pointsIf.(type) {
-					case []*P1Affine:
-						point = val[workItem]
-					case []P1Affine:
-						point = &val[workItem]
-					case P1Affines:
-						point = &val[workItem]
-					}
-
-					var scalar *C.byte
-					switch val := scalarsIf.(type) {
-					case []byte:
-						scalar = (*C.byte)(&val[workItem*nbytes])
-					case [][]byte:
-						scalar = scalars[workItem]
-					case []Scalar:
-						if nbits > 248 {
-							scalar = &val[workItem].b[0]
-						} else {
-							scalar = scalars[workItem]
-						}
-					case []*Scalar:
-						scalar = scalars[workItem]
-					}
-
-					C.go_p1_mult_n_acc(&acc, &point.x, true,
-						scalar, C.size_t(nbits))
-				}
-
-				msgs <- acc
-			}()
-		}
-
-		ret := <-msgs
-		for tid := 1; tid < numThreads; tid++ {
-			point := <-msgs
-			C.blst_p1_add_or_double(&ret, &ret, &point)
-		}
 
 		for i := range scalars {
 			scalars[i] = nil
@@ -2322,7 +2333,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 					p_scalars = &scalars[x]
 				case []Scalar:
 					if nbits > 248 {
-						scalarsBySlice[0] = &val[x].b[0]
+						scalarsBySlice[0] = (*C.byte)(&val[x].b[0])
 						p_scalars = &scalarsBySlice[0]
 					} else {
 						p_scalars = &scalars[x]
@@ -2387,107 +2398,27 @@ func (points P1Affines) Mult(scalarsIf interface{}, nbits int) *P1 {
 func (points P1s) Mult(scalarsIf interface{}, nbits int) *P1 {
 	return points.ToAffine().Mult(scalarsIf, nbits)
 }
-
-//
-// Group-check
-//
-
-func P1AffinesValidate(pointsIf interface{}) bool {
-	var npoints int
-	switch val := pointsIf.(type) {
-	case []*P1Affine:
-		npoints = len(val)
-	case []P1Affine:
-		npoints = len(val)
-	case P1Affines:
-		npoints = len(val)
-	default:
-		panic(fmt.Sprintf("unsupported type %T", val))
-	}
-
-	numThreads := numThreads(npoints)
-
-	if numThreads < 2 {
-		for i := 0; i < npoints; i++ {
-			var point *P1Affine
-
-			switch val := pointsIf.(type) {
-			case []*P1Affine:
-				point = val[i]
-			case []P1Affine:
-				point = &val[i]
-			case P1Affines:
-				point = &val[i]
-			default:
-				panic(fmt.Sprintf("unsupported type %T", val))
-			}
-
-			if !C.go_p1_affine_validate(point, true) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	valid := int32(1)
-	curItem := uint32(0)
-
-	var wg sync.WaitGroup
-	wg.Add(numThreads)
-
-	for tid := 0; tid < numThreads; tid++ {
-		go func() {
-			for atomic.LoadInt32(&valid) != 0 {
-				work := atomic.AddUint32(&curItem, 1) - 1
-				if work >= uint32(npoints) {
-					break
-				}
-
-				var point *P1Affine
-
-				switch val := pointsIf.(type) {
-				case []*P1Affine:
-					point = val[work]
-				case []P1Affine:
-					point = &val[work]
-				case P1Affines:
-					point = &val[work]
-				default:
-					panic(fmt.Sprintf("unsupported type %T", val))
-				}
-
-				if !C.go_p1_affine_validate(point, true) {
-					atomic.StoreInt32(&valid, 0)
-					break
-				}
-			}
-
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
-
-	return atomic.LoadInt32(&valid) != 0
-}
-
-func (points P1Affines) Validate() bool {
-	return P1AffinesValidate(points)
-}
 func PairingAggregatePkInG2(ctx Pairing, PK *P2Affine, pkValidate bool,
 	sig *P1Affine, sigGroupcheck bool, msg []byte,
 	optional ...[]byte) int { // aug
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
 	}
 
 	r := C.blst_pairing_chk_n_aggr_pk_in_g2(&ctx[0],
 		PK, C.bool(pkValidate),
 		sig, C.bool(sigGroupcheck),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+		umsg, C.size_t(len(msg)),
+		uaug, C.size_t(len(aug)))
 
 	return int(r)
 }
@@ -2497,16 +2428,24 @@ func PairingMulNAggregatePkInG2(ctx Pairing, PK *P2Affine, pkValidate bool,
 	rand *Scalar, randBits int, msg []byte,
 	optional ...[]byte) int { // aug
 	var aug []byte
+	var uaug *C.byte
 	if len(optional) > 0 {
 		aug = optional[0]
+		if len(aug) > 0 {
+			uaug = (*C.byte)(&aug[0])
+		}
+	}
+	var umsg *C.byte
+	if len(msg) > 0 {
+		umsg = (*C.byte)(&msg[0])
 	}
 
 	r := C.blst_pairing_chk_n_mul_n_aggr_pk_in_g2(&ctx[0],
 		PK, C.bool(pkValidate),
 		sig, C.bool(sigGroupcheck),
 		&rand.b[0], C.size_t(randBits),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+		umsg, C.size_t(len(msg)),
+		uaug, C.size_t(len(aug)))
 
 	return int(r)
 }
@@ -2551,7 +2490,7 @@ func (p2 *P2Affine) InG2() bool {
 	return bool(C.blst_p2_affine_in_g2(p2))
 }
 
-func (_ *P2Affine) BatchUncompress(in [][]byte) []*P2Affine {
+func (dummy *P2Affine) BatchUncompress(in [][]byte) []*P2Affine {
 	// Allocate space for all of the resulting points. Later we'll save pointers
 	// and return those so that the result could be used in other functions,
 	// such as MultipleAggregateVerify.
@@ -2559,8 +2498,14 @@ func (_ *P2Affine) BatchUncompress(in [][]byte) []*P2Affine {
 	points := make([]P2Affine, n)
 	pointsPtrs := make([]*P2Affine, n)
 
-	numThreads := numThreads(n)
-
+	numCores := runtime.GOMAXPROCS(0)
+	numThreads := maxProcs
+	if numThreads > numCores {
+		numThreads = numCores
+	}
+	if numThreads > n {
+		numThreads = n
+	}
 	// Each thread will determine next message to process by atomically
 	// incrementing curItem, process corresponding point, and
 	// repeat until n is exceeded. Each thread will send a result (true for
@@ -2679,7 +2624,7 @@ func (p2 *P2) Sub(pointIf interface{}) *P2 {
 }
 
 func P2Generator() *P2 {
-	return &cgo_p2Generator
+	return C.blst_p2_generator()
 }
 
 // 'acc += point * scalar', passing 'nil' for 'point' means "use the
@@ -2739,14 +2684,29 @@ func HashToG2(msg []byte, dst []byte,
 	optional ...[]byte) *P2 { // aug
 	var q P2
 
-	var aug []byte
-	if len(optional) > 0 {
-		aug = optional[0]
+	// Handle zero length message
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
 	}
 
-	C.blst_hash_to_g2(&q, ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
+	var aug []byte
+	var augC *C.byte
+	if len(optional) > 0 {
+		aug = optional[0]
+		if len(aug) > 0 {
+			augC = (*C.byte)(&aug[0])
+		}
+	}
+
+	C.blst_hash_to_g2(&q, msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst)),
+		augC, C.size_t(len(aug)))
 	return &q
 }
 
@@ -2754,14 +2714,29 @@ func EncodeToG2(msg []byte, dst []byte,
 	optional ...[]byte) *P2 { // aug
 	var q P2
 
-	var aug []byte
-	if len(optional) > 0 {
-		aug = optional[0]
+	// Handle zero length message
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
 	}
 
-	C.blst_encode_to_g2(&q, ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)),
-		ptrOrNil(aug), C.size_t(len(aug)))
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
+	var aug []byte
+	var augC *C.byte
+	if len(optional) > 0 {
+		aug = optional[0]
+		if len(aug) > 0 {
+			augC = (*C.byte)(&aug[0])
+		}
+	}
+
+	C.blst_encode_to_g2(&q, msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst)),
+		augC, C.size_t(len(aug)))
 	return &q
 }
 
@@ -2933,9 +2908,13 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 		panic(fmt.Sprintf("unsupported type %T", val))
 	}
 
-	numThreads := numThreads(0)
+	numThreads := maxProcs
+	numCores := runtime.GOMAXPROCS(0)
+	if numCores < maxProcs {
+		numThreads = numCores
+	}
 
-	if numThreads < 2 {
+	if numThreads < 2 || npoints < 32 {
 		sz := int(C.blst_p2s_mult_pippenger_scratch_sizeof(C.size_t(npoints))) / 8
 		scratch := make([]uint64, sz)
 
@@ -2962,7 +2941,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 			p_scalars = &scalars[0]
 		case []Scalar:
 			if nbits > 248 {
-				scalarsBySlice[0] = &val[0].b[0]
+				scalarsBySlice[0] = (*C.byte)(&val[0].b[0])
 				p_scalars = &scalarsBySlice[0]
 			} else {
 				p_scalars = &scalars[0]
@@ -2976,71 +2955,6 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 		C.blst_p2s_mult_pippenger(&ret, p_points, C.size_t(npoints),
 			p_scalars, C.size_t(nbits),
 			(*C.limb_t)(&scratch[0]))
-
-		for i := range scalars {
-			scalars[i] = nil
-		}
-
-		return &ret
-	}
-
-	if npoints < 32 {
-		if numThreads > npoints {
-			numThreads = npoints
-		}
-
-		curItem := uint32(0)
-		msgs := make(chan P2, numThreads)
-
-		for tid := 0; tid < numThreads; tid++ {
-			go func() {
-				var acc P2
-
-				for {
-					workItem := int(atomic.AddUint32(&curItem, 1) - 1)
-					if workItem >= npoints {
-						break
-					}
-
-					var point *P2Affine
-					switch val := pointsIf.(type) {
-					case []*P2Affine:
-						point = val[workItem]
-					case []P2Affine:
-						point = &val[workItem]
-					case P2Affines:
-						point = &val[workItem]
-					}
-
-					var scalar *C.byte
-					switch val := scalarsIf.(type) {
-					case []byte:
-						scalar = (*C.byte)(&val[workItem*nbytes])
-					case [][]byte:
-						scalar = scalars[workItem]
-					case []Scalar:
-						if nbits > 248 {
-							scalar = &val[workItem].b[0]
-						} else {
-							scalar = scalars[workItem]
-						}
-					case []*Scalar:
-						scalar = scalars[workItem]
-					}
-
-					C.go_p2_mult_n_acc(&acc, &point.x, true,
-						scalar, C.size_t(nbits))
-				}
-
-				msgs <- acc
-			}()
-		}
-
-		ret := <-msgs
-		for tid := 1; tid < numThreads; tid++ {
-			point := <-msgs
-			C.blst_p2_add_or_double(&ret, &ret, &point)
-		}
 
 		for i := range scalars {
 			scalars[i] = nil
@@ -3127,7 +3041,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 					p_scalars = &scalars[x]
 				case []Scalar:
 					if nbits > 248 {
-						scalarsBySlice[0] = &val[x].b[0]
+						scalarsBySlice[0] = (*C.byte)(&val[x].b[0])
 						p_scalars = &scalarsBySlice[0]
 					} else {
 						p_scalars = &scalars[x]
@@ -3193,94 +3107,6 @@ func (points P2s) Mult(scalarsIf interface{}, nbits int) *P2 {
 	return points.ToAffine().Mult(scalarsIf, nbits)
 }
 
-//
-// Group-check
-//
-
-func P2AffinesValidate(pointsIf interface{}) bool {
-	var npoints int
-	switch val := pointsIf.(type) {
-	case []*P2Affine:
-		npoints = len(val)
-	case []P2Affine:
-		npoints = len(val)
-	case P2Affines:
-		npoints = len(val)
-	default:
-		panic(fmt.Sprintf("unsupported type %T", val))
-	}
-
-	numThreads := numThreads(npoints)
-
-	if numThreads < 2 {
-		for i := 0; i < npoints; i++ {
-			var point *P2Affine
-
-			switch val := pointsIf.(type) {
-			case []*P2Affine:
-				point = val[i]
-			case []P2Affine:
-				point = &val[i]
-			case P2Affines:
-				point = &val[i]
-			default:
-				panic(fmt.Sprintf("unsupported type %T", val))
-			}
-
-			if !C.go_p2_affine_validate(point, true) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	valid := int32(1)
-	curItem := uint32(0)
-
-	var wg sync.WaitGroup
-	wg.Add(numThreads)
-
-	for tid := 0; tid < numThreads; tid++ {
-		go func() {
-			for atomic.LoadInt32(&valid) != 0 {
-				work := atomic.AddUint32(&curItem, 1) - 1
-				if work >= uint32(npoints) {
-					break
-				}
-
-				var point *P2Affine
-
-				switch val := pointsIf.(type) {
-				case []*P2Affine:
-					point = val[work]
-				case []P2Affine:
-					point = &val[work]
-				case P2Affines:
-					point = &val[work]
-				default:
-					panic(fmt.Sprintf("unsupported type %T", val))
-				}
-
-				if !C.go_p2_affine_validate(point, true) {
-					atomic.StoreInt32(&valid, 0)
-					break
-				}
-			}
-
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
-
-	return atomic.LoadInt32(&valid) != 0
-}
-
-func (points P2Affines) Validate() bool {
-	return P2AffinesValidate(points)
-}
-
 func parseOpts(optional ...interface{}) ([]byte, [][]byte, bool, bool) {
 	var aug [][]byte     // For aggregate verify
 	var augSingle []byte // For signing
@@ -3299,6 +3125,15 @@ func parseOpts(optional ...interface{}) ([]byte, [][]byte, bool, bool) {
 		}
 	}
 	return augSingle, aug, useHash, true
+}
+
+func bytesAllZero(s []byte) bool {
+	for _, v := range s {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // These methods are inefficient because of cgo call overhead. For this
@@ -3372,8 +3207,18 @@ func (s *Scalar) HashTo(msg []byte, dst []byte) bool {
 func HashToScalar(msg []byte, dst []byte) *Scalar {
 	var ret Scalar
 
-	if C.go_hash_to_scalar(&ret, ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst))) {
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
+	}
+
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
+	if C.go_hash_to_scalar(&ret, msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst))) {
 		return &ret
 	}
 
@@ -3456,7 +3301,7 @@ func PrintBytes(val []byte, name string) {
 
 func (s *Scalar) Print(name string) {
 	arr := s.ToBEndian()
-	PrintBytes(arr, name)
+	PrintBytes(arr[:], name)
 }
 
 func (p *P1Affine) Print(name string) {
@@ -3530,15 +3375,26 @@ func (e1 *P2) Equals(e2 *P2) bool {
 func expandMessageXmd(msg []byte, dst []byte, len_in_bytes int) []byte {
 	ret := make([]byte, len_in_bytes)
 
+	var msgC *C.byte
+	if len(msg) > 0 {
+		msgC = (*C.byte)(&msg[0])
+	}
+
+	var dstC *C.byte
+	if len(dst) > 0 {
+		dstC = (*C.byte)(&dst[0])
+	}
+
 	C.blst_expand_message_xmd((*C.byte)(&ret[0]), C.size_t(len(ret)),
-		ptrOrNil(msg), C.size_t(len(msg)),
-		ptrOrNil(dst), C.size_t(len(dst)))
+		msgC, C.size_t(len(msg)),
+		dstC, C.size_t(len(dst)))
 	return ret
 }
 
-func breakdown(nbits, window, ncpus int) (nx int, ny int, wnd int) {
+func breakdown(nbits, window, ncpus int) (int, int, int) {
+	var nx, ny, wnd int
 
-	if nbits > window*ncpus { //nolint:nestif
+	if nbits > window*ncpus {
 		nx = 1
 		wnd = bits.Len(uint(ncpus) / 4)
 		if (window + wnd) > 18 {

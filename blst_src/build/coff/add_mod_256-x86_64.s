@@ -25,9 +25,6 @@ add_mod_256:
 .LSEH_body_add_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -69,15 +66,7 @@ add_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_add_mod_256:
 
@@ -107,9 +96,6 @@ mul_by_3_mod_256:
 
 
 	movq	%rdx,%rcx
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -131,15 +117,7 @@ mul_by_3_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_mul_by_3_mod_256:
 
@@ -169,15 +147,7 @@ __lshift_mod_256:
 	cmovcq	%rbx,%r10
 	cmovcq	%rbp,%r11
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rax
-	lfence
-	jmpq	*%rax
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 
 
@@ -206,9 +176,6 @@ lshift_mod_256:
 .LSEH_body_lshift_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -236,15 +203,7 @@ lshift_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_lshift_mod_256:
 
@@ -274,9 +233,6 @@ rshift_mod_256:
 .LSEH_body_rshift_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%rbp
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -336,15 +292,7 @@ rshift_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_rshift_mod_256:
 
@@ -374,9 +322,6 @@ cneg_mod_256:
 .LSEH_body_cneg_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r12
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -425,15 +370,7 @@ cneg_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_cneg_mod_256:
 
@@ -463,9 +400,6 @@ sub_mod_256:
 .LSEH_body_sub_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -505,15 +439,7 @@ sub_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_sub_mod_256:
 
@@ -532,9 +458,6 @@ check_mod_256:
 
 	movq	%rcx,%rdi
 	movq	%rdx,%rsi
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rdi),%rax
 	movq	8(%rdi),%r9
 	movq	16(%rdi),%r10
@@ -559,15 +482,7 @@ check_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_check_mod_256:
 
@@ -597,9 +512,6 @@ add_n_check_mod_256:
 .LSEH_body_add_n_check_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -646,15 +558,7 @@ add_n_check_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_add_n_check_mod_256:
 
@@ -684,9 +588,6 @@ sub_n_check_mod_256:
 .LSEH_body_sub_n_check_mod_256:
 
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rsi),%r8
 	movq	8(%rsi),%r9
 	movq	16(%rsi),%r10
@@ -732,15 +633,7 @@ sub_n_check_mod_256:
 	mov	8(%rsp),%rdi
 	mov	16(%rsp),%rsi
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 
 .LSEH_end_sub_n_check_mod_256:
 .section	.pdata

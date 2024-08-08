@@ -1,7 +1,6 @@
 .text
 
 .globl	div_3_limbs
-
 .def	div_3_limbs;
 .type	32;
 .endef
@@ -37,7 +36,6 @@ div_3_limbs:
 	ret
 
 .globl	quot_rem_128
-
 .def	quot_rem_128;
 .type	32;
 .endef
@@ -76,7 +74,6 @@ quot_rem_128:
 
 
 .globl	quot_rem_64
-
 .def	quot_rem_64;
 .type	32;
 .endef

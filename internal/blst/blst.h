@@ -3,6 +3,7 @@
  * Licensed under the Apache License, Version 2.0, see LICENSE for details.
  * SPDX-License-Identifier: Apache-2.0
  */
+
 #ifndef __BLST_H__
 #define __BLST_H__
 
@@ -25,13 +26,10 @@ typedef __UINT64_TYPE__ uint64_t;
 extern "C" {
 #elif defined(__BLST_CGO__)
 typedef _Bool bool; /* it's assumed that cgo calls modern enough compiler */
-#elif !defined(bool)
-# if defined(__STDC_VERSION__) && __STDC_VERSION__>=199901
-#  define bool _Bool
-# else
-#  define bool int
-# endif
-# define __blst_h_bool__
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__>=199901
+# define bool _Bool
+#else
+# define bool int
 #endif
 
 #ifdef SWIG
@@ -481,8 +479,5 @@ extern const blst_p2_affine BLS12_381_NEG_G2;
 
 #ifdef __cplusplus
 }
-#elif defined(__blst_h_bool__)
-# undef __blst_h_bool__
-# undef bool
 #endif
 #endif

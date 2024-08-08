@@ -34,9 +34,6 @@ _ct_is_square_mod_384:
 	leaq	24+255(%rsp),%rax
 	andq	$-256,%rax
 
-#ifdef	__SGX_LVI_HARDENING__
-	lfence
-#endif
 	movq	0(%rdi),%r8
 	movq	8(%rdi),%r9
 	movq	16(%rdi),%r10
@@ -123,15 +120,7 @@ L$oop_is_square:
 	leaq	48(%r8),%rsp
 .cfi_adjust_cfa_offset	-536-8*6
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc	
 
 
@@ -307,15 +296,7 @@ __smulq_384_n_shift_by_30:
 	movq	%r12,32(%rdi)
 	movq	%r13,40(%rdi)
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -382,15 +363,7 @@ __ab_approximation_30:
 
 	jmp	__inner_loop_30
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -453,15 +426,7 @@ L$oop_30:
 	subq	%r15,%rdx
 	subq	%r15,%rcx
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%r8
-	lfence
-	jmpq	*%r8
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 
 
@@ -502,14 +467,6 @@ L$oop_48:
 	subl	$1,%edi
 	jnz	L$oop_48
 
-	
-#ifdef	__SGX_LVI_HARDENING__
-	popq	%rdx
-	lfence
-	jmpq	*%rdx
-	ud2
-#else
 	.byte	0xf3,0xc3
-#endif
 .cfi_endproc
 

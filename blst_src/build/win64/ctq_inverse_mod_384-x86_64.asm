@@ -548,15 +548,7 @@ $L$SEH_epilogue_ct_inverse_mod_383::
 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD PTR[16+rsp]
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 
 $L$SEH_end_ct_inverse_mod_383::
 ct_inverse_mod_383	ENDP
@@ -769,15 +761,7 @@ __smulq_767x63	PROC PRIVATE
 	mov	QWORD PTR[80+rdx],rcx
 	mov	QWORD PTR[88+rdx],rax
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_767x63	ENDP
 
 ALIGN	32
@@ -919,15 +903,7 @@ __smulq_383x63	PROC PRIVATE
 	mov	QWORD PTR[32+rdi],r12
 	mov	QWORD PTR[40+rdi],r13
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_383x63	ENDP
 
 ALIGN	32
@@ -1104,15 +1080,7 @@ __smulq_383_n_shift_by_62	PROC PRIVATE
 	add	rdx,rbp
 	add	rcx,rbp
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	r8
-	lfence
-	jmp	r8
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __smulq_383_n_shift_by_62	ENDP
 
 ALIGN	32
@@ -1168,15 +1136,7 @@ __ab_approximation_62	PROC PRIVATE
 
 	jmp	__inner_loop_62
 
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rdx
-	lfence
-	jmp	rdx
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __ab_approximation_62	ENDP
 
 ALIGN	8
@@ -1229,15 +1189,7 @@ $L$oop_62::
 	jnz	$L$oop_62
 
 	mov	rsi,QWORD PTR[8+rsp]
-	
-ifdef	__SGX_LVI_HARDENING__
-	pop	rax
-	lfence
-	jmp	rax
-	ud2
-else
-	DB	0F3h,0C3h
-endif
+	DB	0F3h,0C3h		;repret
 __inner_loop_62	ENDP
 .text$	ENDS
 .pdata	SEGMENT READONLY ALIGN(4)
