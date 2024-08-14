@@ -3,7 +3,7 @@ module github.com/onflow/crypto
 go 1.22
 
 require (
-	github.com/btcsuite/btcd/btcec/v2 v2.2.1
+	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/crypto v0.26.0
