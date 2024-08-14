@@ -43,7 +43,7 @@ typedef struct {
 // `Fp2` is equivalent to type `vec384x` (used internally by BLST for F_p^2
 // elements). `Fp2` does not need to be exported to cgo.
 typedef vec384x Fp2;
-// helpers to get "real" and "imaginary" Fp elements from Fp2 pointers
+// helpers to get "real" and "imaginary" F_p elements from Fp2 pointers
 #define real(p) ((*(p))[0])
 #define imag(p) ((*(p))[1])
 

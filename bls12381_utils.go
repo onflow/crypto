@@ -27,7 +27,7 @@ package crypto
 
 // #cgo CFLAGS: -I${SRCDIR}/ -I${SRCDIR}/blst_src -I${SRCDIR}/blst_src/build -D__BLST_CGO__ -Wall -fno-builtin-memcpy -fno-builtin-memset -Wno-unused-function -Wno-unused-macros -Wno-unused-variable
 // #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
-// #cgo mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
+// #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
 // #include "bls12381_utils.h"
 //
 // #if defined(__x86_64__) && (defined(__unix__) || defined(__APPLE__))
@@ -144,7 +144,7 @@ func generatorScalarMultG2(res *pointE2, expo *scalar) {
 	C.G2_mult_gen_to_affine((*C.E2)(res), (*C.Fr)(expo))
 }
 
-// comparison in Fr where r is the group order of G1/G2
+// comparison in F_r where r is the group order of G1/G2
 // (both scalars should be reduced mod r)
 func (x *scalar) equals(other *scalar) bool {
 	return bool(C.Fr_is_equal((*C.Fr)(x), (*C.Fr)(other)))
@@ -160,7 +160,7 @@ func (p *pointE2) equals(other *pointE2) bool {
 	return bool(C.E2_is_equal((*C.E2)(p), (*C.E2)(other)))
 }
 
-// Comparison to zero in Fr.
+// Comparison to zero in F_r.
 // Scalar must be already reduced modulo r
 func (x *scalar) isZero() bool {
 	return bool(C.Fr_is_zero((*C.Fr)(x)))
@@ -222,7 +222,7 @@ func writePointE1(dest []byte, a *pointE1) {
 	C.E1_write_bytes((*C.uchar)(&dest[0]), (*C.E1)(a))
 }
 
-// read an Fr* element from a byte slice
+// read an F_r* element from a byte slice
 // and stores it into a `scalar` type element.
 func readScalarFrStar(a *scalar, src []byte) error {
 	read := C.Fr_star_read_bytes(

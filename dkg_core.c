@@ -18,8 +18,8 @@
 
 #include "dkg_include.h"
 
-// computes P(x) = a_0 + a_1*x + .. + a_n x^n in F_r
-// where `x` is a small integer (byte) and `degree` is P's degree n.
+// computes P(x) = a_0 + a_1*x + .. + a_t x^t in F_r[X]
+// where `x` is a small integer (byte) and `degree` is P's degree t.
 // P(x) is written in `out` and P(x).g2 is written in `y` if `y` is non NULL.
 void Fr_polynomial_image_write(byte *out, E2 *y, const Fr *a, const int degree,
                                const byte x) {
@@ -29,8 +29,8 @@ void Fr_polynomial_image_write(byte *out, E2 *y, const Fr *a, const int degree,
   Fr_write_bytes(out, &image);
 }
 
-// computes P(x) = a_0 + a_1 * x + .. + a_n * x^n  where P is in Fr[X].
-// a_i are all in Fr, `degree` is P's degree, x is a small integer less than
+// computes P(x) = a_0 + a_1 * x + .. + a_t * x^t  where P is in F_r[X].
+// a_i are all in F_r, `degree` is P's degree, x is a small integer less than
 // `MAX_IND` (currently 255).
 // The function writes P(x) in `image` and P(x).g2 in `y` if `y` is non NULL.
 void Fr_polynomial_image(Fr *image, E2 *y, const Fr *a, const int degree,
@@ -51,7 +51,8 @@ void Fr_polynomial_image(Fr *image, E2 *y, const Fr *a, const int degree,
   }
 }
 
-// computes Q(x) = A_0 + A_1*x + ... +  A_n*x^n  in G2
+// computes Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2
+// where `degree` is the degree `t`.
 // and stores the point in y.
 //  - A_i being G2 points
 //  - x being a small scalar (less than `MAX_IND`)
@@ -65,7 +66,8 @@ static void E2_polynomial_image(E2 *y, const E2 *A, const int degree,
 }
 
 // computes y[i] = Q(i+1) for all participants i ( 0 <= i < len_y)
-// where Q(x) = A_0 + A_1*x + ... +  A_n*x^n
+// where Q(x) = A_0 + A_1*x + ... +  A_t*x^t
+//  - `degree` is the degree `t`
 //  - A_i being G2 points
 //  - x being a small scalar (less than `MAX_IND`)
 void E2_polynomial_images(E2 *y, const int len_y, const E2 *A,

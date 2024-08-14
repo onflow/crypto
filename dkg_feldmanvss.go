@@ -56,7 +56,7 @@ type feldmanVSSstate struct {
 	*dkgCommon
 	// dealer index
 	dealerIndex index
-	// SSS's polynomial of degree `t`: P = a_0 + a_1*x + .. + a_t*x^t  in F_r[X].
+	// SSS's polynomial of degree `t`: P(x) = a_0 + a_1*x + .. + a_t*x^t in F_r[X].
 	// The vector size is `t+1`, `a_0` is the group private key
 	a []scalar
 	// Public vector corresponding to `P` (A_i = g_2^a_i, for all i), the vector size is `t+1`.
@@ -294,7 +294,7 @@ func (s *feldmanVSSstate) ForceDisqualify(participant int) error {
 	return nil
 }
 
-// generate a pseudo-random polynomial P = a_0 + a_1*x + .. + a_n x^t in Fr[X]
+// generate a pseudo-random polynomial P(x) = a_0 + a_1*x + .. + a_t x^t in F_r[X]
 // where `t` is the input `degree` (higher degree monomial is non-zero).
 // `a_0` is also non-zero (for single dealer BLS-DKGs, this insures
 // protocol public key output is not identity).
@@ -341,7 +341,7 @@ func (s *feldmanVSSstate) generateShares(seed []byte) error {
 
 	s.y = make([]pointE2, s.size)
 
-	// Generate a random polynomial P in Fr[X] of degree `t` (coefficients are a_i)
+	// Generate a random polynomial P in F_r[X] of degree `t` (coefficients are a_i)
 	// `s.a` are the coefficients of P
 	//  - a_degree is non-zero as deg(P) = degree
 	//  - `a_0` is non-zero to make sure BLS-DKG public key is non-identity
@@ -481,7 +481,7 @@ func (s *feldmanVSSstate) receiveVerifVector(origin index, data []byte) {
 	}
 }
 
-// frPolynomialImage computes P(x) = a_0 + a_1*x + .. + a_n*x^n (mod r) in Fr[X]
+// frPolynomialImage computes P(x) = a_0 + a_1*x + .. + a_t*x^t in F_r[X]
 // r being the order of G1
 // P(x) is written in dest, while g2^P(x) is written in y
 // x being a small integer
@@ -526,7 +526,8 @@ func (s *feldmanVSSstate) verifyShare() bool {
 // computePublicKeys extracts the participants public keys from the verification vector
 // y[i] = Q(i+1) for all participants i, with:
 //
-//	Q(x) = A_0 + A_1*x + ... +  A_n*x^n  in G2
+//	Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2,
+//	 where `t+1` is the length of coefficients A_i.
 func (s *feldmanVSSstate) computePublicKeys() {
 	C.E2_polynomial_images(
 		(*C.E2)(&s.y[0]), (C.int)(len(s.y)),
