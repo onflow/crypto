@@ -90,7 +90,7 @@ go-lint: go-tidy
 .PHONY: test
 test:
 # root package
-	CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,)
+	CC=clang CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,)
 #root package without cgo
 	CGO_ENABLED=0 go test -tags=no_cgo -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,)
 # sub packages
@@ -102,4 +102,4 @@ test:
 incorrect_builds:
 # both tests should fail
 	! CGO_ENABLED=0 go test
-	! CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -tags=no_cgo
+	! CC=clang CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -tags=no_cgo
