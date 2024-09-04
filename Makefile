@@ -84,7 +84,7 @@ go-tidy:
 .PHONY: go-lint
 go-lint: go-tidy
 	# revive -config revive.toml
-	golangci-lint run -v ./...
+	CC=clang golangci-lint run -v ./...
 	
 # test all packages
 .PHONY: test
