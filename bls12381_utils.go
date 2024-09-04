@@ -26,10 +26,9 @@ package crypto
 // and the BLS distributed key generation protocols
 
 // #cgo CFLAGS: -I${SRCDIR}/ -I${SRCDIR}/blst_src -I${SRCDIR}/blst_src/build -D__BLST_CGO__ -Wall -fno-builtin-memcpy -fno-builtin-memset -Wno-unused-function -Wno-unused-macros -Wno-unused-variable
-// #cgo linux CFLAGS: -flto -fvisibility=hidden -fsanitize=cfi
+// #cgo linux CFLAGS: -fvisibility=hidden -flto -fsanitize=cfi
 // #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
 // #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
-// #cgo linux LDFLAGS: -flto
 // #include "bls12381_utils.h"
 //
 // #if defined(__x86_64__) && (defined(__unix__) || defined(__APPLE__))
