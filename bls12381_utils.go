@@ -29,6 +29,7 @@ package crypto
 // #cgo linux CFLAGS: -flto -fvisibility=hidden -fsanitize=cfi
 // #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
 // #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
+// #cgo linux LDFLAGS: -flto
 // #include "bls12381_utils.h"
 //
 // #if defined(__x86_64__) && (defined(__unix__) || defined(__APPLE__))
