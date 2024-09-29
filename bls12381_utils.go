@@ -370,3 +370,26 @@ func isG1Compressed() bool {
 func isG2Compressed() bool {
 	return g2BytesLen == 2*fpBytesLen
 }
+
+// This is only a TEST function used to bench the package pairing
+// It assumes E1 and E2 inputs are in G1 and G2 respectively, and have the same length.
+func multi_pairing(p1 []pointE1, p2 []pointE2) {
+	var res C.Fp12
+	_ = C.Fp12_multi_pairing(&res, (*C.E1)(&p1[0]), (*C.E2)(&p2[0]), (C.int)(len(p1)))
+}
+
+// Addition in E1, used in benchmark
+func addE1(res *pointE1, p1 *pointE1, p2 *pointE1) {
+	C.E1_add((*C.E1)(res), (*C.E1)(p1), (*C.E1)(p2))
+}
+
+// Addition in E2, used in benchmark
+func addE2(res *pointE2, p1 *pointE2, p2 *pointE2) {
+	C.E2_add((*C.E2)(res), (*C.E2)(p1), (*C.E2)(p2))
+}
+
+// modular multiplication in F_r, used in benchmark only
+// it currently calls a Montgomery multiplication
+func multFr(res *scalar, f1 *scalar, f2 *scalar) {
+	C.Fr_mul_montg((*C.Fr)(res), (*C.Fr)(f1), (*C.Fr)(f2))
+}

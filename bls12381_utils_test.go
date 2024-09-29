@@ -24,6 +24,7 @@ package crypto
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,20 +73,21 @@ func TestScalarMultBLS12381(t *testing.T) {
 	})
 }
 
-// G1 and G2 scalar multiplication
-func BenchmarkScalarMult(b *testing.B) {
-	seed := make([]byte, securityBits/8)
+// G1 and G2 operations
+func BenchmarkGroupOperations(b *testing.B) {
+	seed := make([]byte, 2*frBytesLen)
 	_, err := rand.Read(seed)
 	require.NoError(b, err)
 
 	var expo scalar
-	_ = mapToFr(&expo, seed)
+	isZero := mapToFr(&expo, seed)
+	require.False(b, isZero)
 
+	var res pointE1
 	// G1 generator multiplication
 	// Note that generator and random point multiplications
-	// are implemented with the same algorithm
-	var res pointE1
-	b.Run("G1 gen", func(b *testing.B) {
+	// are currently implemented with the same algorithm
+	b.Run("G1 gen expo", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			generatorScalarMultG1(&res, &expo)
@@ -94,9 +96,8 @@ func BenchmarkScalarMult(b *testing.B) {
 
 	// E1 random point multiplication
 	// Note that generator and random point multiplications
-	// are implemented with the same algorithm
-	b.Run("E1 rand", func(b *testing.B) {
-		var res pointE1
+	// are currently implemented with the same algorithm
+	b.Run("E1 rand expo", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			res.scalarMultE1(&res, &expo)
@@ -106,11 +107,33 @@ func BenchmarkScalarMult(b *testing.B) {
 	// G2 generator multiplication
 	// Note that generator and random point multiplications
 	// are implemented with the same algorithm
-	b.Run("G2 gen", func(b *testing.B) {
+	b.Run("G2 gen expo", func(b *testing.B) {
 		var res pointE2
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			generatorScalarMultG2(&res, &expo)
+		}
+	})
+
+	var p1, p2 pointE1
+	unsafeMapToG1(&p1, seed[:frBytesLen])
+	unsafeMapToG1(&p2, seed[frBytesLen:])
+
+	b.Run("G1 add", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			addE1(&p1, &p1, &p2)
+		}
+	})
+
+	var q1, q2 pointE2
+	unsafeMapToG2(&q1, seed[:frBytesLen])
+	unsafeMapToG2(&q2, seed[frBytesLen:])
+
+	b.Run("G2 add", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			addE2(&q1, &q1, &q2)
 		}
 	})
 }
@@ -291,4 +314,50 @@ func TestMapToFr(t *testing.T) {
 	assert.Equal(t, expectedEncoding, sk.Encode())
 	// check scalar is equal to "1" in the lower layer (scalar multiplication)
 	assert.Equal(t, sk.PublicKey().Encode(), g1, "scalar should be 1, check endianness in the C layer")
+}
+
+// pairing bench
+func BenchmarkPairing(b *testing.B) {
+	const pairingsNumber = 3
+
+	// Build random G1 ad G2 points
+	seed := make([]byte, pairingsNumber*frBytesLen)
+	_, err := rand.Read(seed)
+	require.NoError(b, err)
+
+	pointsG1 := make([]pointE1, pairingsNumber)
+	pointsG2 := make([]pointE2, pairingsNumber)
+	for i := 0; i < pairingsNumber; i++ {
+		unsafeMapToG1(&pointsG1[i], seed[i*frBytesLen:(i+1)*frBytesLen])
+		unsafeMapToG2(&pointsG2[i], seed[i*frBytesLen:(i+1)*frBytesLen])
+	}
+
+	for p := 1; p <= pairingsNumber; p++ {
+		b.Run(fmt.Sprintf("%d pairing(s)", p), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				multi_pairing(pointsG1[:p], pointsG2[:p])
+			}
+		})
+	}
+}
+
+// F_r operations
+func BenchmarkFrOperation(b *testing.B) {
+	seed := make([]byte, 2*frBytesLen)
+	_, err := rand.Read(seed)
+	require.NoError(b, err)
+
+	var f1, f2 scalar
+	isZero := mapToFr(&f1, seed[:frBytesLen])
+	require.False(b, isZero)
+	isZero = mapToFr(&f2, seed[frBytesLen:])
+	require.False(b, isZero)
+
+	b.Run("modular mult", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			multFr(&f1, &f1, &f2) // G1
+		}
+	})
 }

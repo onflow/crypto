@@ -335,50 +335,54 @@ func testKeySize(t *testing.T, sk PrivateKey, skLen int, pkLen int) {
 }
 
 func benchVerify(b *testing.B, algo SigningAlgorithm, halg hash.Hasher) {
-	seed := make([]byte, 48)
-	for j := 0; j < len(seed); j++ {
-		seed[j] = byte(j)
-	}
-	sk, err := GeneratePrivateKey(algo, seed)
-	require.NoError(b, err)
-	pk := sk.PublicKey()
-
-	input := []byte("Bench input")
-	s, err := sk.Sign(input, halg)
-	require.NoError(b, err)
-	var result bool
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		result, err = pk.Verify(s, input, halg)
+	b.Run(fmt.Sprintf("verify %s", algo), func(b *testing.B) {
+		seed := make([]byte, 48)
+		for j := 0; j < len(seed); j++ {
+			seed[j] = byte(j)
+		}
+		sk, err := GeneratePrivateKey(algo, seed)
 		require.NoError(b, err)
-	}
-	// sanity check
-	require.True(b, result)
+		pk := sk.PublicKey()
 
-	b.StopTimer()
+		input := []byte("Bench input")
+		s, err := sk.Sign(input, halg)
+		require.NoError(b, err)
+		var result bool
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			result, err = pk.Verify(s, input, halg)
+			require.NoError(b, err)
+		}
+		// sanity check
+		require.True(b, result)
+
+		b.StopTimer()
+	})
 }
 
 func benchSign(b *testing.B, algo SigningAlgorithm, halg hash.Hasher) {
-	seed := make([]byte, 48)
-	for j := 0; j < len(seed); j++ {
-		seed[j] = byte(j)
-	}
-	sk, err := GeneratePrivateKey(algo, seed)
-	require.NoError(b, err)
-
-	input := []byte("Bench input")
-	var signature []byte
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		signature, err = sk.Sign(input, halg)
+	b.Run(fmt.Sprintf("Single sign %s", algo), func(b *testing.B) {
+		seed := make([]byte, 48)
+		for j := 0; j < len(seed); j++ {
+			seed[j] = byte(j)
+		}
+		sk, err := GeneratePrivateKey(algo, seed)
 		require.NoError(b, err)
-	}
-	// sanity check
-	result, err := sk.PublicKey().Verify(signature, input, halg)
-	require.NoError(b, err)
-	require.True(b, result)
 
-	b.StopTimer()
+		input := []byte("Bench input")
+		var signature []byte
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			signature, err = sk.Sign(input, halg)
+			require.NoError(b, err)
+		}
+		// sanity check
+		result, err := sk.PublicKey().Verify(signature, input, halg)
+		require.NoError(b, err)
+		require.True(b, result)
+
+		b.StopTimer()
+	})
 }
