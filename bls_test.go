@@ -102,13 +102,13 @@ func TestBLSMainMethods(t *testing.T) {
 }
 
 // Signing bench
-func BenchmarkBLSBLS12381Sign(b *testing.B) {
+func BenchmarkBLSSingleSign(b *testing.B) {
 	halg := NewExpandMsgXOFKMAC128("bench tag")
 	benchSign(b, BLSBLS12381, halg)
 }
 
 // Verifying bench
-func BenchmarkBLSBLS12381Verify(b *testing.B) {
+func BenchmarkBLSSingleVerify(b *testing.B) {
 	halg := NewExpandMsgXOFKMAC128("bench tag")
 	benchVerify(b, BLSBLS12381, halg)
 }
@@ -873,7 +873,7 @@ func BenchmarkBatchVerify(b *testing.B) {
 
 	// Batch verify bench when all signatures are valid
 	// (2) pairing compared to (2*n) pairings for the batch verification.
-	b.Run("happy path", func(b *testing.B) {
+	b.Run(fmt.Sprintf("happy path-%d-sigs", len(sigs)), func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			// all signatures are valid
@@ -884,13 +884,13 @@ func BenchmarkBatchVerify(b *testing.B) {
 	})
 
 	// Batch verify bench when some signatures are invalid
-	// - if only one signaure is invalid (a valid point in G1):
+	// - if only one signature is invalid (a valid point in G1):
 	// less than (2*2*log(n)) pairings compared to (2*n) pairings for the simple verification.
 	// - if all signatures are invalid (valid points in G1):
 	// (2*2*(n-1)) pairings compared to (2*n) pairings for the simple verification.
-	b.Run("unhappy path", func(b *testing.B) {
-		// only one invalid signature
-		alterSignature(sigs[sigsNum/2])
+	b.Run(fmt.Sprintf("unhappy path-%d-of-%d-sigs", 1, len(sigs)), func(b *testing.B) {
+		// only one invalid signature (point in G1)
+		copy(sigs[sigsNum/2], sigs[0])
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			// all signatures are valid
@@ -1120,12 +1120,15 @@ func BenchmarkVerifySignatureManyMessages(b *testing.B) {
 	}
 	aggSig, err := AggregateBLSSignatures(sigs)
 	require.NoError(b, err)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := VerifyBLSSignatureManyMessages(pks, aggSig, inputMsgs, inputKmacs)
-		require.NoError(b, err)
-	}
-	b.StopTimer()
+
+	b.Run(fmt.Sprintf("%d messages", len(inputMsgs)), func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := VerifyBLSSignatureManyMessages(pks, aggSig, inputMsgs, inputKmacs)
+			require.NoError(b, err)
+		}
+		b.StopTimer()
+	})
 }
 
 // Bench of all aggregation functions
@@ -1157,7 +1160,7 @@ func BenchmarkAggregate(b *testing.B) {
 	}
 
 	// private keys
-	b.Run("PrivateKeys", func(b *testing.B) {
+	b.Run(fmt.Sprintf("%d Private Keys", len(sks)), func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := AggregateBLSPrivateKeys(sks)
@@ -1167,7 +1170,7 @@ func BenchmarkAggregate(b *testing.B) {
 	})
 
 	// public keys
-	b.Run("PublicKeys", func(b *testing.B) {
+	b.Run(fmt.Sprintf("%d Public Keys", len(pks)), func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := AggregateBLSPublicKeys(pks)
@@ -1177,7 +1180,7 @@ func BenchmarkAggregate(b *testing.B) {
 	})
 
 	// signatures
-	b.Run("Signatures", func(b *testing.B) {
+	b.Run(fmt.Sprintf("%d Signatures", len(sigs)), func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := AggregateBLSSignatures(sigs)
