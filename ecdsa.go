@@ -312,7 +312,7 @@ func (a *ecdsaAlgo) decodePublicKey(der []byte) (PublicKey, error) {
 func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
 	expectedLen := bitsToBytes(a.curve.Params().BitSize) + 1
 	if len(pkBytes) != expectedLen {
-		return nil, invalidInputsErrorf(fmt.Sprintf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes)))
+		return nil, invalidInputsErrorf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes))
 	}
 	var goPubKey *ecdsa.PublicKey
 
