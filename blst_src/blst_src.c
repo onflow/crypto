@@ -1,7 +1,7 @@
 // This file contains all BLST lib C files needed for
 // Flow crypto.
 // 
-// The list may need to be updated in a new version of BLST is used. 
+// The list may need to be updated when a new version of BLST is used. 
 
 #include "keygen.c"
 #include "hash_to_field.c"
