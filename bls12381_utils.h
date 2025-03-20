@@ -112,7 +112,7 @@ void E1_multi_scalar(E1 *, const E1 *, const Fr *, const int);
 void E1_add(E1 *, const E1 *, const E1 *);
 void E1_neg(E1 *, const E1 *);
 void E1_sum_vector(E1 *, const E1 *, const int);
-int  E1_sum_vector_byte(byte *, const byte *, const int);
+int E1_sum_vector_byte(byte *, const byte *, const int);
 void G1_mult_gen(E1 *, const Fr *);
 ERROR E1_read_bytes(E1 *, const byte *, const int);
 void E1_write_bytes(byte *, const E1 *);
