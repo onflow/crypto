@@ -605,11 +605,24 @@ void E1_neg(E1 *res, const E1 *a) {
   POINTonE1_cneg((POINTonE1 *)res, 1);
 }
 
-// Exponentiation of a generic point `a` in E1, res = expo.a
+// Exponentiation of a generic point `p` in E1, res = expo.p
 void E1_mult(E1 *res, const E1 *p, const Fr *expo) {
   pow256 tmp;
   pow256_from_Fr(tmp, expo);
   POINTonE1_mult_glv((POINTonE1 *)res, (POINTonE1 *)p, tmp);
+  vec_zero(&tmp, sizeof(tmp));
+}
+
+// Sum of the exponentiation of generic points `p_i` to `e_i` in E1, res = e_0.p_0 +..+ e_n.p_n
+void E1_multi_scalar(E1 *res, const E1 *p, const Fr *e, const int len) {
+  E1_set_infty(res);
+  E1 mult;
+  pow256 tmp;
+  for (int i = 0; i < len; i++) {
+    pow256_from_Fr(tmp, &e[i]);
+    POINTonE1_mult_glv((POINTonE1 *)&mult, (POINTonE1 *)&p[i], tmp);
+    E1_add(res, res, &mult);
+  }
   vec_zero(&tmp, sizeof(tmp));
 }
 
@@ -918,7 +931,7 @@ void E2_neg(E2 *res, const E2 *a) {
   POINTonE2_cneg((POINTonE2 *)res, 1);
 }
 
-// Exponentiation of a generic point `a` in E2, res = expo.a
+// Exponentiation of a generic point `p` in E2, res = expo.p
 void E2_mult(E2 *res, const E2 *p, const Fr *expo) {
   pow256 tmp;
   pow256_from_Fr(tmp, expo);
