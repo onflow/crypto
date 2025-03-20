@@ -99,6 +99,7 @@ static void E1_lagrange_interpolate_at_zero(E1 *out, const E1 shares[],
   }
 
   E1_multi_scalar(out, shares, lagrange_coeffs, degree + 1);
+  free(lagrange_coeffs);
 }
 
 // Computes the Lagrange interpolation at zero LI(0) with regards to the

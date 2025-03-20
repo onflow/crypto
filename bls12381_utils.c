@@ -615,15 +615,39 @@ void E1_mult(E1 *res, const E1 *p, const Fr *expo) {
 
 // Sum of the exponentiation of generic points `p_i` to `e_i` in E1, res = e_0.p_0 +..+ e_n.p_n
 void E1_multi_scalar(E1 *res, const E1 *p, const Fr *e, const int len) {
-  E1_set_infty(res);
-  E1 mult;
-  pow256 tmp;
+  const int e_bit_size = R_BITS;
+
+  // prepare arrays as required by the BLST pippenger call
+  POINTonE1_affine ** p_aff = malloc(sizeof(POINTonE1_affine*) * len);
+  byte ** e_pointers = malloc(sizeof(byte*) * len);
   for (int i = 0; i < len; i++) {
-    pow256_from_Fr(tmp, &e[i]);
-    POINTonE1_mult_glv((POINTonE1 *)&mult, (POINTonE1 *)&p[i], tmp);
-    E1_add(res, res, &mult);
+    // points must be in affine coordinates, in an array of pointers
+    E1 tmp;
+    E1_to_affine(&tmp, p + i);
+    p_aff[i] = malloc(sizeof(POINTonE1_affine));
+    vec_copy(p_aff[i], &tmp, sizeof(POINTonE1_affine));
+
+    // scalars must be in an array of pointers
+    int e_byte_size = BITS_TO_BYTES(e_bit_size);
+    e_pointers[i] = malloc(e_byte_size);
+    vec_copy((byte *)e_pointers[i], (byte *)&e[i], e_byte_size);
   }
-  vec_zero(&tmp, sizeof(tmp));
+  
+  int bucket_size = blst_p1s_mult_pippenger_scratch_sizeof(len);
+	byte * buckets = malloc(bucket_size);
+  
+	blst_p1s_mult_pippenger((POINTonE1 *)res, (const POINTonE1_affine *const *)p_aff, len, 
+    (const byte *const *)e_pointers, e_bit_size, 
+    (POINTonE1xyzz *) buckets);
+
+  // free tmp memory
+  for (int i = 0; i < len; i++) {
+    free(p_aff[i]);
+    free(e_pointers[i]);
+  }
+  free(p_aff);
+  free(e_pointers);
+  free(buckets);
 }
 
 // computes the sum of the E1 array elements `y[i]` and writes it in `sum`.
