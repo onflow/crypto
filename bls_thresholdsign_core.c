@@ -93,15 +93,12 @@ static void E1_lagrange_interpolate_at_zero(E1 *out, const E1 shares[],
 
   // Q(0) = share_i0 ^ L_i0(0) + share_i1 ^ L_i1(0) + .. + share_it ^ L_it(0)
   // where L is the Lagrange coefficient
-
-  E1_set_infty(out);
-  Fr fr_lagr_coef;
-  E1 mult;
+  Fr *lagrange_coeffs = malloc(sizeof(Fr) * (degree + 1));
   for (int i = 0; i < degree + 1; i++) {
-    Fr_lagrange_coeff_at_zero(&fr_lagr_coef, i, indices, degree);
-    E1_mult(&mult, &shares[i], &fr_lagr_coef);
-    E1_add(out, out, &mult);
+    Fr_lagrange_coeff_at_zero(&lagrange_coeffs[i], i, indices, degree);
   }
+
+  E1_multi_scalar(out, shares, lagrange_coeffs, degree + 1);
 }
 
 // Computes the Lagrange interpolation at zero LI(0) with regards to the
