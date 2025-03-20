@@ -24,7 +24,7 @@ import "github.com/onflow/crypto"
 ## Build
 
 Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath.
-If cgo isn't enabled by default, the `GCO_ENABLED` environment variable should be set to `1`.
+If cgo isn't enabled by default, the `CGO_ENABLED` environment variable should be set to `1`.
 It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some primitives (the ones related to BLS).
 
 ### Build with cgo
