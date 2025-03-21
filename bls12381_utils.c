@@ -605,12 +605,50 @@ void E1_neg(E1 *res, const E1 *a) {
   POINTonE1_cneg((POINTonE1 *)res, 1);
 }
 
-// Exponentiation of a generic point `a` in E1, res = expo.a
+// Exponentiation of a generic point `p` in E1, res = expo.p
 void E1_mult(E1 *res, const E1 *p, const Fr *expo) {
   pow256 tmp;
   pow256_from_Fr(tmp, expo);
   POINTonE1_mult_glv((POINTonE1 *)res, (POINTonE1 *)p, tmp);
   vec_zero(&tmp, sizeof(tmp));
+}
+
+// Sum of the exponentiation of generic points `p_i` to `e_i` in E1.
+// res = e_0.p_0 +..+ e_n.p_n
+void E1_multi_scalar(E1 *res, const E1 *p, const Fr *e, const int len) {
+  const int e_bit_size = R_BITS;
+
+  // prepare arrays as required by the BLST pippenger call
+  POINTonE1_affine **p_aff = malloc(sizeof(POINTonE1_affine *) * len);
+  byte **e_pointers = malloc(sizeof(byte *) * len);
+  for (int i = 0; i < len; i++) {
+    // points must be in affine coordinates, in an array of pointers
+    E1 tmp;
+    E1_to_affine(&tmp, p + i);
+    p_aff[i] = malloc(sizeof(POINTonE1_affine));
+    vec_copy(p_aff[i], &tmp, sizeof(POINTonE1_affine));
+
+    // scalars must be in an array of pointers
+    int e_byte_size = BITS_TO_BYTES(e_bit_size);
+    e_pointers[i] = malloc(e_byte_size);
+    vec_copy((byte *)e_pointers[i], (byte *)&e[i], e_byte_size);
+  }
+
+  int bucket_size = blst_p1s_mult_pippenger_scratch_sizeof(len);
+  byte *buckets = malloc(bucket_size);
+
+  blst_p1s_mult_pippenger(
+      (POINTonE1 *)res, (const POINTonE1_affine *const *)p_aff, len,
+      (const byte *const *)e_pointers, e_bit_size, (POINTonE1xyzz *)buckets);
+
+  // free tmp memory
+  for (int i = 0; i < len; i++) {
+    free(p_aff[i]);
+    free(e_pointers[i]);
+  }
+  free(p_aff);
+  free(e_pointers);
+  free(buckets);
 }
 
 // computes the sum of the E1 array elements `y[i]` and writes it in `sum`.
@@ -918,7 +956,7 @@ void E2_neg(E2 *res, const E2 *a) {
   POINTonE2_cneg((POINTonE2 *)res, 1);
 }
 
-// Exponentiation of a generic point `a` in E2, res = expo.a
+// Exponentiation of a generic point `p` in E2, res = expo.p
 void E2_mult(E2 *res, const E2 *p, const Fr *expo) {
   pow256 tmp;
   pow256_from_Fr(tmp, expo);

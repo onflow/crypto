@@ -108,6 +108,7 @@ void E1_to_affine(E1 *, const E1 *);
 bool E1_affine_on_curve(const E1 *);
 bool E1_in_G1(const E1 *);
 void E1_mult(E1 *, const E1 *, const Fr *);
+void E1_multi_scalar(E1 *, const E1 *, const Fr *, const int);
 void E1_add(E1 *, const E1 *, const E1 *);
 void E1_neg(E1 *, const E1 *);
 void E1_sum_vector(E1 *, const E1 *, const int);
