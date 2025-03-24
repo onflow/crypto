@@ -848,3 +848,25 @@ func TestDKGTransitionErrors(t *testing.T) {
 		}
 	})
 }
+
+// bench of computing `n` images of the same polynomial Q in E2:
+// Q(x) = A_0 + A_1*x + ... +  A_t*x^t
+// where the `n` inputs are the small scalars {1..n}
+// This is a particular case of computing `n` multi-scalar multiplications.
+func BenchmarkE2PolynomialImages(b *testing.B) {
+	n := 60
+	t := 40
+
+	// generate the polynomial
+	A := make([]pointE2, t+1)
+	seed := make([]byte, frBytesLen)
+	for i := 0; i < t+1; i++ {
+		_, _ = crand.Read(seed)
+		unsafeMapToG2(&A[i], seed)
+	}
+	// images
+	out := make([]pointE2, n)
+	for i := 0; i < b.N; i++ {
+		E2PolynomialImages(out, A)
+	}
+}
