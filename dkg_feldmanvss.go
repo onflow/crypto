@@ -523,14 +523,25 @@ func (s *feldmanVSSstate) verifyShare() bool {
 		(*C.E2)(&s.y[s.myIndex])))
 }
 
-// computePublicKeys extracts the participants public keys from the verification vector
-// y[i] = Q(i+1) for all participants i, with:
+// computePublicKeys extracts the participants public keys from the verification vector `vA`.
+// y[i] = Q(i+1) for all participants i in {0,..,n-1}, where:
 //
-//	Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2,
-//	 where `t+1` is the length of coefficients A_i.
+//   - Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in G2
+//   - `t+1` is the length of coefficients A_i
+//   - `n` is the length of the array `s.y`
+//   - the computed public keys are stored in `s.y` such that participant `i`'s key is stored in `s.y[i]`
 func (s *feldmanVSSstate) computePublicKeys() {
+	E2PolynomialImages(s.y, s.vA)
+}
+
+// E2PolynomialImages computes `n` images of a polynomial in E2, where:
+//   - the `n` inputs are the small scalars {1,..,n}
+//   - the polynomial is of degree `t` with the `t+1` coefficients A_i (array A), such that Q(x) = A_0 + A_1*x + ... +  A_t*x^t  in E2
+//
+// `out` stores the `n` outputs such that `out[i] = Q(i+1)`
+func E2PolynomialImages(out []pointE2, A []pointE2) {
 	C.E2_polynomial_images(
-		(*C.E2)(&s.y[0]), (C.int)(len(s.y)),
-		(*C.E2)(&s.vA[0]), (C.int)(len(s.vA)-1),
+		(*C.E2)(&out[0]), (C.int)(len(out)),
+		(*C.E2)(&A[0]), (C.int)(len(A)-1),
 	)
 }

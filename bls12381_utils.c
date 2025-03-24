@@ -617,6 +617,7 @@ void E1_mult(E1 *res, const E1 *p, const Fr *expo) {
 // res = e_0.p_0 +..+ e_n.p_n
 void E1_multi_scalar(E1 *res, const E1 *p, const Fr *e, const int len) {
   const int e_bit_size = R_BITS;
+  const int e_byte_size = BITS_TO_BYTES(e_bit_size);
 
   // prepare arrays as required by the BLST pippenger call
   POINTonE1_affine **p_aff = malloc(sizeof(POINTonE1_affine *) * len);
@@ -629,7 +630,6 @@ void E1_multi_scalar(E1 *res, const E1 *p, const Fr *e, const int len) {
     vec_copy(p_aff[i], &tmp, sizeof(POINTonE1_affine));
 
     // scalars must be in an array of pointers
-    int e_byte_size = BITS_TO_BYTES(e_bit_size);
     e_pointers[i] = malloc(e_byte_size);
     vec_copy((byte *)e_pointers[i], (byte *)&e[i], e_byte_size);
   }
