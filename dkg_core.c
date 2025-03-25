@@ -55,7 +55,7 @@ void Fr_polynomial_image(Fr *image, E2 *y, const Fr *a, const int degree,
 // where `degree` is the degree `t`.
 // and stores the point in y.
 //  - A_i being E2 points
-//  - x being a small scalar (less than `MAX_IND`) 
+//  - x being a small scalar (less than `MAX_IND`)
 static void E2_polynomial_image(E2 *y, const E2 *A, const int degree,
                                 const byte x) {
   // Note: this method was compared to Pippenger MSM and turns out to be faster
