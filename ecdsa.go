@@ -203,10 +203,15 @@ func goecdsaGenerateKey(c elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
 	k.Add(k, one)
 
 	priv := new(ecdsa.PrivateKey)
-	priv.PublicKey.Curve = c
 	priv.D = k
-	// public key is not computed
+	priv.PublicKey.Curve = c
+	priv.PublicKey.X, priv.PublicKey.Y = baseScalarMultiplication(c, k)
 	return priv
+}
+
+func baseScalarMultiplication(curve elliptic.Curve, scalar *big.Int) (*big.Int, *big.Int) {
+	x, y := curve.ScalarBaseMult(scalar.Bytes())
+	return x, y
 }
 
 // generatePrivateKey generates a private key for ECDSA
@@ -244,14 +249,14 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	return &prKeyECDSA{
 		alg:     a,
 		goPrKey: sk,
-		pubKey:  nil, // public key is not computed
+		pubKey:  nil, // public key is not constructed
 	}, nil
 }
 
 func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 	n := a.curve.Params().N
-	nlen := bitsToBytes(n.BitLen())
-	if len(der) != nlen {
+	nLen := bitsToBytes(n.BitLen())
+	if len(der) != nLen {
 		return nil, invalidInputsErrorf("input has incorrect %s key size", a.algo)
 	}
 	var d big.Int
@@ -265,11 +270,12 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 		D: &d,
 	}
 	priv.PublicKey.Curve = a.curve
+	priv.PublicKey.X, priv.PublicKey.Y = baseScalarMultiplication(a.curve, &d)
 
 	return &prKeyECDSA{
 		alg:     a,
 		goPrKey: &priv,
-		pubKey:  nil, // public key is not computed
+		pubKey:  nil, // public key is not constructed
 	}, nil
 }
 
@@ -363,14 +369,12 @@ func (sk *prKeyECDSA) Size() int {
 
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSA) PublicKey() PublicKey {
-	// compute the public key once
+	// construct the public key once
 	if sk.pubKey == nil {
-		priv := sk.goPrKey
-		priv.PublicKey.X, priv.PublicKey.Y = priv.Curve.ScalarBaseMult(priv.D.Bytes())
-	}
-	sk.pubKey = &pubKeyECDSA{
-		alg:      sk.alg,
-		goPubKey: &sk.goPrKey.PublicKey,
+		sk.pubKey = &pubKeyECDSA{
+			alg:      sk.alg,
+			goPubKey: &sk.goPrKey.PublicKey,
+		}
 	}
 	return sk.pubKey
 }

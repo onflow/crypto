@@ -10,6 +10,10 @@ Notes:
 
 ## Module import
 
+🚧 Flow cryptography package is written and tested for Go versions up to 1.23.
+It is recommended to not build the package with a later Go version.
+The package is not guaranteed to behave as expected with later Go versions. 🚧
+
 Flow cryptography can be imported as any other Go package and does not require extra setup or pre-build (it used to require a pre-build up to version v0.24.9):
 
 get the package
