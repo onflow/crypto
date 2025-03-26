@@ -207,11 +207,33 @@ func goecdsaMapKey(curve elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
 
 // goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
 // input curve and scalar.
+// Input scalar is assumed to be a non-zero integer modulo the curve order `n`.
 func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) *ecdsa.PrivateKey {
 	priv := new(ecdsa.PrivateKey)
 	priv.D = d
 	priv.PublicKey.Curve = curve
-	priv.PublicKey.X, priv.PublicKey.Y = curve.ScalarBaseMult(d.Bytes())
+
+	if curve == elliptic.P256() {
+		// use crypto/ecdh implementation to perform base scalar multiplication
+		// of an ECDH private key, because crypto/elliptic has deprecated `ScalarBaseMult`
+		ecdhPriv, err := priv.ECDH()
+		if err != nil {
+			// at this point, no error is expected because the function can't be called
+			// with a zero scalar modulo `n`
+			panic("not expected")
+		}
+		// crypto/ecdh serialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3).
+		// The bytes returned are `0x04 || X || Y`
+		ecdhPubBytes := ecdhPriv.PublicKey().Bytes()
+		pLen := bitsToBytes(curve.Params().P.BitLen())
+		priv.PublicKey.X = new(big.Int).SetBytes(ecdhPubBytes[1 : 1+pLen])
+		priv.PublicKey.Y = new(big.Int).SetBytes(ecdhPubBytes[1+pLen:])
+	} else if curve == btcec.S256() {
+		// `ScalarBaseMult` is not deprecated in btcec's type `KoblitzCurve`
+		priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d.Bytes())
+	} else {
+		panic("not expected")
+	}
 	return priv
 }
 
