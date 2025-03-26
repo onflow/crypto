@@ -194,24 +194,25 @@ func (a *ecdsaAlgo) signatureFormatCheck(sig Signature) bool {
 
 var one = new(big.Int).SetInt64(1)
 
-// goecdsaGenerateKey generates a public and private key pair
-// for the crypto/ecdsa library using the input seed
-func goecdsaGenerateKey(c elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
-	k := new(big.Int).SetBytes(seed)
-	n := new(big.Int).Sub(c.Params().N, one)
-	k.Mod(k, n)
-	k.Add(k, one)
-
-	priv := new(ecdsa.PrivateKey)
-	priv.D = k
-	priv.PublicKey.Curve = c
-	priv.PublicKey.X, priv.PublicKey.Y = baseScalarMultiplication(c, k)
-	return priv
+// goecdsaMapKey maps the input seed to a private key
+// of the Go crypto/ecdsa library.
+// The private scalar `d` satisfies 0 < d < n.
+func goecdsaMapKey(curve elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
+	d := new(big.Int).SetBytes(seed)
+	n := new(big.Int).Sub(curve.Params().N, one)
+	d.Mod(d, n)
+	d.Add(d, one)
+	return goecdsaPrivateKey(curve, d)
 }
 
-func baseScalarMultiplication(curve elliptic.Curve, scalar *big.Int) (*big.Int, *big.Int) {
-	x, y := curve.ScalarBaseMult(scalar.Bytes())
-	return x, y
+// goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
+// input curve and scalar.
+func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) *ecdsa.PrivateKey {
+	priv := new(ecdsa.PrivateKey)
+	priv.D = d
+	priv.PublicKey.Curve = curve
+	priv.PublicKey.X, priv.PublicKey.Y = curve.ScalarBaseMult(d.Bytes())
+	return priv
 }
 
 // generatePrivateKey generates a private key for ECDSA
@@ -245,7 +246,7 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	}
 	defer overwrite(okm) // overwrite okm
 
-	sk := goecdsaGenerateKey(a.curve, okm)
+	sk := goecdsaMapKey(a.curve, okm)
 	return &prKeyECDSA{
 		alg:     a,
 		goPrKey: sk,
@@ -266,15 +267,11 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 		return nil, invalidInputsErrorf("input is not a valid %s key", a.algo)
 	}
 
-	priv := ecdsa.PrivateKey{
-		D: &d,
-	}
-	priv.PublicKey.Curve = a.curve
-	priv.PublicKey.X, priv.PublicKey.Y = baseScalarMultiplication(a.curve, &d)
+	priv := goecdsaPrivateKey(a.curve, &d)
 
 	return &prKeyECDSA{
 		alg:     a,
-		goPrKey: &priv,
+		goPrKey: priv,
 		pubKey:  nil, // public key is not constructed
 	}, nil
 }
