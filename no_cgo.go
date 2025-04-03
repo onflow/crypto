@@ -182,14 +182,14 @@ func BatchVerifyBLSSignaturesOneMessage(
 	panic(withFeature("BLS multi-sig"))
 }
 
-func IsBLSAggregateEmptyListError(err error) bool {
+func IsErrBLSAggregateEmptyList(err error) bool {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func IsNotBLSKeyError(err error) bool {
+func IsErrNotBLSKey(err error) bool {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func IsInvalidSignatureError(err error) bool {
+func IsErrInvalidSignature(err error) bool {
 	panic(withFeature("BLS multi-sig"))
 }

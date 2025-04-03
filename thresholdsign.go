@@ -145,7 +145,7 @@ type ThresholdSignatureInspector interface {
 	// Returns:
 	// - (signature, nil) if no error occurred
 	// - (nil, notEnoughSharesError) if not enough shares were collected
-	// - (nil, invalidSignatureError) if at least one collected share does not serialize to a valid BLS signature.
+	// - (nil, errInvalidSignature) if at least one collected share does not serialize to a valid BLS signature.
 	// - (nil, invalidInputsError) if the constructed signature failed to verify against the group public key and stored message. This post-verification
 	//    is required  for safety, as `TrustedAdd` allows adding invalid signatures.
 	// - (nil, error) for any other unexpected error.

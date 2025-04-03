@@ -35,14 +35,14 @@ import (
 // SPOCKProve generates a spock poof for data under the private key sk.
 //
 // The function returns:
-//   - (false, nilHasherError) if the hasher is nil
+//   - (false, errNilHasher) if the hasher is nil
 //   - (false, invalidHasherSiseError) if hasher's output size is not 128 bytes
-//   - (nil, notBLSKeyError) if input key is not a BLS key
+//   - (nil, errNotBLSKey) if input key is not a BLS key
 //   - (nil, error) if an unexpected error occurs
 //   - (proof, nil) otherwise
 func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error) {
 	if sk.Algorithm() != BLSBLS12381 {
-		return nil, notBLSKeyError
+		return nil, errNotBLSKey
 	}
 
 	// BLS signature of data
@@ -56,14 +56,14 @@ func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error)
 // and public key.
 //
 // The function returns:
-//   - (false, notBLSKeyError) if input key is not a BLS key
-//   - (false, nilHasherError) if the hasher is nil
+//   - (false, errNotBLSKey) if input key is not a BLS key
+//   - (false, errNilHasher) if the hasher is nil
 //   - (false, invalidHasherSiseError) if hasher's output size is not 128 bytes
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac hash.Hasher) (bool, error) {
 	if pk.Algorithm() != BLSBLS12381 {
-		return false, notBLSKeyError
+		return false, errNotBLSKey
 	}
 	// BLS verification of data
 	return pk.Verify(proof, data, kmac)
@@ -84,14 +84,14 @@ func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac has
 // verified against a proof of possession prior to calling this function.
 //
 // The function returns:
-//   - (false, notBLSKeyError) if at least one key is not a BLS key.
+//   - (false, errNotBLSKey) if at least one key is not a BLS key.
 //   - (false, error) if an unexpected error occurs.
 //   - (validity, nil) otherwise
 func SPOCKVerify(pk1 PublicKey, proof1 Signature, pk2 PublicKey, proof2 Signature) (bool, error) {
 	blsPk1, ok1 := pk1.(*pubKeyBLSBLS12381)
 	blsPk2, ok2 := pk2.(*pubKeyBLSBLS12381)
 	if !(ok1 && ok2) {
-		return false, notBLSKeyError
+		return false, errNotBLSKey
 	}
 
 	if len(proof1) != g1BytesLen || len(proof2) != g1BytesLen {

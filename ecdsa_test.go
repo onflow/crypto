@@ -90,10 +90,10 @@ func TestECDSAHasher(t *testing.T) {
 		t.Run("Empty hasher", func(t *testing.T) {
 			_, err := sk.Sign(seed, nil)
 			assert.Error(t, err)
-			assert.True(t, IsNilHasherError(err))
+			assert.True(t, IsErrNilHasher(err))
 			_, err = sk.PublicKey().Verify(sig, seed, nil)
 			assert.Error(t, err)
-			assert.True(t, IsNilHasherError(err))
+			assert.True(t, IsErrNilHasher(err))
 		})
 
 		// hasher with large output size
@@ -110,10 +110,10 @@ func TestECDSAHasher(t *testing.T) {
 			dummy := newDummyHasher(31) // 31 is one byte less than the supported curves' order
 			_, err := sk.Sign(seed, dummy)
 			assert.Error(t, err)
-			assert.True(t, IsInvalidHasherSizeError(err))
+			assert.True(t, IsErrInvalidHasherSize(err))
 			_, err = sk.PublicKey().Verify(sig, seed, dummy)
 			assert.Error(t, err)
-			assert.True(t, IsInvalidHasherSizeError(err))
+			assert.True(t, IsErrInvalidHasherSize(err))
 		})
 	}
 }

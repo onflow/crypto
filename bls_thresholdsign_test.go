@@ -271,7 +271,7 @@ func testCentralizedStatefulAPI(t *testing.T) {
 			}
 			sig, err := ts.ThresholdSignature()
 			assert.Error(t, err)
-			assert.True(t, IsInvalidSignatureError(err))
+			assert.True(t, IsErrInvalidSignature(err))
 			assert.Nil(t, sig)
 			share[0] = tmp // restore the share
 		})
@@ -294,18 +294,18 @@ func testCentralizedStatefulAPI(t *testing.T) {
 			pkShares[0] = skEcdsa.PublicKey()
 			tsFollower, err = NewBLSThresholdSignatureInspector(pkGroup, pkShares, threshold, thresholdSignatureMessage, thresholdSignatureTag)
 			assert.Error(t, err)
-			assert.True(t, IsNotBLSKeyError(err))
+			assert.True(t, IsErrNotBLSKey(err))
 			assert.Nil(t, tsFollower)
 			pkShares[0] = tmp // restore valid keys
 			// non BLS group key
 			tsFollower, err = NewBLSThresholdSignatureInspector(skEcdsa.PublicKey(), pkShares, threshold, thresholdSignatureMessage, thresholdSignatureTag)
 			assert.Error(t, err)
-			assert.True(t, IsNotBLSKeyError(err))
+			assert.True(t, IsErrNotBLSKey(err))
 			assert.Nil(t, tsFollower)
 			// non BLS private key
 			tsParticipant, err := NewBLSThresholdSignatureParticipant(pkGroup, pkShares, threshold, index, skEcdsa, thresholdSignatureMessage, thresholdSignatureTag)
 			assert.Error(t, err)
-			assert.True(t, IsNotBLSKeyError(err))
+			assert.True(t, IsErrNotBLSKey(err))
 			assert.Nil(t, tsParticipant)
 			// invalid current index
 			tsParticipant, err = NewBLSThresholdSignatureParticipant(pkGroup, pkShares, threshold, len(pkShares)+1, skShares[index], thresholdSignatureMessage, thresholdSignatureTag)
@@ -625,7 +625,7 @@ func testCentralizedStatelessAPI(t *testing.T) {
 		signShares[0] = BLSInvalidSignature()
 		thresholdSignature, err = BLSReconstructThresholdSignature(n, threshold, signShares, signers[:threshold+1])
 		assert.Error(t, err)
-		assert.True(t, IsInvalidSignatureError(err))
+		assert.True(t, IsErrInvalidSignature(err))
 		assert.Nil(t, thresholdSignature)
 	}
 }
