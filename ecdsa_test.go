@@ -146,6 +146,75 @@ func BenchmarkECDSASecp256k1Verify(b *testing.B) {
 func TestECDSAEncodeDecode(t *testing.T) {
 	for _, curve := range ecdsaCurves {
 		testEncodeDecode(t, curve)
+
+		//  zero private key
+		t.Run("zero private key", func(t *testing.T) {
+			skBytes := make([]byte, ecdsaPrKeyLen[curve])
+			sk, err := DecodePrivateKey(curve, skBytes)
+			require.Error(t, err, "decoding identity private key should fail")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "zero private keys are not a valid")
+			assert.Nil(t, sk)
+		})
+
+		// group order private key
+		t.Run("group order private key", func(t *testing.T) {
+			groupOrder := make(map[SigningAlgorithm][]byte)
+			groupOrder[ECDSAP256] = []byte{255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255,
+				255, 255, 255, 255, 255, 188, 230, 250, 173, 167,
+				23, 158, 132, 243, 185, 202, 194, 252, 99, 37, 81}
+
+			groupOrder[ECDSASecp256k1] = []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+				255, 255, 255, 255, 255, 254, 186, 174, 220, 230,
+				175, 72, 160, 59, 191, 210, 94, 140, 208, 54, 65, 65}
+
+			sk, err := DecodePrivateKey(curve, groupOrder[curve])
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is larger than the curve order")
+			assert.Nil(t, sk)
+		})
+
+		// this is the edge case of a zero-coordinates point.
+		// This is not the infinity point case, it only represents the (0,0) point.
+		// For both curves supported in the package, this point is not on curve.
+		// Infinity point serialization isn't defined by the package for ECDSA.
+		t.Run("all zeros public key", func(t *testing.T) {
+			pkBytes := make([]byte, ecdsaPubKeyLen[curve])
+			pk, err := DecodePublicKey(curve, pkBytes)
+			require.Error(t, err, "point is not on curve")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is not a point on curve")
+			assert.Nil(t, pk)
+		})
+
+		// Test a public key serialization with a point encoded with a coordinate x with
+		// x or y not reduced mod p.
+		// This test checks that:
+		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
+		//  - public key decoding only accepts reduced x and y
+		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
+			invalidPK1s := map[SigningAlgorithm]string{
+				ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			invalidPK2s := map[SigningAlgorithm]string{
+				ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			// invalidpk1 with x >= p
+			invalidPk1, err := hex.DecodeString(invalidPK1s[curve])
+			require.NoError(t, err)
+			_, err = DecodePublicKey(curve, invalidPk1)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+			// invalidpk2 with y >= p
+			invalidPk2, err := hex.DecodeString(invalidPK2s[curve])
+			require.NoError(t, err)
+			_, err = DecodePublicKey(curve, invalidPk2)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+		})
 	}
 }
 

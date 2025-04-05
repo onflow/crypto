@@ -43,7 +43,7 @@ func TestBLSMainMethods(t *testing.T) {
 	testGenSignVerify(t, BLSBLS12381, hasher)
 
 	// specific signature test for BLS:
-	// Test a signature with a point encoded with a coordinate x not reduced mod p
+	// Test a signature with a point encoded with a coordinate x not reduced mod p.
 	// The same signature point with the x coordinate reduced passes verification.
 	// This test checks that:
 	//  - signature decoding handles input x-coordinates larger than p (doesn't result in an exception)
@@ -206,6 +206,17 @@ func TestBLSEncodeDecode(t *testing.T) {
 		sk, err := DecodePrivateKey(BLSBLS12381, skBytes)
 		require.Error(t, err, "decoding identity private key should fail")
 		assert.True(t, IsInvalidInputsError(err))
+		assert.ErrorContains(t, err, "scalar is not in the correct range")
+		assert.Nil(t, sk)
+	})
+
+	// curve group private key
+
+	t.Run("group order private key", func(t *testing.T) {
+		sk, err := DecodePrivateKey(BLSBLS12381, BLS12381Order)
+		require.Error(t, err)
+		assert.True(t, IsInvalidInputsError(err))
+		assert.ErrorContains(t, err, "scalar is not in the correct range")
 		assert.Nil(t, sk)
 	})
 
@@ -237,8 +248,8 @@ func TestBLSEncodeDecode(t *testing.T) {
 	// This test checks that:
 	//  - public key decoding handles input x-coordinates with x[0] and x[1] larger than p (doesn't result in an exception)
 	//  - public key decoding only accepts reduced x[0] and x[1] to insure key serialization uniqueness.
-	// Although uniqueness of public key respresentation isn't a security property, some implementations
-	// may implicitely rely on the property.
+	// Although uniqueness of public key representation isn't a security property, some implementations
+	// may implicitly rely on the property.
 
 	t.Run("public key with non-reduced coordinates", func(t *testing.T) {
 		if !isG2Compressed() {
