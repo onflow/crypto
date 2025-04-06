@@ -162,7 +162,7 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 //   - (nil, invalidInputsErrors) if the signing algorithm is not supported
 //   - (nil, invalidInputsErrors) if the input does not serialize a valid public key:
 //     -- ECDSA: a valid input is bytes(x)||bytes(y) where bytes() is the big-endian encoding padded to the field size (32 bytes).
-//     Note that infinity point serialization isn't defined.
+//     Note that infinity point serialization isn't defined in this package.
 //     -- BLS: a valid input is a compressed serialization of a G2 point following
 //     https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-zcash-serialization-format-
 //     Note that infinity point is a valid serialized public key.
@@ -176,15 +176,16 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 	return signer.decodePublicKey(input)
 }
 
-// DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm
+// DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm.
 // Only ECDSA is supported (BLS uses the compressed serialization by default).
 //
 // The function returns:
 //   - (nil, invalidInputsErrors) if the signing algorithm is not supported (is not ECDSA)
 //   - (nil, invalidInputsErrors) if the input does not serialize a valid public key:
 //     -- ECDSA: a valid input is sign_byte||bytes(x) according to X9.62 section 4.3.6.
+//     Note that infinity point serialization isn't defined in this package.
 //   - (nil, error) if an unexpected error occurs
-//   - (sk, nil) otherwise
+//   - (pk, nil) otherwise
 func DecodePublicKeyCompressed(algo SigningAlgorithm, data []byte) (PublicKey, error) {
 	signer, err := newSigner(algo)
 	if err != nil {

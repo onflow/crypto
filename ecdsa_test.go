@@ -354,7 +354,6 @@ func TestSignatureFormatCheck(t *testing.T) {
 }
 
 func TestEllipticUnmarshalSecp256k1(t *testing.T) {
-
 	testVectors := []string{
 		"028b10bf56476bf7da39a3286e29df389177a2fa0fca2d73348ff78887515d8da1", // IsOnCurve for elliptic returns false
 		"03d39427f07f680d202fe8504306eb29041aceaf4b628c2c69b0ec248155443166", // odd, IsOnCurve for elliptic returns false
@@ -363,7 +362,6 @@ func TestEllipticUnmarshalSecp256k1(t *testing.T) {
 	}
 
 	for _, testVector := range testVectors {
-
 		// get the compressed bytes
 		publicBytes, err := hex.DecodeString(testVector)
 		require.NoError(t, err)
