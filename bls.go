@@ -41,6 +41,12 @@ package crypto
 //  - SPoCK scheme based on BLS: verifies two signatures are generated from the same message,
 //    even though the message is unknown to the verifier.
 
+// #cgo noescape E2_in_G2
+// #cgo nocallback E2_in_G2
+// #cgo noescape bls_sign
+// #cgo nocallback bls_sign
+// #cgo noescape bls_verify
+// #cgo nocallback bls_verify
 // #include "bls_include.h"
 import "C"
 
