@@ -74,13 +74,17 @@ func bitsToBytes(bits int) int {
 	return (bits + 7) >> 3
 }
 
-// signHash returns the signature of the hash using the private key
-// the signature is the concatenation bytes(r)||bytes(s)
-// where r and s are padded to the curve order size
+// signHash returns the signature of the input hash using the private key receiver.
+// The signature is the concatenation bytes(r) || bytes(s),
+// where `r` and `s` are padded to the curve order size.
+// Current implementation of `sign` is randomized, mixing the entropy from the
+// the system's crypto/rand, the private key and the hash.
+//
+// The caller must mask sure the hash is at least the curve order size.
 func (sk *prKeyECDSA) signHash(h hash.Hash) (Signature, error) {
 	r, s, err := ecdsa.Sign(rand.Reader, sk.goPrKey, h)
 	if err != nil {
-		return nil, fmt.Errorf("ECDSA Sign failed: %w", err)
+		return nil, fmt.Errorf("ECDSA sign failed: %w", err)
 	}
 	rBytes := r.Bytes()
 	sBytes := s.Bytes()
@@ -198,7 +202,8 @@ var one = new(big.Int).SetInt64(1)
 // goecdsaMapKey maps the input seed to a private key
 // of the Go crypto/ecdsa library.
 // The private scalar `d` satisfies 0 < d < n.
-func goecdsaMapKey(curve elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
+// Returned error is expected to be nil.
+func goecdsaMapKey(curve elliptic.Curve, seed []byte) (*ecdsa.PrivateKey, error) {
 	d := new(big.Int).SetBytes(seed)
 	n := new(big.Int).Sub(curve.Params().N, one)
 	d.Mod(d, n)
@@ -209,7 +214,8 @@ func goecdsaMapKey(curve elliptic.Curve, seed []byte) *ecdsa.PrivateKey {
 // goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
 // input curve and scalar.
 // Input scalar is assumed to be a non-zero integer modulo the curve order `n`.
-func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) *ecdsa.PrivateKey {
+// Returned error is expected to be nil.
+func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.D = d
 	priv.PublicKey.Curve = curve
@@ -222,7 +228,7 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) *ecdsa.PrivateKey {
 		if err != nil {
 			// at this point, no error is expected because the function can't be called
 			// with a zero scalar modulo `n`
-			panic("non expected error")
+			return nil, fmt.Errorf("non expected error when creating an ECDH private key: %w", err)
 		}
 		// crypto/ecdh serialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3).
 		// The bytes returned are `0x04 || X || Y` because the point is guaranteed to be non-infinity
@@ -234,9 +240,9 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) *ecdsa.PrivateKey {
 		// `ScalarBaseMult` is not deprecated in btcec's type `KoblitzCurve`
 		priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d.Bytes())
 	} else {
-		panic("non expected error")
+		return nil, invalidInputsErrorf("the curve is not supported")
 	}
-	return priv
+	return priv, nil
 }
 
 // generatePrivateKey generates a private key for ECDSA
@@ -270,7 +276,11 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	}
 	defer overwrite(okm) // overwrite okm
 
-	sk := goecdsaMapKey(a.curve, okm)
+	sk, err := goecdsaMapKey(a.curve, okm)
+	if err != nil {
+		// no error is expected at this point
+		return nil, fmt.Errorf("mapping the private key failed: %w", err)
+	}
 	return &prKeyECDSA{
 		alg:     a,
 		goPrKey: sk,
@@ -295,7 +305,11 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 		return nil, invalidInputsErrorf("zero private keys are not a valid %s key", a.algo)
 	}
 
-	priv := goecdsaPrivateKey(a.curve, &d) // n > d > 0 at this point
+	priv, err := goecdsaPrivateKey(a.curve, &d) // n > d > 0 at this point
+	if err != nil {
+		// error is not expected at this point
+		return nil, fmt.Errorf("building the private key failed: %w", err)
+	}
 
 	return &prKeyECDSA{
 		alg:     a,
@@ -349,7 +363,7 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
 			return nil, invalidInputsErrorf("input is not a point on curve secp256k1")
 		}
 	} else {
-		panic("non expected error")
+		return nil, invalidInputsErrorf("curve is not supported")
 	}
 
 	pk := ecdsa.PublicKey{
