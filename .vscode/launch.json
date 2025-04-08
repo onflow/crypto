@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/tarak/Code/onflow/crypto",
+      "program": "/Users/tarak/Code/onflow/crypto/build/Debug/outDebug"
+    }
+  ]
+}
