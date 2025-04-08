@@ -52,10 +52,9 @@ import "C"
 
 import (
 	"bytes"
+	"crypto/hkdf"
 	"crypto/sha256"
 	"fmt"
-
-	"golang.org/x/crypto/hkdf"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -276,18 +275,15 @@ func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (PrivateKey, error) {
 	copy(secret, ikm)
 	defer overwrite(secret) // overwrite secret
 	// HKDF info = key_info || I2OSP(L, 2)
-	keyInfo := "" // use empty key diversifier. TODO: update header to accept input identifier
-	info := append([]byte(keyInfo), byte(okmLength>>8), byte(okmLength))
+	keyInfo := []byte{} // use empty key diversifier. TODO: update header to accept input identifier
+	info := string(append(keyInfo, byte(okmLength>>8), byte(okmLength)))
 
 	sk := newPrKeyBLSBLS12381(nil)
 	for {
 		// instantiate HKDF and extract L bytes
-		reader := hkdf.New(hashFunction, secret, salt, info)
-		okm := make([]byte, okmLength)
-		n, err := reader.Read(okm)
-		if err != nil || n != okmLength {
-			return nil, fmt.Errorf("key generation failed because of the HKDF reader, %d bytes were read: %w",
-				n, err)
+		okm, err := hkdf.Key(hashFunction, secret, salt, info, okmLength)
+		if err != nil {
+			return nil, fmt.Errorf("HKDF computation failed: %w", err)
 		}
 		defer overwrite(okm) // overwrite okm
 

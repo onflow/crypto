@@ -29,13 +29,13 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"golang.org/x/crypto/hkdf"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -261,18 +261,15 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	// use SHA2-256 as the building block H in HKDF
 	hashFunction := sha256.New
 	salt := []byte("") // HKDF salt
-	info := []byte("") // HKDF info
+	info := ""         // HKDF info
 	// use extra 128 bits to reduce the modular reduction bias
 	nLen := bitsToBytes((a.curve.Params().N).BitLen())
 	okmLength := nLen + (securityBits / 8)
 
 	// instantiate HKDF and extract okm
-	reader := hkdf.New(hashFunction, seed, salt, info)
-	okm := make([]byte, okmLength)
-	n, err := reader.Read(okm)
-	if err != nil || n != okmLength {
-		return nil, fmt.Errorf("key generation failed because of the HKDF reader, %d bytes were read: %w",
-			n, err)
+	okm, err := hkdf.Key(hashFunction, seed, salt, info, okmLength)
+	if err != nil {
+		return nil, fmt.Errorf("HKDF computation failed : %w", err)
 	}
 	defer overwrite(okm) // overwrite okm
 

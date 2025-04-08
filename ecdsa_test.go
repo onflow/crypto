@@ -409,3 +409,35 @@ func BenchmarkECDSADecode(b *testing.B) {
 		})
 	}
 }
+
+// TestECDSAKeyGenerationBreakingChange detects if the deterministic key generation
+// changes behaviors (same seed outputs a different key than before)
+func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
+	testVec := []struct {
+		curve      SigningAlgorithm
+		seed       string
+		expectedSK string
+	}{
+		{
+			ECDSASecp256k1,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x4723d238a9702296f96bf64f1288c8b1eb93a4bff8b1482be4172c745bf30acb",
+		},
+		{
+			ECDSAP256,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x3cadd4123b493233252ffdeccaef07066b73e2c3a9a08905669c5a857027708b",
+		},
+	}
+
+	for _, test := range testVec {
+		t.Logf("testing keyGen change for curve %s", test.curve)
+		// key generation
+		seedBytes, err := hex.DecodeString(test.seed)
+		require.NoError(t, err)
+		sk, err := GeneratePrivateKey(test.curve, seedBytes)
+		require.NoError(t, err)
+		// test change
+		assert.Equal(t, test.expectedSK, sk.String())
+	}
+}

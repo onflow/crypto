@@ -1255,3 +1255,17 @@ func TestBLSIdentity(t *testing.T) {
 		assert.False(t, valid)
 	})
 }
+
+// TestBLSKeyGenerationBreakingChange detects if the deterministic key generation
+// changes behaviors (same seed outputs a different key than before)
+func TestBLSKeyGenerationBreakingChange(t *testing.T) {
+	seed := "00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF"
+	expectedSK := "0x5895ab2eccd1883856adc0784b15097e69154ac9bf29ecd605f95be3064f6f01"
+	// key generation
+	seedBytes, err := hex.DecodeString(seed)
+	require.NoError(t, err)
+	sk, err := GeneratePrivateKey(BLSBLS12381, seedBytes)
+	require.NoError(t, err)
+	// test change
+	assert.Equal(t, expectedSK, sk.String())
+}
