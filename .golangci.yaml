@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  exclusions:
+    paths:
+      - "internal/blst/*"  # disable checking copied file from blst
+    rules:
+      - linters:
+          - staticcheck
+        text: "QF1008"   # disable forcing to use the embedded field and omitting the embedded struct
+formatters:
+  exclusions:
+    paths:
+      - "internal/blst/*"  # disable checking copied file from blst
+
+
+
