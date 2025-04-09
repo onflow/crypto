@@ -90,7 +90,7 @@ func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac has
 func SPOCKVerify(pk1 PublicKey, proof1 Signature, pk2 PublicKey, proof2 Signature) (bool, error) {
 	blsPk1, ok1 := pk1.(*pubKeyBLSBLS12381)
 	blsPk2, ok2 := pk2.(*pubKeyBLSBLS12381)
-	if !(ok1 && ok2) {
+	if !ok1 || !ok2 {
 		return false, errNotBLSKey
 	}
 

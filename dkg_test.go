@@ -690,8 +690,9 @@ func (proc *testDKGProcessor) invalidVectorBroadcast(data []byte) {
 func (proc *testDKGProcessor) invalidComplaintBroadcast(data []byte) {
 	newMsg := &message{proc.current, proc.protocol, broadcast, data}
 
-	if proc.malicious == invalidComplaintBroadcast {
+	switch proc.malicious {
 
+	case invalidComplaintBroadcast:
 		// choose a random reason for an invalid complaint
 		coin := mrand.Intn(2)
 		gt.Logf("%d malicious complaint broadcast, coin is %d\n", proc.current, coin)
@@ -710,7 +711,7 @@ func (proc *testDKGProcessor) invalidComplaintBroadcast(data []byte) {
 				proc.chans[i] <- newMsg
 			}
 		}
-	} else if proc.malicious == timeoutedComplaintBroadcast {
+	case timeoutedComplaintBroadcast:
 		gt.Logf("%d timeouted complaint broadcast\n", proc.current)
 		// send the complaint after the second timeout, equivalent to not sending at all
 		// as the complaint should be ignored.
@@ -719,7 +720,6 @@ func (proc *testDKGProcessor) invalidComplaintBroadcast(data []byte) {
 				proc.lateChansTimeout2[i] <- newMsg
 			}
 		}
-		return
 	}
 }
 

@@ -214,7 +214,9 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 
 				// same for the compressed encoding
 				// skip if BLS is used and compression isn't supported
-				if !(salg == BLSBLS12381 && !isG2Compressed()) {
+				if salg == BLSBLS12381 && !isG2Compressed() {
+					continue
+				} else {
 					pkComprBytes := pk.EncodeCompressed()
 					pkComprCheck, err := DecodePublicKeyCompressed(salg, pkComprBytes)
 					require.Nil(t, err)
