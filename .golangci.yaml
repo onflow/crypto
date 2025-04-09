@@ -7,6 +7,9 @@ linters:
       - linters:
           - staticcheck
         text: "QF1008"   # disable forcing to use the embedded field and omitting the embedded struct
+      - linters:
+          - govet
+        text: "unsafeptr"  # disable flagging unsafeptr usage
 formatters:
   exclusions:
     paths:
