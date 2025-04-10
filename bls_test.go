@@ -1259,7 +1259,7 @@ func TestBLSIdentity(t *testing.T) {
 // TestBLSKeyGenerationBreakingChange detects if the deterministic key generation
 // changes behaviors (same seed outputs a different key than before)
 func TestBLSKeyGenerationBreakingChange(t *testing.T) {
-	seed := "00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF"
+	seed := "00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF" // example of what you shouldn't use as a secret seed
 	expectedSK := "0x5895ab2eccd1883856adc0784b15097e69154ac9bf29ecd605f95be3064f6f01"
 	// key generation
 	seedBytes, err := hex.DecodeString(seed)

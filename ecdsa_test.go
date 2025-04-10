@@ -156,16 +156,12 @@ func TestECDSAEncodeDecode(t *testing.T) {
 
 		// group order private key
 		t.Run("group order private key", func(t *testing.T) {
-			groupOrder := make(map[SigningAlgorithm][]byte)
-			groupOrder[ECDSAP256] = []byte{255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255,
-				255, 255, 255, 255, 255, 188, 230, 250, 173, 167,
-				23, 158, 132, 243, 185, 202, 194, 252, 99, 37, 81}
-
-			groupOrder[ECDSASecp256k1] = []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 254, 186, 174, 220, 230,
-				175, 72, 160, 59, 191, 210, 94, 140, 208, 54, 65, 65}
-
-			sk, err := DecodePrivateKey(curve, groupOrder[curve])
+			groupOrder := make(map[SigningAlgorithm]string)
+			groupOrder[ECDSAP256] = "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
+			groupOrder[ECDSASecp256k1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+			orderBytes, err := hex.DecodeString(groupOrder[curve])
+			require.NoError(t, err)
+			sk, err := DecodePrivateKey(curve, orderBytes)
 			require.Error(t, err)
 			assert.True(t, IsInvalidInputsError(err))
 			assert.ErrorContains(t, err, "input is larger than the curve order")
@@ -175,7 +171,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 		// this is the edge case of a zero-coordinates point.
 		// This is not the infinity point case, it only represents the (0,0) point.
 		// For both curves supported in the package, this point is not on curve.
-		// Infinity point serialization isn't defined by the package for ECDSA.
+		// Infinity point serialization isn't defined by the package for ECDSA and can't be deserialized.
 		t.Run("all zeros public key", func(t *testing.T) {
 			pkBytes := make([]byte, ecdsaPubKeyLen[curve])
 			pk, err := DecodePublicKey(curve, pkBytes)
@@ -185,7 +181,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			assert.Nil(t, pk)
 		})
 
-		// Test a public key serialization with a point encoded with a coordinate x with
+		// Test a public key serialization with a point encoded with
 		// x or y not reduced mod p.
 		// This test checks that:
 		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)

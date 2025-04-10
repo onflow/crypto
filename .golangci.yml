@@ -2,7 +2,7 @@ version: "2"
 linters:
   exclusions:
     paths:
-      - "internal/blst/*"  # disable checking copied file from blst
+      - "internal/blst/*"  # disable checking copied files from blst
     rules:
       - linters:
           - staticcheck
@@ -13,7 +13,7 @@ linters:
 formatters:
   exclusions:
     paths:
-      - "internal/blst/*"  # disable checking copied file from blst
+      - "internal/blst/*"  # disable checking copied files from blst
 
 
 

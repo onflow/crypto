@@ -80,7 +80,7 @@ func bitsToBytes(bits int) int {
 // Current implementation of `sign` is randomized, mixing the entropy from the
 // the system's crypto/rand, the private key and the hash.
 //
-// The caller must mask sure the hash is at least the curve order size.
+// The caller must make sure that the hash is at least the curve order size.
 func (sk *prKeyECDSA) signHash(h hash.Hash) (Signature, error) {
 	r, s, err := ecdsa.Sign(rand.Reader, sk.goPrKey, h)
 	if err != nil {
@@ -320,7 +320,7 @@ func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
 }
 
 // rawDecodePublicKey decodes a public key.
-// A valid input is bytes(x)||bytes(y) where bytes() is the big-endian encoding padded to the field size.
+// A valid input is `bytes(x) || bytes(y)` where `bytes()` is the big-endian encoding padded to the field size.
 // Note that infinity point serialization isn't defined in this package so the input (or output) can never represent an infinity point.
 func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
 	curve := a.curve
@@ -344,6 +344,7 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
 	if curve == elliptic.P256() {
 		// use crypto/ecdh implementation to perform on curve check
 		// because crypto/elliptic deprecated `IsOnCurve`.
+		// ECDH's `NewPublicKey` checks the public key is on curve to avoid falling in small-order groups.
 
 		// crypto/ecdh deserialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3)
 		// except for infinity point.
@@ -504,14 +505,14 @@ func (pk *pubKeyECDSA) Size() int {
 // This compressed representation uses an extra byte to disambiguate parity.
 // The expected input is a public key (x,y).
 //
-// Receiver point is on curve and non-infinity because the package only allows
-// constructing non-infinity points on curve in the expected behavior.
+// Receiver point is guaranteed to be on curve and to be non-infinity because
+// the package does not allow constructing infinity points or points not on curve.
 func (pk *pubKeyECDSA) EncodeCompressed() []byte {
 	return elliptic.MarshalCompressed(pk.goPubKey.Curve, pk.goPubKey.X, pk.goPubKey.Y)
 }
 
-// given a public key (x,y), returns a raw uncompressed encoding bytes(x)||bytes(y)
-// x and y are padded to the field size
+// `rawEncode` returns a raw uncompressed encoding `bytes(x) || bytes(y)` given a public key (x,y).
+// x and y are padded to the field size.
 func (pk *pubKeyECDSA) rawEncode() []byte {
 	xBytes := pk.goPubKey.X.Bytes()
 	yBytes := pk.goPubKey.Y.Bytes()

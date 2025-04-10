@@ -161,8 +161,9 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 // The function returns:
 //   - (nil, invalidInputsErrors) if the signing algorithm is not supported
 //   - (nil, invalidInputsErrors) if the input does not serialize a valid public key:
-//     -- ECDSA: a valid input is bytes(x)||bytes(y) where bytes() is the big-endian encoding padded to the field size (32 bytes).
-//     Note that infinity point serialization isn't defined in this package.
+//     -- ECDSA: a valid input is `bytes(x) || bytes(y)` where `bytes()` is the big-endian encoding padded to the field size (32 bytes),
+//     x and y are a point coordinates reduced modulo the field's prime, with the point being on curve.
+//     Note that infinity point serialization isn't defined in this package, so an infinity public key cannot be constructed.
 //     -- BLS: a valid input is a compressed serialization of a G2 point following
 //     https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-zcash-serialization-format-
 //     Note that infinity point is a valid serialized public key.
@@ -182,7 +183,9 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 // The function returns:
 //   - (nil, invalidInputsErrors) if the signing algorithm is not supported (is not ECDSA)
 //   - (nil, invalidInputsErrors) if the input does not serialize a valid public key:
-//     -- ECDSA: a valid input is sign_byte||bytes(x) according to X9.62 section 4.3.6.
+//     -- ECDSA: a valid input is `sign_byte || bytes(x)` according to X9.62 section 4.3.6.
+//     x is the first point coordinate (reduced modulo the field's prime) of a point being on curve.
+//     Note that infinity point serialization isn't defined in this package, so an infinity public key cannot be constructed.
 //     Note that infinity point serialization isn't defined in this package.
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
