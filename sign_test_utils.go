@@ -52,22 +52,22 @@ func TestHasherErrors(t *testing.T) {
 		err := errNilHasher
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, IsErrNilHasher(err))
+		assert.True(t, IsNilHasherError(err))
 		assert.False(t, IsInvalidInputsError(err))
-		assert.False(t, IsErrNilHasher(invInpError))
-		assert.False(t, IsErrNilHasher(otherError))
-		assert.False(t, IsErrNilHasher(nil))
+		assert.False(t, IsNilHasherError(invInpError))
+		assert.False(t, IsNilHasherError(otherError))
+		assert.False(t, IsNilHasherError(nil))
 	})
 
 	t.Run("nilHasher error sanity", func(t *testing.T) {
 		err := invalidHasherSizeErrorf("")
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, IsErrInvalidHasherSize(err))
+		assert.True(t, IsInvalidHasherSizeError(err))
 		assert.False(t, IsInvalidInputsError(err))
-		assert.False(t, IsErrInvalidHasherSize(invInpError))
-		assert.False(t, IsErrInvalidHasherSize(otherError))
-		assert.False(t, IsErrInvalidHasherSize(nil))
+		assert.False(t, IsInvalidHasherSizeError(invInpError))
+		assert.False(t, IsInvalidHasherSizeError(otherError))
+		assert.False(t, IsInvalidHasherSizeError(nil))
 	})
 }
 

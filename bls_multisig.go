@@ -280,7 +280,7 @@ func RemoveBLSPublicKeys(aggKey PublicKey, keysToRemove []PublicKey) (PublicKey,
 //
 // The function returns:
 //   - (false, errNilHasher) if hasher is nil
-//   - (false, errInvalidHasherSize) if hasher's output size is not 128 bytes
+//   - (false, invalidHasherSizeError) if hasher's output size is not 128 bytes
 //   - (false, errNotBLSKey) if at least one key is not of type pubKeyBLSBLS12381
 //   - (nil, errBLSAggregateEmptyList) if input key slice is empty
 //   - (false, error) if an unexpected error occurs
@@ -319,7 +319,7 @@ func VerifyBLSSignatureOneMessage(
 //
 // The function returns:
 //   - (false, errNilHasher) if a hasher is nil
-//   - (false, errInvalidHasherSize) if a hasher's output size is not 128 bytes
+//   - (false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - (false, errNotBLSKey) if at least one key is not a BLS BLS12-381 key
 //   - (false, invalidInputsError) if size of keys is not matching the size of messages and hashers
 //   - (false, errBLSAggregateEmptyList) if input key slice `pks` is empty
@@ -469,7 +469,7 @@ func VerifyBLSSignatureManyMessages(
 //
 // The function returns:
 //   - ([]false, errNilHasher) if a hasher is nil
-//   - ([]false, errInvalidHasherSize) if a hasher's output size is not 128 bytes
+//   - ([]false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - ([]false, errNotBLSKey) if at least one key is not of type BLS BLS12-381
 //   - ([]false, invalidInputsError) if size of keys is not matching the size of signatures
 //   - ([]false, errBLSAggregateEmptyList) if input key slice is empty
@@ -563,11 +563,11 @@ func BatchVerifyBLSSignaturesOneMessage(
 // is empty or nil and thereby represents an invalid input.
 var errBLSAggregateEmptyList = errors.New("list cannot be empty")
 
-// IsErrBLSAggregateEmptyList checks if err is an `errBLSAggregateEmptyList`.
+// IsBLSAggregateEmptyListError checks if err is an `errBLSAggregateEmptyList`.
 // errBLSAggregateEmptyList is returned when a BLS aggregation function is called with
 // an empty list which is not allowed in some aggregation cases to avoid signature equivocation
 // issues.
-func IsErrBLSAggregateEmptyList(err error) bool {
+func IsBLSAggregateEmptyListError(err error) bool {
 	return errors.Is(err, errBLSAggregateEmptyList)
 }
 
@@ -575,10 +575,10 @@ func IsErrBLSAggregateEmptyList(err error) bool {
 // used is not a BLS on BLS12 381 key.
 var errNotBLSKey = errors.New("input key has to be a BLS on BLS12-381 key")
 
-// IsErrNotBLSKey checks if err is an `errNotBLSKey`.
+// IsNotBLSKeyError checks if err is an `errNotBLSKey`.
 // errNotBLSKey is returned when a private or public key
 // used is not a BLS on BLS12 381 key.
-func IsErrNotBLSKey(err error) bool {
+func IsNotBLSKeyError(err error) bool {
 	return errors.Is(err, errNotBLSKey)
 }
 
@@ -586,9 +586,9 @@ func IsErrNotBLSKey(err error) bool {
 // valid element on E1 of the BLS12-381 curve (but without checking the element is on subgroup G1).
 var errInvalidSignature = errors.New("input signature does not deserialize to an E1 element")
 
-// IsErrInvalidSignature checks if err is an `errInvalidSignature`
-// errInvalidSignature is returned when a signature input does not serialize to a
+// IsInvalidSignatureError checks if err is the internal `errInvalidSignature`.
+// `errInvalidSignature` is returned when a signature input does not serialize to a
 // valid element on E1 of the BLS12-381 curve (but without checking the element is on subgroup G1).
-func IsErrInvalidSignature(err error) bool {
+func IsInvalidSignatureError(err error) bool {
 	return errors.Is(err, errInvalidSignature)
 }

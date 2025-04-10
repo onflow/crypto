@@ -132,7 +132,7 @@ func internalExpandMsgXOFKMAC128(key string) hash.Hasher {
 // checkBLSHasher asserts that the given `hasher` is not nil and
 // has an output size of `expandMsgOutput`. Otherwise an error is returned:
 //   - errNilHasher if the hasher is nil
-//   - errInvalidHasherSize if the hasher's output size is not `expandMsgOutput` (128 bytes)
+//   - invalidHasherSizeError if the hasher's output size is not `expandMsgOutput` (128 bytes)
 func checkBLSHasher(hasher hash.Hasher) error {
 	if hasher == nil {
 		return errNilHasher
@@ -155,7 +155,7 @@ func checkBLSHasher(hasher hash.Hasher) error {
 //
 // The function returns:
 //   - (false, errNilHasher) if a hasher is nil
-//   - (false, errInvalidHasherSize) if a hasher's output size is not 128 bytes
+//   - (false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - (signature, nil) otherwise
 func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (Signature, error) {
 	// sanity check of input hasher
@@ -191,7 +191,7 @@ func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (Signature, erro
 //
 // The function returns:
 //   - (false, errNilHasher) if a hasher is nil
-//   - (false, errInvalidHasherSize) if a hasher's output size is not 128 bytes
+//   - (false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func (pk *pubKeyBLSBLS12381) Verify(s Signature, data []byte, kmac hash.Hasher) (bool, error) {

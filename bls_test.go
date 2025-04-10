@@ -147,22 +147,22 @@ func TestBLSBLS12381Hasher(t *testing.T) {
 	t.Run("Empty hasher", func(t *testing.T) {
 		_, err := sk.Sign(msg, nil)
 		assert.Error(t, err)
-		assert.True(t, IsErrNilHasher(err))
+		assert.True(t, IsNilHasherError(err))
 		_, err = sk.PublicKey().Verify(sig, msg, nil)
 		assert.Error(t, err)
-		assert.True(t, IsErrNilHasher(err))
+		assert.True(t, IsNilHasherError(err))
 	})
 
 	// short size hasher
 	t.Run("short size hasher", func(t *testing.T) {
 		s, err := sk.Sign(msg, hash.NewSHA2_256())
 		assert.Error(t, err)
-		assert.True(t, IsErrInvalidHasherSize(err))
+		assert.True(t, IsInvalidHasherSizeError(err))
 		assert.Nil(t, s)
 
 		valid, err := sk.PublicKey().Verify(sig, msg, hash.NewSHA2_256())
 		assert.Error(t, err)
-		assert.True(t, IsErrInvalidHasherSize(err))
+		assert.True(t, IsInvalidHasherSizeError(err))
 		assert.False(t, valid)
 	})
 
@@ -328,12 +328,12 @@ func TestBLSPOP(t *testing.T) {
 		// ecdsa key
 		sk := invalidSK(t)
 		s, err := BLSGeneratePOP(sk)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.Nil(t, s)
 
 		s = make([]byte, SignatureLenBLSBLS12381)
 		result, err := BLSVerifyPOP(sk.PublicKey(), s)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.False(t, result)
 	})
 }
@@ -426,40 +426,40 @@ func TestBLSAggregateSignatures(t *testing.T) {
 		// test aggregating an empty signature list
 		aggSig, err = AggregateBLSSignatures(sigs[:0])
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Nil(t, aggSig)
 
 		// test verification with an empty key list
 		result, err := VerifyBLSSignatureOneMessage(pks[:0], aggSig, input, kmac)
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.False(t, result)
 
 		// test with a signature of a wrong length
 		shortSig := sigs[0][:SignatureLenBLSBLS12381-1]
 		aggSig, err = AggregateBLSSignatures([]Signature{shortSig})
 		assert.Error(t, err)
-		assert.True(t, IsErrInvalidSignature(err))
+		assert.True(t, IsInvalidSignatureError(err))
 		assert.Nil(t, aggSig)
 
 		// test with an invalid signature of a correct length
 		invalidSig := BLSInvalidSignature()
 		aggSig, err = AggregateBLSSignatures([]Signature{invalidSig})
 		assert.Error(t, err)
-		assert.True(t, IsErrInvalidSignature(err))
+		assert.True(t, IsInvalidSignatureError(err))
 		assert.Nil(t, aggSig)
 
 		// test the empty key list
 		aggSk, err := AggregateBLSPrivateKeys(sks[:0])
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Nil(t, aggSk)
 
 		// test with an invalid key type
 		sk := invalidSK(t)
 		aggSk, err = AggregateBLSPrivateKeys([]PrivateKey{sk})
 		assert.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.Nil(t, aggSk)
 	})
 }
@@ -503,12 +503,12 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 		// private keys
 		aggSk, err := AggregateBLSPrivateKeys(sks[:0])
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Nil(t, aggSk)
 		// public keys
 		aggPk, err := AggregateBLSPublicKeys(pks[:0])
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Nil(t, aggPk)
 	})
 
@@ -526,14 +526,14 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 		// empty list
 		aggPK, err := AggregateBLSPublicKeys(pks[:0])
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Nil(t, aggPK)
 
 		// test with an invalid key type
 		pk := invalidSK(t).PublicKey()
 		aggPK, err = AggregateBLSPublicKeys([]PublicKey{pk})
 		assert.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.Nil(t, aggPK)
 	})
 
@@ -665,12 +665,12 @@ func TestBLSRemovePubKeys(t *testing.T) {
 		pk := invalidSK(t).PublicKey()
 		partialPk, err := RemoveBLSPublicKeys(pk, pks)
 		assert.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.Nil(t, partialPk)
 
 		partialPk, err = RemoveBLSPublicKeys(aggPk, []PublicKey{pk})
 		assert.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.Nil(t, partialPk)
 	})
 }
@@ -800,7 +800,7 @@ func TestBLSBatchVerify(t *testing.T) {
 	t.Run("empty list", func(t *testing.T) {
 		valid, err := BatchVerifyBLSSignaturesOneMessage(pks[:0], sigs[:0], input, kmac)
 		require.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.Equal(t, valid, expectedValid[:0])
 	})
 
@@ -822,7 +822,7 @@ func TestBLSBatchVerify(t *testing.T) {
 		}
 		valid, err := BatchVerifyBLSSignaturesOneMessage(pks, sigs, input, nil)
 		require.Error(t, err)
-		assert.True(t, IsErrNilHasher(err))
+		assert.True(t, IsNilHasherError(err))
 
 		assert.Equal(t, valid, expectedValid)
 	})
@@ -835,7 +835,7 @@ func TestBLSBatchVerify(t *testing.T) {
 		pks[0] = invalidSK(t).PublicKey()
 		valid, err := BatchVerifyBLSSignaturesOneMessage(pks, sigs, input, kmac)
 		require.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 
 		assert.Equal(t, valid, expectedValid)
 	})
@@ -995,7 +995,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 	t.Run("empty list", func(t *testing.T) {
 		valid, err := VerifyBLSSignatureManyMessages(inputPks[:0], aggSig, inputMsgs, inputKmacs)
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.False(t, valid)
 	})
 
@@ -1010,7 +1010,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 		// empty key list
 		valid, err = VerifyBLSSignatureManyMessages(inputPks[:0], aggSig, inputMsgs, inputKmacs)
 		assert.Error(t, err)
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.False(t, valid)
 
 		// nil hasher
@@ -1018,7 +1018,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 		inputKmacs[0] = nil
 		valid, err = VerifyBLSSignatureManyMessages(inputPks, aggSig, inputMsgs, inputKmacs)
 		assert.Error(t, err)
-		assert.True(t, IsErrNilHasher(err))
+		assert.True(t, IsNilHasherError(err))
 		assert.False(t, valid)
 		inputKmacs[0] = tmp
 
@@ -1027,7 +1027,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 		inputPks[0] = invalidSK(t).PublicKey()
 		valid, err = VerifyBLSSignatureManyMessages(inputPks, aggSig, inputMsgs, inputKmacs)
 		assert.Error(t, err)
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.False(t, valid)
 		inputPks[0] = tmpPK
 	})
@@ -1079,22 +1079,22 @@ func TestBLSErrorTypes(t *testing.T) {
 		err := errBLSAggregateEmptyList
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, IsErrBLSAggregateEmptyList(err))
+		assert.True(t, IsBLSAggregateEmptyListError(err))
 		assert.False(t, IsInvalidInputsError(err))
-		assert.False(t, IsErrBLSAggregateEmptyList(invInpError))
-		assert.False(t, IsErrBLSAggregateEmptyList(otherError))
-		assert.False(t, IsErrBLSAggregateEmptyList(nil))
+		assert.False(t, IsBLSAggregateEmptyListError(invInpError))
+		assert.False(t, IsBLSAggregateEmptyListError(otherError))
+		assert.False(t, IsBLSAggregateEmptyListError(nil))
 	})
 
 	t.Run("errNotBLSKey sanity", func(t *testing.T) {
 		err := errNotBLSKey
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, IsErrNotBLSKey(err))
+		assert.True(t, IsNotBLSKeyError(err))
 		assert.False(t, IsInvalidInputsError(err))
-		assert.False(t, IsErrNotBLSKey(invInpError))
-		assert.False(t, IsErrNotBLSKey(otherError))
-		assert.False(t, IsErrNotBLSKey(nil))
+		assert.False(t, IsNotBLSKeyError(invInpError))
+		assert.False(t, IsNotBLSKeyError(otherError))
+		assert.False(t, IsNotBLSKeyError(nil))
 	})
 }
 
