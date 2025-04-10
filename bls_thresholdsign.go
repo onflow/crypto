@@ -105,7 +105,7 @@ var _ ThresholdSignatureInspector = (*blsThresholdSignatureInspector)(nil)
 //   - `n` is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
 //   - threshold value is not in interval `[1, n-1]`
 //   - input private key and public key at my index do not match
-//   - (nil, notBLSKeyError) if the private or at least one public key is not of type BLS BLS12-381.
+//   - (nil, errNotBLSKey) if the private or at least one public key is not of type BLS BLS12-381.
 //   - (pointer, nil) otherwise
 func NewBLSThresholdSignatureParticipant(
 	groupPublicKey PublicKey,
@@ -126,7 +126,7 @@ func NewBLSThresholdSignatureParticipant(
 
 	// check private key is BLS key
 	if _, ok := myPrivateKey.(*prKeyBLSBLS12381); !ok {
-		return nil, fmt.Errorf("private key of participant %d is not valid: %w", myIndex, notBLSKeyError)
+		return nil, fmt.Errorf("private key of participant %d is not valid: %w", myIndex, errNotBLSKey)
 	}
 
 	// create the follower
@@ -162,7 +162,7 @@ func NewBLSThresholdSignatureParticipant(
 // - (nil, invalidInputsError) if:
 //   - `n` is not in [`ThresholdSignMinSize`, `ThresholdSignMaxSize`]
 //   - threshold value is not in interval `[1, n-1]`
-//   - (nil, notBLSKeyError) at least one public key is not of type pubKeyBLSBLS12381
+//   - (nil, errNotBLSKey) at least one public key is not of type pubKeyBLSBLS12381
 //   - (pointer, nil) otherwise
 func NewBLSThresholdSignatureInspector(
 	groupPublicKey PublicKey,
@@ -187,11 +187,11 @@ func NewBLSThresholdSignatureInspector(
 	// check keys are BLS keys
 	for i, pk := range sharePublicKeys {
 		if _, ok := pk.(*pubKeyBLSBLS12381); !ok {
-			return nil, fmt.Errorf("key at index %d is invalid: %w", i, notBLSKeyError)
+			return nil, fmt.Errorf("key at index %d is invalid: %w", i, errNotBLSKey)
 		}
 	}
 	if _, ok := groupPublicKey.(*pubKeyBLSBLS12381); !ok {
-		return nil, fmt.Errorf("group key is invalid: %w", notBLSKeyError)
+		return nil, fmt.Errorf("group key is invalid: %w", errNotBLSKey)
 	}
 
 	return &blsThresholdSignatureInspector{
@@ -387,7 +387,7 @@ func (s *blsThresholdSignatureInspector) VerifyAndAdd(orig int, share Signature)
 // Returns:
 //   - (signature, nil) if no error occurred
 //   - (nil, notEnoughSharesError) if not enough shares were collected
-//   - (nil, invalidSignatureError) if at least one collected share does not serialize to a valid BLS signature.
+//   - (nil, errInvalidSignature) if at least one collected share does not serialize to a valid BLS signature.
 //   - (nil, invalidInputsError) if the constructed signature failed to verify against the group public key and stored
 //     message. This post-verification is required  for safety, as `TrustedAdd` allows adding invalid signatures.
 //   - (nil, error) for any other unexpected error.
@@ -413,7 +413,7 @@ func (s *blsThresholdSignatureInspector) ThresholdSignature() (Signature, error)
 // Returns:
 //   - (signature, nil) if no error occurred
 //   - (nil, notEnoughSharesError) if not enough shares were collected
-//   - (nil, invalidSignatureError) if at least one collected share does not serialize to a valid BLS signature.
+//   - (nil, errInvalidSignature) if at least one collected share does not serialize to a valid BLS signature.
 //   - (nil, invalidInputsError) if the constructed signature failed to verify against the group public key and stored message.
 //   - (nil, error) for any other unexpected error.
 func (s *blsThresholdSignatureInspector) reconstructThresholdSignature() (Signature, error) {
@@ -439,7 +439,7 @@ func (s *blsThresholdSignatureInspector) reconstructThresholdSignature() (Signat
 		(*C.uint8_t)(&signers[0]), (C.int)(s.threshold))
 
 	if result != valid {
-		return nil, invalidSignatureError
+		return nil, errInvalidSignature
 	}
 
 	// Verify the computed signature
@@ -469,7 +469,7 @@ func (s *blsThresholdSignatureInspector) reconstructThresholdSignature() (Signat
 //     -- the inputs are not in the correct range.
 //   - (nil, notEnoughSharesError) if the threshold is not reached.
 //   - (nil, duplicatedSignerError) if input signers are not distinct.
-//   - (nil, invalidSignatureError) if at least one of the first (threshold+1) signatures.
+//   - (nil, errInvalidSignature) if at least one of the first (threshold+1) signatures.
 //     does not serialize to a valid E1 point.
 //   - (threshold_sig, nil) otherwise.
 //
@@ -530,7 +530,7 @@ func BLSReconstructThresholdSignature(size int, threshold int,
 		(*C.uchar)(&flatShares[0]),
 		(*C.uint8_t)(&indexSigners[0]), (C.int)(threshold),
 	) != valid {
-		return nil, invalidSignatureError
+		return nil, errInvalidSignature
 	}
 	return thresholdSignature, nil
 }

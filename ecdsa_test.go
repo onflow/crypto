@@ -24,7 +24,6 @@ import (
 
 	"crypto/elliptic"
 	crand "crypto/rand"
-	"math/big"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
@@ -74,9 +73,7 @@ func (d *dummyHasher) SumHash() hash.Hash               { return make([]byte, d.
 func (d *dummyHasher) Reset()                           {}
 
 func TestECDSAHasher(t *testing.T) {
-
 	for _, curve := range ecdsaCurves {
-
 		// generate a key pair
 		seed := make([]byte, KeyGenSeedMinLen)
 		n, err := crand.Read(seed)
@@ -146,6 +143,71 @@ func BenchmarkECDSASecp256k1Verify(b *testing.B) {
 func TestECDSAEncodeDecode(t *testing.T) {
 	for _, curve := range ecdsaCurves {
 		testEncodeDecode(t, curve)
+
+		//  zero private key
+		t.Run("zero private key", func(t *testing.T) {
+			skBytes := make([]byte, ecdsaPrKeyLen[curve])
+			sk, err := DecodePrivateKey(curve, skBytes)
+			require.Error(t, err, "decoding identity private key should fail")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "zero private keys are not a valid")
+			assert.Nil(t, sk)
+		})
+
+		// group order private key
+		t.Run("group order private key", func(t *testing.T) {
+			groupOrder := make(map[SigningAlgorithm]string)
+			groupOrder[ECDSAP256] = "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
+			groupOrder[ECDSASecp256k1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+			orderBytes, err := hex.DecodeString(groupOrder[curve])
+			require.NoError(t, err)
+			sk, err := DecodePrivateKey(curve, orderBytes)
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is larger than the curve order")
+			assert.Nil(t, sk)
+		})
+
+		// this is the edge case of a zero-coordinates point.
+		// This is not the infinity point case, it only represents the (0,0) point.
+		// For both curves supported in the package, this point is not on curve.
+		// Infinity point serialization isn't defined by the package for ECDSA and can't be deserialized.
+		t.Run("all zeros public key", func(t *testing.T) {
+			pkBytes := make([]byte, ecdsaPubKeyLen[curve])
+			pk, err := DecodePublicKey(curve, pkBytes)
+			require.Error(t, err, "point is not on curve")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is not a point on curve")
+			assert.Nil(t, pk)
+		})
+
+		// Test a public key serialization with a point encoded with
+		// x or y not reduced mod p.
+		// This test checks that:
+		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
+		//  - public key decoding only accepts reduced x and y
+		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
+			invalidPK1s := map[SigningAlgorithm]string{
+				ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			invalidPK2s := map[SigningAlgorithm]string{
+				ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			// invalidpk1 with x >= p
+			invalidPk1, err := hex.DecodeString(invalidPK1s[curve])
+			require.NoError(t, err)
+			_, err = DecodePublicKey(curve, invalidPk1)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+			// invalidpk2 with y >= p
+			invalidPk2, err := hex.DecodeString(invalidPK2s[curve])
+			require.NoError(t, err)
+			_, err = DecodePublicKey(curve, invalidPk2)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+		})
 	}
 }
 
@@ -158,7 +220,6 @@ func TestECDSAEquals(t *testing.T) {
 
 // TestECDSAUtils tests some utility functions
 func TestECDSAUtils(t *testing.T) {
-
 	for _, curve := range ecdsaCurves {
 		// generate a key pair
 		seed := make([]byte, KeyGenSeedMinLen)
@@ -172,88 +233,40 @@ func TestECDSAUtils(t *testing.T) {
 	}
 }
 
-// TestScalarMult is a unit test of the scalar multiplication
-// This is only a sanity check meant to make sure the curve implemented
-// is checked against an independent test vector
-func TestScalarMultP256_secp256k1(t *testing.T) {
-	secp256k1 := secp256k1Instance.curve
-	p256 := p256Instance.curve
-	genericMultTests := []struct {
-		curve elliptic.Curve
-		Px    string
-		Py    string
-		k     string
-		Qx    string
-		Qy    string
+// TestECDSAPublicKeyComputation is a sanity check that the public
+// key derivation from the private key is valid.
+// This is a sanity check of the underlined base scalar multiplication.
+// Derived public keys are compared against a hardcoded vector.
+func TestECDSAPublicKeyComputation(t *testing.T) {
+	testVec := []struct {
+		curve SigningAlgorithm
+		sk    string
+		pk    string
 	}{
 		{
-			secp256k1,
-			"858a2ea2498449acf531128892f8ee5eb6d10cfb2f7ebfa851def0e0d8428742",
-			"015c59492d794a4f6a3ab3046eecfc85e223d1ce8571aa99b98af6838018286e",
+			ECDSASecp256k1,
 			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
-			"fea24b9a6acdd97521f850e782ef4a24f3ef672b5cd51f824499d708bb0c744d",
-			"5f0b6db1a2c851cb2959fab5ed36ad377e8b53f1f43b7923f1be21b316df1ea1",
+			"0x36f292f6c287b6e72ca8128465647c7f88730f84ab27a1e934dbd2da753930fa39a09ddcf3d28fb30cc683de3fc725e095ec865c3d41aef6065044cb12b1ff61",
 		},
 		{
-			p256,
-			"fa1a85f1ae436e9aa05baabe60eb83b2d7ff52e5766504fda4e18d2d25887481",
-			"f7cc347e1ac53f6720ffc511bfb23c2f04c764620be0baf8c44313e92d5404de",
+			ECDSAP256,
 			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
-			"28a27fc352f315d5cc562cb0d97e5882b6393fd6571f7d394cc583e65b5c7ffe",
-			"4086d17a2d0d9dc365388c91ba2176de7acc5c152c1a8d04e14edc6edaebd772",
+			"0x78a80dfe190a6068be8ddf05644c32d2540402ffc682442f6a9eeb96125d86813789f92cf4afabf719aaba79ecec54b27e33a188f83158f6dd15ecb231b49808",
 		},
 	}
 
-	baseMultTests := []struct {
-		curve elliptic.Curve
-		k     string
-		Qx    string
-		Qy    string
-	}{
-		{
-			secp256k1,
-			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
-			"36f292f6c287b6e72ca8128465647c7f88730f84ab27a1e934dbd2da753930fa",
-			"39a09ddcf3d28fb30cc683de3fc725e095ec865c3d41aef6065044cb12b1ff61",
-		},
-		{
-			p256,
-			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
-			"78a80dfe190a6068be8ddf05644c32d2540402ffc682442f6a9eeb96125d8681",
-			"3789f92cf4afabf719aaba79ecec54b27e33a188f83158f6dd15ecb231b49808",
-		},
+	for _, test := range testVec {
+		// get the private key (the scalar)
+		bytes, err := hex.DecodeString(test.sk)
+		require.NoError(t, err)
+		sk, err := DecodePrivateKey(test.curve, bytes)
+		require.NoError(t, err)
+		// computed public key (base scalar point result)
+		computedPk := sk.PublicKey().String()
+		require.NoError(t, err)
+		// check that the computed public key matches the expected one
+		assert.Equal(t, test.pk, computedPk)
 	}
-
-	t.Run("scalar mult check", func(t *testing.T) {
-		for _, test := range genericMultTests {
-			Px, _ := new(big.Int).SetString(test.Px, 16)
-			Py, _ := new(big.Int).SetString(test.Py, 16)
-			k, _ := new(big.Int).SetString(test.k, 16)
-			Qx, _ := new(big.Int).SetString(test.Qx, 16)
-			Qy, _ := new(big.Int).SetString(test.Qy, 16)
-			Rx, Ry := test.curve.ScalarMult(Px, Py, k.Bytes())
-			assert.Equal(t, Rx.Cmp(Qx), 0)
-			assert.Equal(t, Ry.Cmp(Qy), 0)
-		}
-	})
-
-	t.Run("base scalar mult check", func(t *testing.T) {
-		for _, test := range baseMultTests {
-			k, _ := new(big.Int).SetString(test.k, 16)
-			Qx, _ := new(big.Int).SetString(test.Qx, 16)
-			Qy, _ := new(big.Int).SetString(test.Qy, 16)
-			// base mult
-			Rx, Ry := test.curve.ScalarBaseMult(k.Bytes())
-			assert.Equal(t, Rx.Cmp(Qx), 0)
-			assert.Equal(t, Ry.Cmp(Qy), 0)
-			// generic mult with base point
-			Px := new(big.Int).Set(test.curve.Params().Gx)
-			Py := new(big.Int).Set(test.curve.Params().Gy)
-			Rx, Ry = test.curve.ScalarMult(Px, Py, k.Bytes())
-			assert.Equal(t, Rx.Cmp(Qx), 0)
-			assert.Equal(t, Ry.Cmp(Qy), 0)
-		}
-	})
 }
 
 func TestSignatureFormatCheck(t *testing.T) {
@@ -337,7 +350,6 @@ func TestSignatureFormatCheck(t *testing.T) {
 }
 
 func TestEllipticUnmarshalSecp256k1(t *testing.T) {
-
 	testVectors := []string{
 		"028b10bf56476bf7da39a3286e29df389177a2fa0fca2d73348ff78887515d8da1", // IsOnCurve for elliptic returns false
 		"03d39427f07f680d202fe8504306eb29041aceaf4b628c2c69b0ec248155443166", // odd, IsOnCurve for elliptic returns false
@@ -346,7 +358,6 @@ func TestEllipticUnmarshalSecp256k1(t *testing.T) {
 	}
 
 	for _, testVector := range testVectors {
-
 		// get the compressed bytes
 		publicBytes, err := hex.DecodeString(testVector)
 		require.NoError(t, err)
@@ -392,5 +403,37 @@ func BenchmarkECDSADecode(b *testing.B) {
 			}
 			b.StopTimer()
 		})
+	}
+}
+
+// TestECDSAKeyGenerationBreakingChange detects if the deterministic key generation
+// changes behaviors (same seed outputs a different key than before)
+func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
+	testVec := []struct {
+		curve      SigningAlgorithm
+		seed       string
+		expectedSK string
+	}{
+		{
+			ECDSASecp256k1,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x4723d238a9702296f96bf64f1288c8b1eb93a4bff8b1482be4172c745bf30acb",
+		},
+		{
+			ECDSAP256,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x3cadd4123b493233252ffdeccaef07066b73e2c3a9a08905669c5a857027708b",
+		},
+	}
+
+	for _, test := range testVec {
+		t.Logf("testing keyGen change for curve %s", test.curve)
+		// key generation
+		seedBytes, err := hex.DecodeString(test.seed)
+		require.NoError(t, err)
+		sk, err := GeneratePrivateKey(test.curve, seedBytes)
+		require.NoError(t, err)
+		// test change
+		assert.Equal(t, test.expectedSK, sk.String())
 	}
 }

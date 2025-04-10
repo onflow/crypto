@@ -78,12 +78,12 @@ func IsInvalidInputsError(err error) bool {
 	return errors.As(err, &target)
 }
 
-var nilHasherError = errors.New("hasher cannot be nil")
+var errNilHasher = errors.New("hasher cannot be nil")
 
-// IsNilHasherError checks if the input error wraps a nilHasherError.
-// nilHasherError is returned when a nil hasher is used.
+// IsNilHasherError checks if the input error wraps the internal errNilHasher,
+// which is returned when a nil hasher is used.
 func IsNilHasherError(err error) bool {
-	return errors.Is(err, nilHasherError)
+	return errors.Is(err, errNilHasher)
 }
 
 // invalidHasherSizeError is an error returned when a crypto API is called with a hasher

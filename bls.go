@@ -41,15 +41,20 @@ package crypto
 //  - SPoCK scheme based on BLS: verifies two signatures are generated from the same message,
 //    even though the message is unknown to the verifier.
 
+// #cgo noescape E2_in_G2
+// #cgo nocallback E2_in_G2
+// #cgo noescape bls_sign
+// #cgo nocallback bls_sign
+// #cgo noescape bls_verify
+// #cgo nocallback bls_verify
 // #include "bls_include.h"
 import "C"
 
 import (
 	"bytes"
+	"crypto/hkdf"
 	"crypto/sha256"
 	"fmt"
-
-	"golang.org/x/crypto/hkdf"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -126,11 +131,11 @@ func internalExpandMsgXOFKMAC128(key string) hash.Hasher {
 
 // checkBLSHasher asserts that the given `hasher` is not nil and
 // has an output size of `expandMsgOutput`. Otherwise an error is returned:
-//   - nilHasherError if the hasher is nil
+//   - errNilHasher if the hasher is nil
 //   - invalidHasherSizeError if the hasher's output size is not `expandMsgOutput` (128 bytes)
 func checkBLSHasher(hasher hash.Hasher) error {
 	if hasher == nil {
-		return nilHasherError
+		return errNilHasher
 	}
 	if hasher.Size() != expandMsgOutput {
 		return invalidHasherSizeErrorf("hasher's size needs to be %d, got %d", expandMsgOutput, hasher.Size())
@@ -149,7 +154,7 @@ func checkBLSHasher(hasher hash.Hasher) error {
 // with a domain separation tag.
 //
 // The function returns:
-//   - (false, nilHasherError) if a hasher is nil
+//   - (false, errNilHasher) if a hasher is nil
 //   - (false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - (signature, nil) otherwise
 func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (Signature, error) {
@@ -185,7 +190,7 @@ func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (Signature, erro
 // If the hasher used is ExpandMsgXOFKMAC128, the hasher is read only.
 //
 // The function returns:
-//   - (false, nilHasherError) if a hasher is nil
+//   - (false, errNilHasher) if a hasher is nil
 //   - (false, invalidHasherSizeError) if a hasher's output size is not 128 bytes
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
@@ -270,18 +275,15 @@ func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (PrivateKey, error) {
 	copy(secret, ikm)
 	defer overwrite(secret) // overwrite secret
 	// HKDF info = key_info || I2OSP(L, 2)
-	keyInfo := "" // use empty key diversifier. TODO: update header to accept input identifier
-	info := append([]byte(keyInfo), byte(okmLength>>8), byte(okmLength))
+	keyInfo := []byte{} // use empty key diversifier. TODO: update header to accept input identifier
+	info := string(append(keyInfo, byte(okmLength>>8), byte(okmLength)))
 
 	sk := newPrKeyBLSBLS12381(nil)
 	for {
 		// instantiate HKDF and extract L bytes
-		reader := hkdf.New(hashFunction, secret, salt, info)
-		okm := make([]byte, okmLength)
-		n, err := reader.Read(okm)
-		if err != nil || n != okmLength {
-			return nil, fmt.Errorf("key generation failed because of the HKDF reader, %d bytes were read: %w",
-				n, err)
+		okm, err := hkdf.Key(hashFunction, secret, salt, info, okmLength)
+		if err != nil {
+			return nil, fmt.Errorf("HKDF computation failed: %w", err)
 		}
 		defer overwrite(okm) // overwrite okm
 
