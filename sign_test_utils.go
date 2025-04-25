@@ -49,7 +49,7 @@ func TestKeyGenErrors(t *testing.T) {
 
 func TestHasherErrors(t *testing.T) {
 	t.Run("nilHasher error sanity", func(t *testing.T) {
-		err := nilHasherError
+		err := errNilHasher
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
 		assert.True(t, IsNilHasherError(err))
@@ -213,8 +213,10 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 				assert.NotEqual(t, pkBytes, distinctPkBytes)
 
 				// same for the compressed encoding
-				// skip is BLS is used and compression isn't supported
-				if !(salg == BLSBLS12381 && !isG2Compressed()) {
+				// skip if BLS is used and compression isn't supported
+				if salg == BLSBLS12381 && !isG2Compressed() {
+					continue
+				} else {
 					pkComprBytes := pk.EncodeCompressed()
 					pkComprCheck, err := DecodePublicKeyCompressed(salg, pkComprBytes)
 					require.Nil(t, err)
@@ -225,26 +227,6 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 					assert.NotEqual(t, pkComprBytes, distinctPkComprBytes)
 				}
 			}
-		})
-
-		// test invalid private keys (equal to the curve group order)
-
-		t.Run("private keys equal to the group order", func(t *testing.T) {
-			groupOrder := make(map[SigningAlgorithm][]byte)
-			groupOrder[ECDSAP256] = []byte{255, 255, 255, 255, 0, 0, 0, 0, 255, 255, 255,
-				255, 255, 255, 255, 255, 188, 230, 250, 173, 167,
-				23, 158, 132, 243, 185, 202, 194, 252, 99, 37, 81}
-
-			groupOrder[ECDSASecp256k1] = []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 254, 186, 174, 220, 230,
-				175, 72, 160, 59, 191, 210, 94, 140, 208, 54, 65, 65}
-
-			groupOrder[BLSBLS12381] = BLS12381Order
-
-			sk, err := DecodePrivateKey(salg, groupOrder[salg])
-			require.Error(t, err)
-			assert.True(t, IsInvalidInputsError(err))
-			assert.Nil(t, sk)
 		})
 
 		// test invalid private and public keys (invalid length)

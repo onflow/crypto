@@ -28,6 +28,16 @@ package crypto
 // #cgo CFLAGS: -I${SRCDIR}/ -I${SRCDIR}/blst_src -I${SRCDIR}/blst_src/build -D__BLST_CGO__ -Wall -fno-builtin-memcpy -fno-builtin-memset -Wno-unused-function -Wno-unused-macros -Wno-unused-variable
 // #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
 // #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
+// #cgo noescape E2_read_bytes
+// #cgo nocallback E2_read_bytes
+// #cgo noescape E2_write_bytes
+// #cgo nocallback E2_write_bytes
+// #cgo noescape E1_read_bytes
+// #cgo nocallback E1_read_bytes
+// #cgo noescape E1_write_bytes
+// #cgo nocallback E1_write_bytes
+// #cgo noescape Fr_star_read_bytes
+// #cgo nocallback Fr_star_read_bytes
 // #include "bls12381_utils.h"
 //
 // #if defined(__x86_64__) && (defined(__unix__) || defined(__APPLE__))

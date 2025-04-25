@@ -43,7 +43,7 @@ func TestBLSMainMethods(t *testing.T) {
 	testGenSignVerify(t, BLSBLS12381, hasher)
 
 	// specific signature test for BLS:
-	// Test a signature with a point encoded with a coordinate x not reduced mod p
+	// Test a signature with a point encoded with a coordinate x not reduced mod p.
 	// The same signature point with the x coordinate reduced passes verification.
 	// This test checks that:
 	//  - signature decoding handles input x-coordinates larger than p (doesn't result in an exception)
@@ -206,6 +206,17 @@ func TestBLSEncodeDecode(t *testing.T) {
 		sk, err := DecodePrivateKey(BLSBLS12381, skBytes)
 		require.Error(t, err, "decoding identity private key should fail")
 		assert.True(t, IsInvalidInputsError(err))
+		assert.ErrorContains(t, err, "scalar is not in the correct range")
+		assert.Nil(t, sk)
+	})
+
+	// curve group private key
+
+	t.Run("group order private key", func(t *testing.T) {
+		sk, err := DecodePrivateKey(BLSBLS12381, BLS12381Order)
+		require.Error(t, err)
+		assert.True(t, IsInvalidInputsError(err))
+		assert.ErrorContains(t, err, "scalar is not in the correct range")
 		assert.Nil(t, sk)
 	})
 
@@ -237,8 +248,8 @@ func TestBLSEncodeDecode(t *testing.T) {
 	// This test checks that:
 	//  - public key decoding handles input x-coordinates with x[0] and x[1] larger than p (doesn't result in an exception)
 	//  - public key decoding only accepts reduced x[0] and x[1] to insure key serialization uniqueness.
-	// Although uniqueness of public key respresentation isn't a security property, some implementations
-	// may implicitely rely on the property.
+	// Although uniqueness of public key representation isn't a security property, some implementations
+	// may implicitly rely on the property.
 
 	t.Run("public key with non-reduced coordinates", func(t *testing.T) {
 		if !isG2Compressed() {
@@ -1065,7 +1076,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 // such as `IsInvalidInputsError`.
 func TestBLSErrorTypes(t *testing.T) {
 	t.Run("aggregateEmptyListError sanity", func(t *testing.T) {
-		err := blsAggregateEmptyListError
+		err := errBLSAggregateEmptyList
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
 		assert.True(t, IsBLSAggregateEmptyListError(err))
@@ -1075,8 +1086,8 @@ func TestBLSErrorTypes(t *testing.T) {
 		assert.False(t, IsBLSAggregateEmptyListError(nil))
 	})
 
-	t.Run("notBLSKeyError sanity", func(t *testing.T) {
-		err := notBLSKeyError
+	t.Run("errNotBLSKey sanity", func(t *testing.T) {
+		err := errNotBLSKey
 		invInpError := invalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
 		assert.True(t, IsNotBLSKeyError(err))
@@ -1243,4 +1254,18 @@ func TestBLSIdentity(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, valid)
 	})
+}
+
+// TestBLSKeyGenerationBreakingChange detects if the deterministic key generation
+// changes behaviors (same seed outputs a different key than before)
+func TestBLSKeyGenerationBreakingChange(t *testing.T) {
+	seed := "00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF" // example of what you shouldn't use as a secret seed
+	expectedSK := "0x5895ab2eccd1883856adc0784b15097e69154ac9bf29ecd605f95be3064f6f01"
+	// key generation
+	seedBytes, err := hex.DecodeString(seed)
+	require.NoError(t, err)
+	sk, err := GeneratePrivateKey(BLSBLS12381, seedBytes)
+	require.NoError(t, err)
+	// test change
+	assert.Equal(t, expectedSK, sk.String())
 }
