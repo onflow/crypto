@@ -214,7 +214,8 @@ func goecdsaMapKey(curve elliptic.Curve, seed []byte) (*ecdsa.PrivateKey, error)
 // goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
 // input curve and scalar.
 // Input scalar is assumed to be a non-zero integer modulo the curve order `n`.
-// Returned error is expected to be nil.
+// Error returns:
+//   - invalidInputsError if the input curve is unsupported
 func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.D = d
@@ -322,6 +323,8 @@ func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
 // rawDecodePublicKey decodes a public key.
 // A valid input is `bytes(x) || bytes(y)` where `bytes()` is the big-endian encoding padded to the field size.
 // Note that infinity point serialization isn't defined in this package so the input (or output) can never represent an infinity point.
+// Error Returns:
+//   - invalidInputsError if the input is not a valid serialization of a public key on the given curve.
 func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
 	curve := a.curve
 	p := (curve.Params().P)
@@ -377,9 +380,14 @@ func (a *ecdsaAlgo) decodePublicKey(der []byte) (PublicKey, error) {
 	return a.rawDecodePublicKey(der)
 }
 
-// decodePublicKeyCompressed returns a non-infinity public key given the bytes of a compressed public key according to X9.62 section 4.3.6.
+// decodePublicKeyCompressed returns a non-infinity public key given the bytes of a compressed
+// public key according to X9.62 section 4.3.6.
 // The compressed representation uses an extra byte to disambiguate sign.
-// Note that infinity point serialization isn't defined in this package so the input (or output) can never represent an infinity point.
+// Note that infinity point serialization isn't defined in this package so the input (or output)
+// can never represent an infinity point.
+// Error Returns:
+//   - invalidInputsError if the curve isn't supported or the input isn't a valid key serialization
+//     on the given curve.
 func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
 	expectedLen := bitsToBytes(a.curve.Params().BitSize) + 1
 	if len(pkBytes) != expectedLen {
@@ -390,7 +398,7 @@ func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error)
 	if a.curve == elliptic.P256() {
 		x, y := elliptic.UnmarshalCompressed(a.curve, pkBytes)
 		if x == nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed deserialization of a %v key", pkBytes, a.algo.String())
+			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
 		}
 		goPubKey = new(ecdsa.PublicKey)
 		goPubKey.Curve = a.curve
@@ -401,7 +409,7 @@ func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error)
 		// use `btcec` because elliptic's `UnmarshalCompressed` doesn't work for SEC Koblitz curves
 		pk, err := btcec.ParsePubKey(pkBytes)
 		if err != nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed deserialization of a %v key", pkBytes, a.algo.String())
+			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
 		}
 		// convert to a crypto/ecdsa key
 		goPubKey = pk.ToECDSA()
