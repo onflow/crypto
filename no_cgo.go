@@ -50,6 +50,10 @@ func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (Publ
 	panic(withFeature("BLS signature"))
 }
 
+func (a *blsBLS12381Algo) signatureFormatCheck(sig Signature) bool {
+	panic(withFeature("BLS signature"))
+}
+
 func NewExpandMsgXOFKMAC128(domainTag string) hash.Hasher {
 	panic(withFeature("BLS hasher"))
 }
