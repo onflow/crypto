@@ -16,111 +16,116 @@
  * limitations under the License.
  */
 
-package crypto
+package sign
 
 import (
-	"crypto/elliptic"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec/v2"
-
 	"github.com/onflow/crypto/hash"
-	"github.com/onflow/crypto/sign"
 )
 
-// revive:disable:var-naming
-
-// revive:enable
-
-type SigningAlgorithm = sign.SigningAlgorithm
-type Signature = sign.Signature
-type PrivateKey = sign.PrivateKey
-type PublicKey = sign.PublicKey
+// SigningAlgorithm is an identifier for a signing algorithm
+// (and parameters if applicable)
+type SigningAlgorithm int
 
 const (
 	// Supported signing algorithms
-	UnknownSigningAlgorithm = sign.UnknownSigningAlgorithm
+	UnknownSigningAlgorithm SigningAlgorithm = iota
 	// BLSBLS12381 is BLS on BLS 12-381 curve
-	BLSBLS12381 = sign.BLSBLS12381
+	BLSBLS12381
 	// ECDSAP256 is ECDSA on NIST P-256 curve
-	ECDSAP256 = sign.ECDSAP256
+	ECDSAP256
 	// ECDSASecp256k1 is ECDSA on secp256k1 curve
-	ECDSASecp256k1 = sign.ECDSASecp256k1
+	ECDSASecp256k1
 )
 
-type signer interface {
+// String returns the string representation of this signing algorithm.
+func (f SigningAlgorithm) String() string {
+	return [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}[f]
+}
+
+// Signature is a generic type, regardless of the signature scheme
+type Signature []byte
+
+// Bytes returns a byte array of the signature data
+func (s Signature) Bytes() []byte {
+	return s[:]
+}
+
+// String returns a String representation of the signature data
+func (s Signature) String() string {
+	return fmt.Sprintf("%#x", s.Bytes())
+}
+
+// PrivateKey is an unspecified signature scheme private key
+type PrivateKey interface {
+	// Algorithm returns the signing algorithm related to the private key.
+	Algorithm() SigningAlgorithm
+	// Size return the key size in bytes.
+	Size() int
+	// String return a hex representation of the key
+	String() string
+	// Sign generates a signature using the provided hasher.
+	Sign([]byte, hash.Hasher) (Signature, error)
+	// PublicKey returns the public key.
+	PublicKey() PublicKey
+	// Encode returns a bytes representation of the private key
+	Encode() []byte
+	// Equals returns true if the given PrivateKeys are equal. Keys are considered unequal if their algorithms are
+	// unequal or if their encoded representations are unequal. If the encoding of either key fails, they are considered
+	// unequal as well.
+	Equals(PrivateKey) bool
+}
+
+// PublicKey is an unspecified signature scheme public key.
+type PublicKey interface {
+	// Algorithm returns the signing algorithm related to the public key.
+	Algorithm() SigningAlgorithm
+	// Size() return the key size in bytes.
+	Size() int
+	// String return a hex representation of the key
+	String() string
+	// Verify verifies a signature of an input message using the provided hasher.
+	Verify(Signature, []byte, hash.Hasher) (bool, error)
+	// Encode returns a bytes representation of the public key.
+	Encode() []byte
+	// EncodeCompressed returns a compressed byte representation of the public key.
+	// The compressed serialization concept is generic to elliptic curves,
+	// but we refer to individual curve parameters for details of the compressed format
+	EncodeCompressed() []byte
+	// Equals returns true if the given PublicKeys are equal. Keys are considered unequal if their algorithms are
+	// unequal or if their encoded representations are unequal. If the encoding of either key fails, they are considered
+	// unequal as well.
+	Equals(PublicKey) bool
+}
+
+type Signer interface {
 	// generatePrivateKey generates a private key
-	generatePrivateKey([]byte) (PrivateKey, error)
+	GeneratePrivateKey([]byte) (PrivateKey, error)
 	// decodePrivateKey loads a private key from a byte array
-	decodePrivateKey([]byte) (PrivateKey, error)
+	DecodePrivateKey([]byte) (PrivateKey, error)
 	// decodePublicKey loads a public key from a byte array
-	decodePublicKey([]byte) (PublicKey, error)
+	DecodePublicKey([]byte) (PublicKey, error)
 	// decodePublicKeyCompressed loads a public key from a byte array representing a point in compressed form
-	decodePublicKeyCompressed([]byte) (PublicKey, error)
+	DecodePublicKeyCompressed([]byte) (PublicKey, error)
 	// signatureFormatCheck verifies the format of a serialized signature
-	signatureFormatCheck(Signature) bool
+	SignatureFormatCheck(Signature) bool
 }
 
-// signerAdapter adapts the internal signer interface to the sign.Signer interface
-type signerAdapter struct {
-	signer signer
+var signers = make(map[SigningAlgorithm]Signer)
+
+// RegisterSigner registers a signer implementation for an algorithm
+func RegisterSigner(algo SigningAlgorithm, signer Signer) {
+	signers[algo] = signer
 }
 
-func (s *signerAdapter) GeneratePrivateKey(seed []byte) (PrivateKey, error) {
-	return s.signer.generatePrivateKey(seed)
-}
-
-func (s *signerAdapter) DecodePrivateKey(input []byte) (PrivateKey, error) {
-	return s.signer.decodePrivateKey(input)
-}
-
-func (s *signerAdapter) DecodePublicKey(input []byte) (PublicKey, error) {
-	return s.signer.decodePublicKey(input)
-}
-
-func (s *signerAdapter) DecodePublicKeyCompressed(data []byte) (PublicKey, error) {
-	return s.signer.decodePublicKeyCompressed(data)
-}
-
-func (s *signerAdapter) SignatureFormatCheck(sig Signature) bool {
-	return s.signer.signatureFormatCheck(sig)
-}
-
-// newSigner returns a signer instance
-func newSigner(algo SigningAlgorithm) (signer, error) {
-	switch algo {
-	case ECDSAP256:
-		return p256Instance, nil
-	case ECDSASecp256k1:
-		return secp256k1Instance, nil
-	case BLSBLS12381:
-		return blsInstance, nil
-	default:
-		return nil, invalidInputsErrorf("the signature scheme %s is not supported", algo)
+// getSigner returns a signer instance for the given algorithm
+func getSigner(algo SigningAlgorithm) (Signer, error) {
+	signer, exists := signers[algo]
+	if !exists {
+		return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 	}
-}
-
-// Initialize the context of all algos
-func init() {
-	// ECDSA
-	p256Instance = &(ecdsaAlgo{
-		curve: elliptic.P256(),
-		algo:  ECDSAP256,
-	})
-	secp256k1Instance = &(ecdsaAlgo{
-		curve: btcec.S256(),
-		algo:  ECDSASecp256k1,
-	})
-
-	// BLS
-	initBLS12381()
-	blsInstance = &blsBLS12381Algo{
-		algo: BLSBLS12381,
-	}
-
-	sign.RegisterSigner(ECDSAP256, &signerAdapter{signer: p256Instance})
-	sign.RegisterSigner(ECDSASecp256k1, &signerAdapter{signer: secp256k1Instance})
-	sign.RegisterSigner(BLSBLS12381, &signerAdapter{signer: blsInstance})
+	return signer, nil
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,
@@ -131,7 +136,11 @@ func init() {
 // If SignatureFormatCheck returns false then the input is not a valid
 // signature and will fail a verification against any message and public key.
 func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
-	return sign.SignatureFormatCheck(algo, s)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return false, err
+	}
+	return signer.SignatureFormatCheck(s), nil
 }
 
 // GeneratePrivateKey generates a private key of the algorithm using the entropy of the given seed.
@@ -145,7 +154,11 @@ func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
 //   - (false, error) if an unexpected error occurs
 //   - (sk, nil) if key generation was successful
 func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) {
-	return sign.GeneratePrivateKey(algo, seed)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("key generation failed: %w", err)
+	}
+	return signer.GeneratePrivateKey(seed)
 }
 
 // DecodePrivateKey decodes an array of bytes into a private key of the given algorithm
@@ -160,7 +173,11 @@ func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) 
 //   - (nil, error) if an unexpected error occurs
 //   - (sk, nil) otherwise
 func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
-	return sign.DecodePrivateKey(algo, input)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode private key failed: %w", err)
+	}
+	return signer.DecodePrivateKey(input)
 }
 
 // DecodePublicKey decodes an array of bytes into a public key of the given algorithm
@@ -177,7 +194,11 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
-	return sign.DecodePublicKey(algo, input)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode public key failed: %w", err)
+	}
+	return signer.DecodePublicKey(input)
 }
 
 // DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm.
@@ -193,5 +214,9 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKeyCompressed(algo SigningAlgorithm, data []byte) (PublicKey, error) {
-	return sign.DecodePublicKeyCompressed(algo, data)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode compressed public key failed: %w", err)
+	}
+	return signer.DecodePublicKeyCompressed(data)
 }
