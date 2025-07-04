@@ -20,11 +20,9 @@ package crypto
 
 import (
 	"crypto/elliptic"
-	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 
-	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
 )
 
