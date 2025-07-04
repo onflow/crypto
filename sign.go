@@ -84,19 +84,6 @@ func (s *signerAdapter) SignatureFormatCheck(sig Signature) bool {
 	return s.signer.signatureFormatCheck(sig)
 }
 
-// newSigner returns a signer instance
-func newSigner(algo SigningAlgorithm) (signer, error) {
-	switch algo {
-	case ECDSAP256:
-		return p256Instance, nil
-	case ECDSASecp256k1:
-		return secp256k1Instance, nil
-	case BLSBLS12381:
-		return blsInstance, nil
-	default:
-		return nil, invalidInputsErrorf("the signature scheme %s is not supported", algo)
-	}
-}
 
 // Initialize the context of all algos
 func init() {
