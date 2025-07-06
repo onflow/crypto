@@ -131,7 +131,7 @@ func invalidSK(t *testing.T) PrivateKey {
 	n, err := crand.Read(seed)
 	require.Equal(t, n, KeyGenSeedMinLen)
 	require.NoError(t, err)
-	sk, err := GeneratePrivateKey(ECDSAP256, seed)
+	sk, err := GeneratePrivateKey(sign.ECDSAP256, seed)
 	require.NoError(t, err)
 	return sk
 }

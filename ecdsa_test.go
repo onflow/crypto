@@ -119,25 +119,25 @@ func TestECDSAHasher(t *testing.T) {
 // Signing bench
 func BenchmarkECDSAP256Sign(b *testing.B) {
 	halg := hash.NewSHA3_256()
-	benchSign(b, ECDSAP256, halg)
+	benchSign(b, sign.ECDSAP256, halg)
 }
 
 // Verifying bench
 func BenchmarkECDSAP256Verify(b *testing.B) {
 	halg := hash.NewSHA3_256()
-	benchVerify(b, ECDSAP256, halg)
+	benchVerify(b, sign.ECDSAP256, halg)
 }
 
 // Signing bench
 func BenchmarkECDSASecp256k1Sign(b *testing.B) {
 	halg := hash.NewSHA3_256()
-	benchSign(b, ECDSASecp256k1, halg)
+	benchSign(b, sign.ECDSASecp256k1, halg)
 }
 
 // Verifying bench
 func BenchmarkECDSASecp256k1Verify(b *testing.B) {
 	halg := hash.NewSHA3_256()
-	benchVerify(b, ECDSASecp256k1, halg)
+	benchVerify(b, sign.ECDSASecp256k1, halg)
 }
 
 // TestECDSAEncodeDecode tests encoding and decoding of ECDSA keys
@@ -158,8 +158,8 @@ func TestECDSAEncodeDecode(t *testing.T) {
 		// group order private key
 		t.Run("group order private key", func(t *testing.T) {
 			groupOrder := make(map[SigningAlgorithm]string)
-			groupOrder[ECDSAP256] = "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
-			groupOrder[ECDSASecp256k1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+			groupOrder[sign.ECDSAP256] = "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
+			groupOrder[sign.ECDSASecp256k1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
 			orderBytes, err := hex.DecodeString(groupOrder[curve])
 			require.NoError(t, err)
 			sk, err := DecodePrivateKey(curve, orderBytes)
@@ -189,12 +189,12 @@ func TestECDSAEncodeDecode(t *testing.T) {
 		//  - public key decoding only accepts reduced x and y
 		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
 			invalidPK1s := map[SigningAlgorithm]string{
-				ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
-				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+				sign.ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+				sign.ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
 			}
 			invalidPK2s := map[SigningAlgorithm]string{
-				ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
-				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+				sign.ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+				sign.ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
 			}
 			// invalidpk1 with x >= p
 			invalidPk1, err := hex.DecodeString(invalidPK1s[curve])
@@ -245,12 +245,12 @@ func TestECDSAPublicKeyComputation(t *testing.T) {
 		pk    string
 	}{
 		{
-			ECDSASecp256k1,
+			sign.ECDSASecp256k1,
 			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
 			"0x36f292f6c287b6e72ca8128465647c7f88730f84ab27a1e934dbd2da753930fa39a09ddcf3d28fb30cc683de3fc725e095ec865c3d41aef6065044cb12b1ff61",
 		},
 		{
-			ECDSAP256,
+			sign.ECDSAP256,
 			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
 			"0x78a80dfe190a6068be8ddf05644c32d2540402ffc682442f6a9eeb96125d86813789f92cf4afabf719aaba79ecec54b27e33a188f83158f6dd15ecb231b49808",
 		},
@@ -364,7 +364,7 @@ func TestEllipticUnmarshalSecp256k1(t *testing.T) {
 		require.NoError(t, err)
 
 		// decompress, check that those are perfectly valid Secp256k1 public keys
-		retrieved, err := DecodePublicKeyCompressed(ECDSASecp256k1, publicBytes)
+		retrieved, err := DecodePublicKeyCompressed(sign.ECDSASecp256k1, publicBytes)
 		require.NoError(t, err)
 
 		// check the compression is canonical by re-compressing to the same bytes
@@ -382,7 +382,7 @@ func BenchmarkECDSADecode(b *testing.B) {
 	seed := make([]byte, 50)
 	_, _ = crand.Read(seed)
 
-	for _, curve := range []SigningAlgorithm{ECDSASecp256k1, ECDSAP256} {
+	for _, curve := range []SigningAlgorithm{sign.ECDSASecp256k1, sign.ECDSAP256} {
 		sk, _ := GeneratePrivateKey(curve, seed)
 		comp := sk.PublicKey().EncodeCompressed()
 		uncomp := sk.PublicKey().Encode()
@@ -416,12 +416,12 @@ func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
 		expectedSK string
 	}{
 		{
-			ECDSASecp256k1,
+			sign.ECDSASecp256k1,
 			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
 			"0x4723d238a9702296f96bf64f1288c8b1eb93a4bff8b1482be4172c745bf30acb",
 		},
 		{
-			ECDSAP256,
+			sign.ECDSAP256,
 			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
 			"0x3cadd4123b493233252ffdeccaef07066b73e2c3a9a08905669c5a857027708b",
 		},
