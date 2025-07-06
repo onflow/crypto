@@ -369,7 +369,7 @@ func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (Publ
 // signatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
 func (a *blsBLS12381Algo) signatureFormatCheck(sig Signature) bool {
-	return len(sig) == SignatureLenBLSBLS12381
+	panic(fmt.Sprintf("%s does not support signature format check", a.algo))
 }
 
 // prKeyBLSBLS12381 is the private key of BLS using BLS12_381, it implements PrivateKey
