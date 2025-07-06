@@ -288,7 +288,7 @@ func testCentralizedStatefulAPI(t *testing.T) {
 			seed := make([]byte, KeyGenSeedMinLen)
 			_, err = rand.Read(seed)
 			require.NoError(t, err)
-			skEcdsa, err := GeneratePrivateKey(ECDSAP256, seed)
+			skEcdsa, err := GeneratePrivateKey(sign.ECDSAP256, seed)
 			require.NoError(t, err)
 			tmp := pkShares[0]
 			pkShares[0] = skEcdsa.PublicKey()

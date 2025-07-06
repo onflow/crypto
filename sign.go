@@ -36,16 +36,6 @@ type Signature = sign.Signature
 type PrivateKey = sign.PrivateKey
 type PublicKey = sign.PublicKey
 
-const (
-	// Supported signing algorithms
-	UnknownSigningAlgorithm = sign.UnknownSigningAlgorithm
-	// BLSBLS12381 is BLS on BLS 12-381 curve
-	BLSBLS12381 = sign.BLSBLS12381
-	// ECDSAP256 is ECDSA on NIST P-256 curve
-	ECDSAP256 = sign.ECDSAP256
-	// ECDSASecp256k1 is ECDSA on secp256k1 curve
-	ECDSASecp256k1 = sign.ECDSASecp256k1
-)
 
 type signer interface {
 	// generatePrivateKey generates a private key
@@ -63,11 +53,11 @@ type signer interface {
 // newSigner returns a signer instance
 func newSigner(algo SigningAlgorithm) (signer, error) {
 	switch algo {
-	case ECDSAP256:
+	case sign.ECDSAP256:
 		return p256Instance, nil
-	case ECDSASecp256k1:
+	case sign.ECDSASecp256k1:
 		return secp256k1Instance, nil
-	case BLSBLS12381:
+	case sign.BLSBLS12381:
 		return blsInstance, nil
 	default:
 		return nil, invalidInputsErrorf("the signature scheme %s is not supported", algo)
@@ -79,17 +69,17 @@ func init() {
 	// ECDSA
 	p256Instance = &(ecdsaAlgo{
 		curve: elliptic.P256(),
-		algo:  ECDSAP256,
+		algo:  sign.ECDSAP256,
 	})
 	secp256k1Instance = &(ecdsaAlgo{
 		curve: btcec.S256(),
-		algo:  ECDSASecp256k1,
+		algo:  sign.ECDSASecp256k1,
 	})
 
 	// BLS
 	initBLS12381()
 	blsInstance = &blsBLS12381Algo{
-		algo: BLSBLS12381,
+		algo: sign.BLSBLS12381,
 	}
 }
 
@@ -102,9 +92,9 @@ func init() {
 // signature and will fail a verification against any message and public key.
 func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
 	switch algo {
-	case ECDSAP256:
+	case sign.ECDSAP256:
 		return p256Instance.signatureFormatCheck(s), nil
-	case ECDSASecp256k1:
+	case sign.ECDSASecp256k1:
 		return secp256k1Instance.signatureFormatCheck(s), nil
 	default:
 		return false, invalidInputsErrorf(
