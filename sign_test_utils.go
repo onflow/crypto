@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 func getPRG(t *testing.T) *mrand.Rand {
