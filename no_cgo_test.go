@@ -7,16 +7,17 @@ import (
 	"testing"
 
 	"github.com/onflow/crypto"
+	"github.com/onflow/crypto/sign"
 	"github.com/stretchr/testify/assert"
 )
 
 // Test all public functions requiring cgo.
 // These functions must panic if built without cgo.
 func TestNoRelicPanic(t *testing.T) {
-	assert.Panics(t, func() { _, _ = crypto.GeneratePrivateKey(crypto.BLSBLS12381, nil) })
-	assert.Panics(t, func() { _, _ = crypto.DecodePrivateKey(crypto.BLSBLS12381, nil) })
-	assert.Panics(t, func() { _, _ = crypto.DecodePublicKey(crypto.BLSBLS12381, nil) })
-	assert.Panics(t, func() { _, _ = crypto.DecodePublicKeyCompressed(crypto.BLSBLS12381, nil) })
+	assert.Panics(t, func() { _, _ = crypto.GeneratePrivateKey(sign.BLSBLS12381, nil) })
+	assert.Panics(t, func() { _, _ = crypto.DecodePrivateKey(sign.BLSBLS12381, nil) })
+	assert.Panics(t, func() { _, _ = crypto.DecodePublicKey(sign.BLSBLS12381, nil) })
+	assert.Panics(t, func() { _, _ = crypto.DecodePublicKeyCompressed(sign.BLSBLS12381, nil) })
 	assert.Panics(t, func() { _ = crypto.NewExpandMsgXOFKMAC128("") })
 	assert.Panics(t, func() { _ = crypto.BLSInvalidSignature() })
 	assert.Panics(t, func() { _, _ = crypto.BLSGeneratePOP(nil) })
