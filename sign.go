@@ -20,6 +20,7 @@ package crypto
 
 import (
 	"crypto/elliptic"
+	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 
@@ -59,31 +60,19 @@ type signer interface {
 	signatureFormatCheck(Signature) bool
 }
 
-// signerAdapter adapts the internal signer interface to the sign.Signer interface
-type signerAdapter struct {
-	signer signer
+// newSigner returns a signer instance
+func newSigner(algo SigningAlgorithm) (signer, error) {
+	switch algo {
+	case ECDSAP256:
+		return p256Instance, nil
+	case ECDSASecp256k1:
+		return secp256k1Instance, nil
+	case BLSBLS12381:
+		return blsInstance, nil
+	default:
+		return nil, invalidInputsErrorf("the signature scheme %s is not supported", algo)
+	}
 }
-
-func (s *signerAdapter) GeneratePrivateKey(seed []byte) (PrivateKey, error) {
-	return s.signer.generatePrivateKey(seed)
-}
-
-func (s *signerAdapter) DecodePrivateKey(input []byte) (PrivateKey, error) {
-	return s.signer.decodePrivateKey(input)
-}
-
-func (s *signerAdapter) DecodePublicKey(input []byte) (PublicKey, error) {
-	return s.signer.decodePublicKey(input)
-}
-
-func (s *signerAdapter) DecodePublicKeyCompressed(data []byte) (PublicKey, error) {
-	return s.signer.decodePublicKeyCompressed(data)
-}
-
-func (s *signerAdapter) SignatureFormatCheck(sig Signature) bool {
-	return s.signer.signatureFormatCheck(sig)
-}
-
 
 // Initialize the context of all algos
 func init() {
@@ -102,10 +91,6 @@ func init() {
 	blsInstance = &blsBLS12381Algo{
 		algo: BLSBLS12381,
 	}
-
-	sign.RegisterSigner(ECDSAP256, &signerAdapter{signer: p256Instance})
-	sign.RegisterSigner(ECDSASecp256k1, &signerAdapter{signer: secp256k1Instance})
-	sign.RegisterSigner(BLSBLS12381, &signerAdapter{signer: blsInstance})
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,
@@ -116,7 +101,16 @@ func init() {
 // If SignatureFormatCheck returns false then the input is not a valid
 // signature and will fail a verification against any message and public key.
 func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
-	return sign.SignatureFormatCheck(algo, s)
+	switch algo {
+	case ECDSAP256:
+		return p256Instance.signatureFormatCheck(s), nil
+	case ECDSASecp256k1:
+		return secp256k1Instance.signatureFormatCheck(s), nil
+	default:
+		return false, invalidInputsErrorf(
+			"the signature scheme %s is not supported",
+			algo)
+	}
 }
 
 // GeneratePrivateKey generates a private key of the algorithm using the entropy of the given seed.
@@ -130,7 +124,11 @@ func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
 //   - (false, error) if an unexpected error occurs
 //   - (sk, nil) if key generation was successful
 func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) {
-	return sign.GeneratePrivateKey(algo, seed)
+	signer, err := newSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("key generation failed: %w", err)
+	}
+	return signer.generatePrivateKey(seed)
 }
 
 // DecodePrivateKey decodes an array of bytes into a private key of the given algorithm
@@ -145,7 +143,11 @@ func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) 
 //   - (nil, error) if an unexpected error occurs
 //   - (sk, nil) otherwise
 func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
-	return sign.DecodePrivateKey(algo, input)
+	signer, err := newSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode private key failed: %w", err)
+	}
+	return signer.decodePrivateKey(input)
 }
 
 // DecodePublicKey decodes an array of bytes into a public key of the given algorithm
@@ -162,7 +164,11 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
-	return sign.DecodePublicKey(algo, input)
+	signer, err := newSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode public key failed: %w", err)
+	}
+	return signer.decodePublicKey(input)
 }
 
 // DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm.
@@ -178,5 +184,9 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKeyCompressed(algo SigningAlgorithm, data []byte) (PublicKey, error) {
-	return sign.DecodePublicKeyCompressed(algo, data)
+	signer, err := newSigner(algo)
+	if err != nil {
+		return nil, fmt.Errorf("decode compressed public key failed: %w", err)
+	}
+	return signer.decodePublicKeyCompressed(data)
 }

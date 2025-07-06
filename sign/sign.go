@@ -99,35 +99,6 @@ type PublicKey interface {
 	Equals(PublicKey) bool
 }
 
-type Signer interface {
-	// generatePrivateKey generates a private key
-	GeneratePrivateKey([]byte) (PrivateKey, error)
-	// decodePrivateKey loads a private key from a byte array
-	DecodePrivateKey([]byte) (PrivateKey, error)
-	// decodePublicKey loads a public key from a byte array
-	DecodePublicKey([]byte) (PublicKey, error)
-	// decodePublicKeyCompressed loads a public key from a byte array representing a point in compressed form
-	DecodePublicKeyCompressed([]byte) (PublicKey, error)
-	// signatureFormatCheck verifies the format of a serialized signature
-	SignatureFormatCheck(Signature) bool
-}
-
-var signers = make(map[SigningAlgorithm]Signer)
-
-// RegisterSigner registers a signer implementation for an algorithm
-func RegisterSigner(algo SigningAlgorithm, signer Signer) {
-	signers[algo] = signer
-}
-
-// getSigner returns a signer instance for the given algorithm
-func getSigner(algo SigningAlgorithm) (Signer, error) {
-	signer, exists := signers[algo]
-	if !exists {
-		return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
-	}
-	return signer, nil
-}
-
 // SignatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
 //
@@ -136,11 +107,7 @@ func getSigner(algo SigningAlgorithm) (Signer, error) {
 // If SignatureFormatCheck returns false then the input is not a valid
 // signature and will fail a verification against any message and public key.
 func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
-	signer, err := getSigner(algo)
-	if err != nil {
-		return false, err
-	}
-	return signer.SignatureFormatCheck(s), nil
+	return false, fmt.Errorf("the signature scheme %s is not supported", algo)
 }
 
 // GeneratePrivateKey generates a private key of the algorithm using the entropy of the given seed.
@@ -154,11 +121,7 @@ func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
 //   - (false, error) if an unexpected error occurs
 //   - (sk, nil) if key generation was successful
 func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) {
-	signer, err := getSigner(algo)
-	if err != nil {
-		return nil, fmt.Errorf("key generation failed: %w", err)
-	}
-	return signer.GeneratePrivateKey(seed)
+	return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 }
 
 // DecodePrivateKey decodes an array of bytes into a private key of the given algorithm
@@ -173,11 +136,7 @@ func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) 
 //   - (nil, error) if an unexpected error occurs
 //   - (sk, nil) otherwise
 func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
-	signer, err := getSigner(algo)
-	if err != nil {
-		return nil, fmt.Errorf("decode private key failed: %w", err)
-	}
-	return signer.DecodePrivateKey(input)
+	return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 }
 
 // DecodePublicKey decodes an array of bytes into a public key of the given algorithm
@@ -194,11 +153,7 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
-	signer, err := getSigner(algo)
-	if err != nil {
-		return nil, fmt.Errorf("decode public key failed: %w", err)
-	}
-	return signer.DecodePublicKey(input)
+	return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 }
 
 // DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm.
@@ -214,9 +169,5 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKeyCompressed(algo SigningAlgorithm, data []byte) (PublicKey, error) {
-	signer, err := getSigner(algo)
-	if err != nil {
-		return nil, fmt.Errorf("decode compressed public key failed: %w", err)
-	}
-	return signer.DecodePublicKeyCompressed(data)
+	return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 }
