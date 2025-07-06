@@ -33,20 +33,20 @@ import (
 )
 
 var ecdsaCurves = []SigningAlgorithm{
-	ECDSAP256,
-	ECDSASecp256k1,
+	sign.ECDSAP256,
+	sign.ECDSASecp256k1,
 }
 var ecdsaPrKeyLen = map[SigningAlgorithm]int{
-	ECDSAP256:      PrKeyLenECDSAP256,
-	ECDSASecp256k1: PrKeyLenECDSASecp256k1,
+	sign.ECDSAP256:      PrKeyLenECDSAP256,
+	sign.ECDSASecp256k1: PrKeyLenECDSASecp256k1,
 }
 var ecdsaPubKeyLen = map[SigningAlgorithm]int{
-	ECDSAP256:      PubKeyLenECDSAP256,
-	ECDSASecp256k1: PubKeyLenECDSASecp256k1,
+	sign.ECDSAP256:      PubKeyLenECDSAP256,
+	sign.ECDSASecp256k1: PubKeyLenECDSASecp256k1,
 }
 var ecdsaSigLen = map[SigningAlgorithm]int{
-	ECDSAP256:      SignatureLenECDSAP256,
-	ECDSASecp256k1: SignatureLenECDSASecp256k1,
+	sign.ECDSAP256:      SignatureLenECDSAP256,
+	sign.ECDSASecp256k1: SignatureLenECDSASecp256k1,
 }
 
 // ECDSA tests

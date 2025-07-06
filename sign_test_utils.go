@@ -214,7 +214,7 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 
 				// same for the compressed encoding
 				// skip if BLS is used and compression isn't supported
-				if salg == BLSBLS12381 && !isG2Compressed() {
+				if salg == sign.BLSBLS12381 && !isG2Compressed() {
 					continue
 				} else {
 					pkComprBytes := pk.EncodeCompressed()
@@ -233,9 +233,9 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 		t.Run("invalid key length", func(t *testing.T) {
 			// private key
 			skLens := make(map[SigningAlgorithm]int)
-			skLens[ECDSAP256] = PrKeyLenECDSAP256
-			skLens[ECDSASecp256k1] = PrKeyLenECDSASecp256k1
-			skLens[BLSBLS12381] = 32
+			skLens[sign.ECDSAP256] = PrKeyLenECDSAP256
+			skLens[sign.ECDSASecp256k1] = PrKeyLenECDSASecp256k1
+			skLens[sign.BLSBLS12381] = 32
 
 			bytes := make([]byte, skLens[salg]+1)
 			sk, err := DecodePrivateKey(salg, bytes)
@@ -245,9 +245,9 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 
 			// public key
 			pkLens := make(map[SigningAlgorithm]int)
-			pkLens[ECDSAP256] = PubKeyLenECDSAP256
-			pkLens[ECDSASecp256k1] = PubKeyLenECDSASecp256k1
-			pkLens[BLSBLS12381] = 96
+			pkLens[sign.ECDSAP256] = PubKeyLenECDSAP256
+			pkLens[sign.ECDSASecp256k1] = PubKeyLenECDSASecp256k1
+			pkLens[sign.BLSBLS12381] = 96
 
 			bytes = make([]byte, pkLens[salg]+1)
 			pk, err := DecodePublicKey(salg, bytes)
