@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 // SPOCKProve generates a spock poof for data under the private key sk.
@@ -41,7 +42,7 @@ import (
 //   - (nil, error) if an unexpected error occurs
 //   - (proof, nil) otherwise
 func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error) {
-	if sk.Algorithm() != BLSBLS12381 {
+	if sk.Algorithm() != sign.BLSBLS12381 {
 		return nil, errNotBLSKey
 	}
 
@@ -62,7 +63,7 @@ func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error)
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac hash.Hasher) (bool, error) {
-	if pk.Algorithm() != BLSBLS12381 {
+	if pk.Algorithm() != sign.BLSBLS12381 {
 		return false, errNotBLSKey
 	}
 	// BLS verification of data

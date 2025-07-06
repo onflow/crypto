@@ -27,6 +27,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/crypto/sign"
 )
 
 func TestSPOCKProveVerifyAgainstData(t *testing.T) {
@@ -37,7 +39,7 @@ func TestSPOCKProveVerifyAgainstData(t *testing.T) {
 	n, err := crand.Read(seed)
 	require.Equal(t, n, KeyGenSeedMinLen)
 	require.NoError(t, err)
-	sk, err := GeneratePrivateKey(BLSBLS12381, seed)
+	sk, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
 	require.NoError(t, err)
 	_, err = crand.Read(data)
 	require.NoError(t, err)
@@ -69,7 +71,7 @@ func TestSPOCKProveVerifyAgainstData(t *testing.T) {
 	// test with a valid but different key (unhappy path)
 	t.Run("invalid key", func(t *testing.T) {
 		seed[0] ^= 1
-		wrongSk, err := GeneratePrivateKey(BLSBLS12381, seed)
+		wrongSk, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
 		require.NoError(t, err)
 		result, err := SPOCKVerifyAgainstData(wrongSk.PublicKey(), s, data, kmac)
 		require.NoError(t, err)
@@ -111,13 +113,13 @@ func TestSPOCKProveVerify(t *testing.T) {
 	n, err := crand.Read(seed1)
 	require.Equal(t, n, KeyGenSeedMinLen)
 	require.NoError(t, err)
-	sk1, err := GeneratePrivateKey(BLSBLS12381, seed1)
+	sk1, err := GeneratePrivateKey(sign.BLSBLS12381, seed1)
 	require.NoError(t, err)
 	// sk2
 	n, err = crand.Read(seed2)
 	require.Equal(t, n, KeyGenSeedMinLen)
 	require.NoError(t, err)
-	sk2, err := GeneratePrivateKey(BLSBLS12381, seed2)
+	sk2, err := GeneratePrivateKey(sign.BLSBLS12381, seed2)
 	require.NoError(t, err)
 
 	// generate SPoCK proofs
@@ -154,7 +156,7 @@ func TestSPOCKProveVerify(t *testing.T) {
 	// matching the private keys used to generate the proofs.
 	t.Run("invalid public key", func(t *testing.T) {
 		seed2[0] ^= 1 // alter the seed
-		sk2bis, err := GeneratePrivateKey(BLSBLS12381, seed2)
+		sk2bis, err := GeneratePrivateKey(sign.BLSBLS12381, seed2)
 		require.NoError(t, err)
 		result, err := SPOCKVerify(sk1.PublicKey(), pr1, sk2bis.PublicKey(), pr2)
 		require.NoError(t, err)

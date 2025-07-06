@@ -57,6 +57,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 const (
@@ -396,7 +397,7 @@ func newPrKeyBLSBLS12381(x *scalar) *prKeyBLSBLS12381 {
 
 // Algorithm returns the Signing Algorithm
 func (sk *prKeyBLSBLS12381) Algorithm() SigningAlgorithm {
-	return BLSBLS12381
+	return sign.BLSBLS12381
 }
 
 // Size returns the private key length in bytes
@@ -487,7 +488,7 @@ func newPubKeyBLSBLS12381(p *pointE2) *pubKeyBLSBLS12381 {
 
 // Algorithm returns the Signing Algorithm
 func (pk *pubKeyBLSBLS12381) Algorithm() SigningAlgorithm {
-	return BLSBLS12381
+	return sign.BLSBLS12381
 }
 
 // Size returns the public key lengh in bytes
