@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 // SPOCKProve generates a spock poof for data under the private key sk.
@@ -40,8 +41,8 @@ import (
 //   - (nil, errNotBLSKey) if input key is not a BLS key
 //   - (nil, error) if an unexpected error occurs
 //   - (proof, nil) otherwise
-func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error) {
-	if sk.Algorithm() != BLSBLS12381 {
+func SPOCKProve(sk sign.PrivateKey, data []byte, kmac hash.Hasher) (sign.Signature, error) {
+	if sk.Algorithm() != sign.BLSBLS12381 {
 		return nil, errNotBLSKey
 	}
 
@@ -61,8 +62,8 @@ func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error)
 //   - (false, invalidHasherSiseError) if hasher's output size is not 128 bytes
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
-func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac hash.Hasher) (bool, error) {
-	if pk.Algorithm() != BLSBLS12381 {
+func SPOCKVerifyAgainstData(pk sign.PublicKey, proof sign.Signature, data []byte, kmac hash.Hasher) (bool, error) {
+	if pk.Algorithm() != sign.BLSBLS12381 {
 		return false, errNotBLSKey
 	}
 	// BLS verification of data
@@ -87,7 +88,7 @@ func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac has
 //   - (false, errNotBLSKey) if at least one key is not a BLS key.
 //   - (false, error) if an unexpected error occurs.
 //   - (validity, nil) otherwise
-func SPOCKVerify(pk1 PublicKey, proof1 Signature, pk2 PublicKey, proof2 Signature) (bool, error) {
+func SPOCKVerify(pk1 sign.PublicKey, proof1 sign.Signature, pk2 sign.PublicKey, proof2 sign.Signature) (bool, error) {
 	blsPk1, ok1 := pk1.(*pubKeyBLSBLS12381)
 	blsPk2, ok2 := pk2.(*pubKeyBLSBLS12381)
 	if !ok1 || !ok2 {

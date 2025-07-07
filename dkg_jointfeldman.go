@@ -23,6 +23,8 @@ import "C"
 
 import (
 	"fmt"
+
+	"github.com/onflow/crypto/sign"
 )
 
 // Implements Joint Feldman (Pedersen) protocol using
@@ -189,7 +191,7 @@ func (s *JointFeldmanState) NextTimeout() error {
 //   - dkgFailureError if the public key share or group public key is identity.
 //   - dkgInvalidStateTransitionError Start() was not called, or NextTimeout() was not called twice
 //   - nil otherwise.
-func (s *JointFeldmanState) End() (PrivateKey, PublicKey, []PublicKey, error) {
+func (s *JointFeldmanState) End() (sign.PrivateKey, sign.PublicKey, []sign.PublicKey, error) {
 	if !s.jointRunning {
 		return nil, nil, nil, dkgInvalidStateTransitionErrorf("dkg protocol %d is not running", s.myIndex)
 	}
@@ -238,7 +240,7 @@ func (s *JointFeldmanState) End() (PrivateKey, PublicKey, []PublicKey, error) {
 	Y := newPubKeyBLSBLS12381(jointPublicKey)
 
 	// The participants public keys
-	y := make([]PublicKey, s.size)
+	y := make([]sign.PublicKey, s.size)
 	for i, p := range jointy {
 		y[i] = newPubKeyBLSBLS12381(&p)
 	}

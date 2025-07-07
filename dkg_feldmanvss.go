@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/random"
+	"github.com/onflow/crypto/sign"
 )
 
 // Implements Feldman Verifiable Secret Sharing (VSS) using
@@ -157,7 +158,7 @@ func (s *feldmanVSSstate) Start(seed []byte) error {
 //   - dkgFailureError if the private key and vector are inconsistent.
 //   - dkgFailureError if the public key share or group public key is identity.
 //   - nil otherwise.
-func (s *feldmanVSSstate) End() (PrivateKey, PublicKey, []PublicKey, error) {
+func (s *feldmanVSSstate) End() (sign.PrivateKey, sign.PublicKey, []sign.PublicKey, error) {
 	if !s.running {
 		return nil, nil, nil, dkgInvalidStateTransitionErrorf("dkg is not running")
 	}
@@ -172,7 +173,7 @@ func (s *feldmanVSSstate) End() (PrivateKey, PublicKey, []PublicKey, error) {
 	Y := newPubKeyBLSBLS12381(&s.vA[0])
 
 	// The participants public keys
-	y := make([]PublicKey, s.size)
+	y := make([]sign.PublicKey, s.size)
 	for i, p := range s.y {
 		y[i] = newPubKeyBLSBLS12381(&p)
 	}
