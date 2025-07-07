@@ -83,7 +83,6 @@ func TestECDSAHasher(t *testing.T) {
 		seed := make([]byte, KeyGenSeedMinLen)
 		sk, err := sign.GeneratePrivateKey(curve, seed)
 		require.NoError(t, err)
-		halg = hash.NewSHA2_256()
 		invalidHasher := &invalidHasher{}
 		data := []byte("some data")
 		_, err = sk.Sign(data, invalidHasher)
