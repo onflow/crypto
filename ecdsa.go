@@ -38,6 +38,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 const (
@@ -167,7 +168,7 @@ func (pk *pubKeyECDSA) Verify(sig Signature, data []byte, alg hash.Hasher) (bool
 // regardless of messages or public keys.
 // If FormatCheck returns false then the input is not a valid ECDSA
 // signature and will fail a verification against any message and public key.
-func (a *ecdsaAlgo) signatureFormatCheck(sig Signature) bool {
+func (a *ecdsaAlgo) signatureFormatCheck(sig sign.Signature) bool {
 	N := a.curve.Params().N
 	nLen := bitsToBytes(N.BitLen())
 
@@ -247,7 +248,7 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, err
 //
 // It is recommended to use a secure crypto RNG to generate the seed.
 // The seed must have enough entropy.
-func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
+func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (sign.PrivateKey, error) {
 	if len(seed) < KeyGenSeedMinLen || len(seed) > KeyGenSeedMaxLen {
 		return nil, invalidInputsErrorf("seed byte length should be between %d and %d",
 			KeyGenSeedMinLen, KeyGenSeedMaxLen)
@@ -282,7 +283,7 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	}, nil
 }
 
-func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
+func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 	n := a.curve.Params().N
 	nLen := bitsToBytes(n.BitLen())
 	if len(der) != nLen {
@@ -312,7 +313,7 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 	}, nil
 }
 
-func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
+func (a *ecdsaAlgo) decodePrivateKey(der []byte) (sign.PrivateKey, error) {
 	return a.rawDecodePrivateKey(der)
 }
 
@@ -321,7 +322,7 @@ func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
 // Note that infinity point serialization isn't defined in this package so the input (or output) can never represent an infinity point.
 // Error Returns:
 //   - invalidInputsError if the input is not a valid serialization of a public key on the given curve.
-func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
+func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (sign.PublicKey, error) {
 	curve := a.curve
 	p := (curve.Params().P)
 	pLen := bitsToBytes(p.BitLen())
@@ -372,7 +373,7 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
 	return &pubKeyECDSA{a, &pk}, nil
 }
 
-func (a *ecdsaAlgo) decodePublicKey(der []byte) (PublicKey, error) {
+func (a *ecdsaAlgo) decodePublicKey(der []byte) (sign.PublicKey, error) {
 	return a.rawDecodePublicKey(der)
 }
 
@@ -384,7 +385,7 @@ func (a *ecdsaAlgo) decodePublicKey(der []byte) (PublicKey, error) {
 // Error Returns:
 //   - invalidInputsError if the curve isn't supported or the input isn't a valid key serialization
 //     on the given curve.
-func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
+func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (sign.PublicKey, error) {
 	expectedLen := bitsToBytes(a.curve.Params().BitSize) + 1
 	if len(pkBytes) != expectedLen {
 		return nil, invalidInputsErrorf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes))
@@ -425,7 +426,7 @@ type prKeyECDSA struct {
 	pubKey *pubKeyECDSA
 }
 
-var _ PrivateKey = (*prKeyECDSA)(nil)
+var _ sign.PrivateKey = (*prKeyECDSA)(nil)
 
 // Algorithm returns the algo related to the private key
 func (sk *prKeyECDSA) Algorithm() SigningAlgorithm {
@@ -438,7 +439,7 @@ func (sk *prKeyECDSA) Size() int {
 }
 
 // PublicKey returns the public key associated to the private key
-func (sk *prKeyECDSA) PublicKey() PublicKey {
+func (sk *prKeyECDSA) PublicKey() sign.PublicKey {
 	// construct the public key once
 	if sk.pubKey == nil {
 		sk.pubKey = &pubKeyECDSA{
@@ -467,7 +468,7 @@ func (sk *prKeyECDSA) Encode() []byte {
 }
 
 // Equals test the equality of two private keys
-func (sk *prKeyECDSA) Equals(other PrivateKey) bool {
+func (sk *prKeyECDSA) Equals(other sign.PrivateKey) bool {
 	// check the key type
 	otherECDSA, ok := other.(*prKeyECDSA)
 	if !ok {
@@ -493,7 +494,7 @@ type pubKeyECDSA struct {
 	goPubKey *ecdsa.PublicKey
 }
 
-var _ PublicKey = (*pubKeyECDSA)(nil)
+var _ sign.PublicKey = (*pubKeyECDSA)(nil)
 
 // Algorithm returns the the algo related to the private key
 func (pk *pubKeyECDSA) Algorithm() SigningAlgorithm {
@@ -536,7 +537,7 @@ func (pk *pubKeyECDSA) Encode() []byte {
 }
 
 // Equals test the equality of two private keys
-func (pk *pubKeyECDSA) Equals(other PublicKey) bool {
+func (pk *pubKeyECDSA) Equals(other sign.PublicKey) bool {
 	// check the key type
 	otherECDSA, ok := other.(*pubKeyECDSA)
 	if !ok {

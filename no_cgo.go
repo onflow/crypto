@@ -34,23 +34,23 @@ type blsBLS12381Algo struct {
 // BLS context on the BLS 12-381 curve
 var blsInstance *blsBLS12381Algo
 
-func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (PrivateKey, error) {
+func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (sign.PrivateKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (PrivateKey, error) {
+func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (sign.PrivateKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (PublicKey, error) {
+func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (sign.PublicKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (PublicKey, error) {
+func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (sign.PublicKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) signatureFormatCheck(sig Signature) bool {
+func (a *blsBLS12381Algo) signatureFormatCheck(sig sign.Signature) bool {
 	panic(withFeature("BLS signature"))
 }
 

@@ -248,7 +248,7 @@ func IsBLSSignatureIdentity(s Signature) bool {
 //
 // The generated private key (resp. its corresponding public key) is guaranteed
 // to not be equal to the identity element of Z_r (resp. G2).
-func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (PrivateKey, error) {
+func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (sign.PrivateKey, error) {
 	if len(ikm) < KeyGenSeedMinLen || len(ikm) > KeyGenSeedMaxLen {
 		return nil, invalidInputsErrorf(
 			"seed length should be at least %d bytes and at most %d bytes",
@@ -317,7 +317,7 @@ func BLSInvalidSignature() Signature {
 // decodePrivateKey decodes a slice of bytes into a private key.
 // Decoding assumes a bytes big endian format.
 // It checks the scalar is non-zero and is less than the group order.
-func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (PrivateKey, error) {
+func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (sign.PrivateKey, error) {
 	sk := newPrKeyBLSBLS12381(nil)
 
 	err := readScalarFrStar(&sk.scalar, privateKeyBytes)
@@ -334,7 +334,7 @@ func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (PrivateKey, 
 // However, the comparison to identity is cached in the [PublicKey] structure for
 // a faster check during signature verifications. Any verification against an identity
 // public key outputs `false`.
-func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (PublicKey, error) {
+func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (sign.PublicKey, error) {
 	if len(publicKeyBytes) != PubKeyLenBLSBLS12381 {
 		return nil, invalidInputsErrorf("input length must be %d, got %d",
 			PubKeyLenBLSBLS12381, len(publicKeyBytes))
@@ -358,7 +358,7 @@ func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (PublicKey, err
 
 // decodePublicKeyCompressed decodes a slice of bytes into a public key.
 // since we use the compressed representation by default, this checks the default and delegates to decodePublicKeyCompressed
-func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (PublicKey, error) {
+func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (sign.PublicKey, error) {
 	if !isG2Compressed() {
 		panic("library is not configured to use compressed public key serialization")
 	}
@@ -367,7 +367,7 @@ func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (Publ
 
 // signatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
-func (a *blsBLS12381Algo) signatureFormatCheck(sig Signature) bool {
+func (a *blsBLS12381Algo) signatureFormatCheck(sig sign.Signature) bool {
 	panic(fmt.Sprintf("%s does not support signature format check", a.algo))
 }
 
@@ -379,7 +379,7 @@ type prKeyBLSBLS12381 struct {
 	scalar scalar
 }
 
-var _ PrivateKey = (*prKeyBLSBLS12381)(nil)
+var _ sign.PrivateKey = (*prKeyBLSBLS12381)(nil)
 
 // newPrKeyBLSBLS12381 creates a new BLS private key with the given scalar.
 // If no scalar is provided, the function allocates an
@@ -419,7 +419,7 @@ func (sk *prKeyBLSBLS12381) computePublicKey() {
 }
 
 // PublicKey returns the public key corresponding to the private key
-func (sk *prKeyBLSBLS12381) PublicKey() PublicKey {
+func (sk *prKeyBLSBLS12381) PublicKey() sign.PublicKey {
 	if sk.pk != nil {
 		return sk.pk
 	}
@@ -436,7 +436,7 @@ func (a *prKeyBLSBLS12381) Encode() []byte {
 }
 
 // Equals checks is two public keys are equal.
-func (sk *prKeyBLSBLS12381) Equals(other PrivateKey) bool {
+func (sk *prKeyBLSBLS12381) Equals(other sign.PrivateKey) bool {
 	otherBLS, ok := other.(*prKeyBLSBLS12381)
 	if !ok {
 		return false
@@ -467,7 +467,7 @@ type pubKeyBLSBLS12381 struct {
 	isIdentity bool
 }
 
-var _ PublicKey = (*pubKeyBLSBLS12381)(nil)
+var _ sign.PublicKey = (*pubKeyBLSBLS12381)(nil)
 
 // newPubKeyBLSBLS12381 creates a new BLS public key with the given point.
 // If no scalar is provided, the function allocates an
@@ -516,7 +516,7 @@ func (a *pubKeyBLSBLS12381) Encode() []byte {
 }
 
 // Equals checks is two public keys are equal
-func (pk *pubKeyBLSBLS12381) Equals(other PublicKey) bool {
+func (pk *pubKeyBLSBLS12381) Equals(other sign.PublicKey) bool {
 	otherBLS, ok := other.(*pubKeyBLSBLS12381)
 	if !ok {
 		return false
