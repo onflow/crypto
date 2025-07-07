@@ -21,6 +21,8 @@ package crypto
 import (
 	"errors"
 	"fmt"
+
+	"github.com/onflow/crypto/sign"
 )
 
 // DKG stands for distributed key generation. In this package, DKG
@@ -76,7 +78,7 @@ type DKGState interface {
 	// - all the public key shares corresponding to the participants private
 	// key shares
 	// - the finalized private key which is the current participant's own private key share
-	End() (PrivateKey, PublicKey, []PublicKey, error)
+	End() (sign.PrivateKey, sign.PublicKey, []sign.PublicKey, error)
 	// NextTimeout set the next timeout of the protocol if any timeout applies.
 	// Some protocols could require more than one timeout
 	NextTimeout() error

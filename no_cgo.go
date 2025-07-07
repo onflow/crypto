@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 const (
@@ -28,29 +29,29 @@ func withFeature(feature string) string {
 }
 
 type blsBLS12381Algo struct {
-	algo SigningAlgorithm
+	algo sign.SigningAlgorithm
 }
 
 // BLS context on the BLS 12-381 curve
 var blsInstance *blsBLS12381Algo
 
-func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (sign.PrivateKey, error) {
+func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePrivateKey(privateKeyBytes []byte) (sign.PrivateKey, error) {
+func (a *blsBLS12381Algo) DecodePrivateKey(privateKeyBytes []byte) (sign.PrivateKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePublicKey(publicKeyBytes []byte) (sign.PublicKey, error) {
+func (a *blsBLS12381Algo) DecodePublicKey(publicKeyBytes []byte) (sign.PublicKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) decodePublicKeyCompressed(publicKeyBytes []byte) (sign.PublicKey, error) {
+func (a *blsBLS12381Algo) DecodePublicKeyCompressed(publicKeyBytes []byte) (sign.PublicKey, error) {
 	panic(withFeature("BLS signature"))
 }
 
-func (a *blsBLS12381Algo) signatureFormatCheck(sig sign.Signature) bool {
+func (a *blsBLS12381Algo) SignatureFormatCheck(sig sign.Signature) (bool, error) {
 	panic(withFeature("BLS signature"))
 }
 
@@ -58,11 +59,11 @@ func NewExpandMsgXOFKMAC128(domainTag string) hash.Hasher {
 	panic(withFeature("BLS hasher"))
 }
 
-func IsBLSSignatureIdentity(s Signature) bool {
+func IsBLSSignatureIdentity(s sign.Signature) bool {
 	panic(withFeature("BLS signature"))
 }
 
-func BLSInvalidSignature() Signature {
+func BLSInvalidSignature() sign.Signature {
 	panic(withFeature("BLS signature"))
 }
 
@@ -71,11 +72,11 @@ func isG2Compressed() bool {
 }
 
 func NewBLSThresholdSignatureParticipant(
-	groupPublicKey PublicKey,
-	sharePublicKeys []PublicKey,
+	groupPublicKey sign.PublicKey,
+	sharePublicKeys []sign.PublicKey,
 	threshold int,
 	myIndex int,
-	myPrivateKey PrivateKey,
+	myPrivateKey sign.PrivateKey,
 	message []byte,
 	dsTag string,
 ) (ThresholdSignatureParticipant, error) {
@@ -83,8 +84,8 @@ func NewBLSThresholdSignatureParticipant(
 }
 
 func NewBLSThresholdSignatureInspector(
-	groupPublicKey PublicKey,
-	sharePublicKeys []PublicKey,
+	groupPublicKey sign.PublicKey,
+	sharePublicKeys []sign.PublicKey,
 	threshold int,
 	message []byte,
 	dsTag string,
@@ -93,7 +94,7 @@ func NewBLSThresholdSignatureInspector(
 }
 
 func BLSReconstructThresholdSignature(size int, threshold int,
-	shares []Signature, signers []int) (Signature, error) {
+	shares []sign.Signature, signers []int) (sign.Signature, error) {
 	_ = duplicatedSignerErrorf("")
 	_ = notEnoughSharesErrorf("")
 	panic(withFeature("BLS threshold signature"))
@@ -103,8 +104,8 @@ func EnoughShares(threshold int, sharesNumber int) (bool, error) {
 	panic(withFeature("BLS threshold signature"))
 }
 
-func BLSThresholdKeyGen(size int, threshold int, seed []byte) ([]PrivateKey,
-	[]PublicKey, PublicKey, error) {
+func BLSThresholdKeyGen(size int, threshold int, seed []byte) ([]sign.PrivateKey,
+	[]sign.PublicKey, sign.PublicKey, error) {
 	panic(withFeature("BLS threshold signature"))
 }
 
@@ -128,60 +129,60 @@ func NewJointFeldman(size int, threshold int, myIndex int,
 	panic(withFeature("BLS-DKG"))
 }
 
-func SPOCKProve(sk PrivateKey, data []byte, kmac hash.Hasher) (Signature, error) {
+func SPOCKProve(sk sign.PrivateKey, data []byte, kmac hash.Hasher) (sign.Signature, error) {
 	panic(withFeature("BLS-SPoCK"))
 }
 
-func SPOCKVerifyAgainstData(pk PublicKey, proof Signature, data []byte, kmac hash.Hasher) (bool, error) {
+func SPOCKVerifyAgainstData(pk sign.PublicKey, proof sign.Signature, data []byte, kmac hash.Hasher) (bool, error) {
 	panic(withFeature("BLS-SPoCK"))
 }
 
-func SPOCKVerify(pk1 PublicKey, proof1 Signature, pk2 PublicKey, proof2 Signature) (bool, error) {
+func SPOCKVerify(pk1 sign.PublicKey, proof1 sign.Signature, pk2 sign.PublicKey, proof2 sign.Signature) (bool, error) {
 	panic(withFeature("BLS-SPoCK"))
 }
 
-func BLSGeneratePOP(sk PrivateKey) (Signature, error) {
+func BLSGeneratePOP(sk sign.PrivateKey) (sign.Signature, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func BLSVerifyPOP(pk PublicKey, s Signature) (bool, error) {
+func BLSVerifyPOP(pk sign.PublicKey, s sign.Signature) (bool, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func AggregateBLSSignatures(sigs []Signature) (Signature, error) {
+func AggregateBLSSignatures(sigs []sign.Signature) (sign.Signature, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func AggregateBLSPrivateKeys(keys []PrivateKey) (PrivateKey, error) {
+func AggregateBLSPrivateKeys(keys []sign.PrivateKey) (sign.PrivateKey, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func AggregateBLSPublicKeys(keys []PublicKey) (PublicKey, error) {
+func AggregateBLSPublicKeys(keys []sign.PublicKey) (sign.PublicKey, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func IdentityBLSPublicKey() PublicKey {
+func IdentityBLSPublicKey() sign.PublicKey {
 	panic(withFeature("BLS multi-sig"))
 }
 
-func RemoveBLSPublicKeys(aggKey PublicKey, keysToRemove []PublicKey) (PublicKey, error) {
+func RemoveBLSPublicKeys(aggKey sign.PublicKey, keysToRemove []sign.PublicKey) (sign.PublicKey, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
 func VerifyBLSSignatureOneMessage(
-	pks []PublicKey, s Signature, message []byte, kmac hash.Hasher,
+	pks []sign.PublicKey, s sign.Signature, message []byte, kmac hash.Hasher,
 ) (bool, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
 func VerifyBLSSignatureManyMessages(
-	pks []PublicKey, s Signature, messages [][]byte, kmac []hash.Hasher,
+	pks []sign.PublicKey, s sign.Signature, messages [][]byte, kmac []hash.Hasher,
 ) (bool, error) {
 	panic(withFeature("BLS multi-sig"))
 }
 
 func BatchVerifyBLSSignaturesOneMessage(
-	pks []PublicKey, sigs []Signature, message []byte, kmac hash.Hasher,
+	pks []sign.PublicKey, sigs []sign.Signature, message []byte, kmac hash.Hasher,
 ) ([]bool, error) {
 	panic(withFeature("BLS multi-sig"))
 }

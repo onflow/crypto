@@ -48,7 +48,7 @@ import (
 // validPrivateKeyBytesFlow generates bytes of a valid private key in Flow library
 func validPrivateKeyBytesFlow(t *rapid.T) []byte {
 	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
-	sk, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
+	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	// TODO: require.NoError(t, err) seems to mess with rapid
 	if err != nil {
 		assert.FailNow(t, "failed key generation")
@@ -59,7 +59,7 @@ func validPrivateKeyBytesFlow(t *rapid.T) []byte {
 // validPublicKeyBytesFlow generates bytes of a valid public key in Flow library
 func validPublicKeyBytesFlow(t *rapid.T) []byte {
 	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
-	sk, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
+	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	require.NoError(t, err)
 	return sk.PublicKey().Encode()
 }
@@ -67,7 +67,7 @@ func validPublicKeyBytesFlow(t *rapid.T) []byte {
 // validSignatureBytesFlow generates bytes of a valid signature in Flow library
 func validSignatureBytesFlow(t *rapid.T) []byte {
 	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
-	sk, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
+	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	require.NoError(t, err)
 	hasher := NewExpandMsgXOFKMAC128("random_tag")
 	message := rapid.SliceOfN(rapid.Byte(), 1, 1000).Draw(t, "msg").([]byte)
@@ -109,7 +109,7 @@ func testEncodeDecodePrivateKeyCrossBLST(t *rapid.T) {
 	skBytes := rapid.OneOf(randomSlice, validSliceFlow, validSliceBLST).Example().([]byte)
 
 	// check decoding results are consistent
-	skFlow, err := DecodePrivateKey(sign.BLSBLS12381, skBytes)
+	skFlow, err := sign.DecodePrivateKey(sign.BLSBLS12381, skBytes)
 	var skBLST blst.Scalar
 	res := skBLST.Deserialize(skBytes)
 
@@ -136,7 +136,7 @@ func testEncodeDecodePublicKeyCrossBLST(t *rapid.T) {
 	pkBytes := rapid.OneOf(randomSlice, validSliceFlow, validSliceBLST).Example().([]byte)
 
 	// check decoding results are consistent
-	pkFlow, err := DecodePublicKey(sign.BLSBLS12381, pkBytes)
+	pkFlow, err := sign.DecodePublicKey(sign.BLSBLS12381, pkBytes)
 	var pkBLST blst.P2Affine
 	res := pkBLST.Deserialize(pkBytes)
 	pkValidBLST := pkBLST.KeyValidate()
@@ -196,7 +196,7 @@ func testEncodeDecodeG1CrossBLST(t *rapid.T) {
 func testSignHashCrossBLST(t *rapid.T) {
 	// decode two private keys from the same bytes
 	skBytes := rapid.Custom(validPrivateKeyBytesFlow).Example().([]byte)
-	skFlow, err := DecodePrivateKey(sign.BLSBLS12381, skBytes)
+	skFlow, err := sign.DecodePrivateKey(sign.BLSBLS12381, skBytes)
 
 	require.NoError(t, err)
 	var skBLST blst.Scalar
@@ -223,7 +223,7 @@ func testSignHashCrossBLST(t *rapid.T) {
 func testKeyGenCrossBLST(t *rapid.T) {
 	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
 
-	skFlow, err := GeneratePrivateKey(sign.BLSBLS12381, seed)
+	skFlow, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	if err != nil {
 		assert.FailNow(t, "failed key generation")
 	}

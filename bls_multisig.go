@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/sign"
 )
 
 // BLS multi-signature using BLS12-381 curve
@@ -63,7 +64,7 @@ var popKMAC = internalExpandMsgXOFKMAC128(blsPOPCipherSuite)
 // The function returns:
 //   - (nil, errNotBLSKey) if the input key is not of type BLS BLS12-381
 //   - (pop, nil) otherwise
-func BLSGeneratePOP(sk PrivateKey) (Signature, error) {
+func BLSGeneratePOP(sk sign.PrivateKey) (sign.Signature, error) {
 	_, ok := sk.(*prKeyBLSBLS12381)
 	if !ok {
 		return nil, errNotBLSKey
@@ -82,7 +83,7 @@ func BLSGeneratePOP(sk PrivateKey) (Signature, error) {
 // The function returns:
 //   - (false, errNotBLSKey) if the input key is not of type BLS BLS12-381
 //   - (validity, nil) otherwise
-func BLSVerifyPOP(pk PublicKey, s Signature) (bool, error) {
+func BLSVerifyPOP(pk sign.PublicKey, s sign.Signature) (bool, error) {
 	_, ok := pk.(*pubKeyBLSBLS12381)
 	if !ok {
 		return false, errNotBLSKey
@@ -107,7 +108,7 @@ func BLSVerifyPOP(pk PublicKey, s Signature) (bool, error) {
 //     G1 membership is not checked.
 //   - (nil, error) if an unexpected error occurs
 //   - (aggregated_signature, nil) otherwise
-func AggregateBLSSignatures(sigs []Signature) (Signature, error) {
+func AggregateBLSSignatures(sigs []sign.Signature) (sign.Signature, error) {
 	// check for empty list
 	if len(sigs) == 0 {
 		return nil, errBLSAggregateEmptyList
@@ -151,7 +152,7 @@ func AggregateBLSSignatures(sigs []Signature) (Signature, error) {
 //   - (nil, errNotBLSKey) if at least one key is not of type BLS BLS12-381
 //   - (nil, errBLSAggregateEmptyList) if no keys are provided (input slice is empty)
 //   - (aggregated_key, nil) otherwise
-func AggregateBLSPrivateKeys(keys []PrivateKey) (PrivateKey, error) {
+func AggregateBLSPrivateKeys(keys []sign.PrivateKey) (sign.PrivateKey, error) {
 	// check for empty list
 	if len(keys) == 0 {
 		return nil, errBLSAggregateEmptyList
@@ -185,7 +186,7 @@ func AggregateBLSPrivateKeys(keys []PrivateKey) (PrivateKey, error) {
 //   - (nil, errNotBLSKey) if at least one key is not of type BLS BLS12-381
 //   - (nil, errBLSAggregateEmptyList) no keys are provided (input slice is empty)
 //   - (aggregated_key, nil) otherwise
-func AggregateBLSPublicKeys(keys []PublicKey) (PublicKey, error) {
+func AggregateBLSPublicKeys(keys []sign.PublicKey) (sign.PublicKey, error) {
 
 	// check for empty list
 	if len(keys) == 0 {
@@ -211,7 +212,7 @@ func AggregateBLSPublicKeys(keys []PublicKey) (PublicKey, error) {
 
 // IdentityBLSPublicKey returns an identity public key which corresponds to the point
 // at infinity in G2 (identity element g2).
-func IdentityBLSPublicKey() PublicKey {
+func IdentityBLSPublicKey() sign.PublicKey {
 	return &g2PublicKey
 }
 
@@ -229,7 +230,7 @@ func IdentityBLSPublicKey() PublicKey {
 // The function returns:
 //   - (nil, errNotBLSKey) if at least one input key is not of type BLS BLS12-381
 //   - (remaining_key, nil) otherwise
-func RemoveBLSPublicKeys(aggKey PublicKey, keysToRemove []PublicKey) (PublicKey, error) {
+func RemoveBLSPublicKeys(aggKey sign.PublicKey, keysToRemove []sign.PublicKey) (sign.PublicKey, error) {
 
 	aggPKBLS, ok := aggKey.(*pubKeyBLSBLS12381)
 	if !ok {
@@ -286,7 +287,7 @@ func RemoveBLSPublicKeys(aggKey PublicKey, keysToRemove []PublicKey) (PublicKey,
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func VerifyBLSSignatureOneMessage(
-	pks []PublicKey, s Signature, message []byte, kmac hash.Hasher,
+	pks []sign.PublicKey, s sign.Signature, message []byte, kmac hash.Hasher,
 ) (bool, error) {
 	// public key list must be non empty, this is checked internally by AggregateBLSPublicKeys
 	aggPk, err := AggregateBLSPublicKeys(pks)
@@ -326,7 +327,7 @@ func VerifyBLSSignatureOneMessage(
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func VerifyBLSSignatureManyMessages(
-	pks []PublicKey, s Signature, messages [][]byte, kmac []hash.Hasher,
+	pks []sign.PublicKey, s sign.Signature, messages [][]byte, kmac []hash.Hasher,
 ) (bool, error) {
 
 	// check signature length
@@ -476,7 +477,7 @@ func VerifyBLSSignatureManyMessages(
 //   - ([]false, error) if an unexpected error occurs
 //   - ([]validity, nil) otherwise
 func BatchVerifyBLSSignaturesOneMessage(
-	pks []PublicKey, sigs []Signature, message []byte, kmac hash.Hasher,
+	pks []sign.PublicKey, sigs []sign.Signature, message []byte, kmac hash.Hasher,
 ) ([]bool, error) {
 	// boolean array returned when errors occur
 	falseSlice := make([]bool, len(sigs))

@@ -20,6 +20,7 @@ package sign
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -99,44 +100,44 @@ type PublicKey interface {
 	Equals(PublicKey) bool
 }
 
+// Todo: move to sign/internal
 type signer interface {
-	// generatePrivateKey generates a private key
-	generatePrivateKey([]byte) (PrivateKey, error)
-	// decodePrivateKey loads a private key from a byte array
-	decodePrivateKey([]byte) (PrivateKey, error)
-	// decodePublicKey loads a public key from a byte array
-	decodePublicKey([]byte) (PublicKey, error)
-	// decodePublicKeyCompressed loads a public key from a byte array representing a point in compressed form
-	decodePublicKeyCompressed([]byte) (PublicKey, error)
-	// signatureFormatCheck verifies the format of a serialized signature
-	signatureFormatCheck(Signature) bool
+	// GeneratePrivateKey generates a private key
+	GeneratePrivateKey([]byte) (PrivateKey, error)
+	// DecodePrivateKey loads a private key from a byte array
+	DecodePrivateKey([]byte) (PrivateKey, error)
+	// DecodePublicKey loads a public key from a byte array
+	DecodePublicKey([]byte) (PublicKey, error)
+	// DecodePublicKeyCompressed loads a public key from a byte array representing a point in compressed form
+	DecodePublicKeyCompressed([]byte) (PublicKey, error)
+	// SignatureFormatCheck verifies the format of a serialized signature
+	SignatureFormatCheck(Signature) (bool, error)
 }
 
-// Algorithm instances - these will be initialized by the main crypto package
-var (
-	p256Instance     signer
-	secp256k1Instance signer
-	blsInstance      signer
-)
+// Algorithm instances, initialized by the supported signature algorithms
+var signerInstances map[SigningAlgorithm]signer = make(map[SigningAlgorithm]signer)
 
-// newSigner returns a signer instance
-func newSigner(algo SigningAlgorithm) (signer, error) {
-	switch algo {
-	case ECDSAP256:
-		return p256Instance, nil
-	case ECDSASecp256k1:
-		return secp256k1Instance, nil
-	case BLSBLS12381:
-		return blsInstance, nil
-	default:
+// Todo: shouldn't be public - move to sign/internal and update interface{} to Signer
+func RegisterSigner(algo SigningAlgorithm, signerInput interface{}) error {
+	signerInstance, ok := signerInput.(signer)
+	if !ok {
+		fmt.Println(reflect.TypeOf(signerInput))
+		return fmt.Errorf("signer input is not a signer")
+	}
+
+	if signerInstances[algo] != nil {
+		return fmt.Errorf("signer already registered for algorithm %s", algo)
+	}
+	signerInstances[algo] = signerInstance
+	return nil
+}
+
+// getSigner returns a signer instance of a registered signature algorithm
+func getSigner(algo SigningAlgorithm) (signer, error) {
+	if signerInstances[algo] == nil {
 		return nil, fmt.Errorf("the signature scheme %s is not supported", algo)
 	}
-}
-
-func SetSignerInstances(p256, secp256k1, bls interface{}) {
-	p256Instance = p256.(signer)
-	secp256k1Instance = secp256k1.(signer)
-	blsInstance = bls.(signer)
+	return signerInstances[algo], nil
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,
@@ -147,20 +148,11 @@ func SetSignerInstances(p256, secp256k1, bls interface{}) {
 // If SignatureFormatCheck returns false then the input is not a valid
 // signature and will fail a verification against any message and public key.
 func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
-	switch algo {
-	case ECDSAP256:
-		if p256Instance == nil {
-			return false, fmt.Errorf("ECDSA P256 not initialized")
-		}
-		return p256Instance.signatureFormatCheck(s), nil
-	case ECDSASecp256k1:
-		if secp256k1Instance == nil {
-			return false, fmt.Errorf("ECDSA secp256k1 not initialized")
-		}
-		return secp256k1Instance.signatureFormatCheck(s), nil
-	default:
-		return false, fmt.Errorf("the signature scheme %s is not supported", algo)
+	signer, err := getSigner(algo)
+	if err != nil {
+		return false, fmt.Errorf("signature format check failed: %w", err)
 	}
+	return signer.SignatureFormatCheck(s)
 }
 
 // GeneratePrivateKey generates a private key of the algorithm using the entropy of the given seed.
@@ -174,11 +166,11 @@ func SignatureFormatCheck(algo SigningAlgorithm, s Signature) (bool, error) {
 //   - (false, error) if an unexpected error occurs
 //   - (sk, nil) if key generation was successful
 func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) {
-	signer, err := newSigner(algo)
+	signer, err := getSigner(algo)
 	if err != nil {
 		return nil, fmt.Errorf("key generation failed: %w", err)
 	}
-	return signer.generatePrivateKey(seed)
+	return signer.GeneratePrivateKey(seed)
 }
 
 // DecodePrivateKey decodes an array of bytes into a private key of the given algorithm
@@ -193,11 +185,11 @@ func GeneratePrivateKey(algo SigningAlgorithm, seed []byte) (PrivateKey, error) 
 //   - (nil, error) if an unexpected error occurs
 //   - (sk, nil) otherwise
 func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
-	signer, err := newSigner(algo)
+	signer, err := getSigner(algo)
 	if err != nil {
 		return nil, fmt.Errorf("decode private key failed: %w", err)
 	}
-	return signer.decodePrivateKey(input)
+	return signer.DecodePrivateKey(input)
 }
 
 // DecodePublicKey decodes an array of bytes into a public key of the given algorithm
@@ -214,11 +206,11 @@ func DecodePrivateKey(algo SigningAlgorithm, input []byte) (PrivateKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
-	signer, err := newSigner(algo)
+	signer, err := getSigner(algo)
 	if err != nil {
 		return nil, fmt.Errorf("decode public key failed: %w", err)
 	}
-	return signer.decodePublicKey(input)
+	return signer.DecodePublicKey(input)
 }
 
 // DecodePublicKeyCompressed decodes an array of bytes given in a compressed representation into a public key of the given algorithm.
@@ -234,9 +226,9 @@ func DecodePublicKey(algo SigningAlgorithm, input []byte) (PublicKey, error) {
 //   - (nil, error) if an unexpected error occurs
 //   - (pk, nil) otherwise
 func DecodePublicKeyCompressed(algo SigningAlgorithm, data []byte) (PublicKey, error) {
-	signer, err := newSigner(algo)
+	signer, err := getSigner(algo)
 	if err != nil {
 		return nil, fmt.Errorf("decode compressed public key failed: %w", err)
 	}
-	return signer.decodePublicKeyCompressed(data)
+	return signer.DecodePublicKeyCompressed(data)
 }

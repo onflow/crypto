@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/crypto/sign"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -464,7 +465,7 @@ type testDKGProcessor struct {
 	// index of the current participant in the protocol
 	current int
 	// group public key, output of DKG
-	pk PublicKey
+	pk sign.PublicKey
 	// final disqualified list
 	disqualified []bool
 	// final output error of the DKG
