@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"crypto/elliptic"
-	crand "crypto/rand"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +30,7 @@ import (
 
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
-	"github.com/onflow/crypto/sign/internal/testutils"
+	"github.com/onflow/crypto/sign/testutils"
 )
 
 var ecdsaCurves = []sign.SigningAlgorithm{
@@ -85,9 +84,6 @@ func TestECDSAHasher(t *testing.T) {
 		sk, err := sign.GeneratePrivateKey(curve, seed)
 		require.NoError(t, err)
 		halg = hash.NewSHA2_256()
-		halg = hash.NewHasherFromAlgorithm(hash.SHA2_256)
-		halg = hash.NewHasherFromAlgorithm(hash.SHA2_256)
-		halg = hash.NewHasherFromAlgorithm(hash.SHA2_256)
 		invalidHasher := &invalidHasher{}
 		data := []byte("some data")
 		_, err = sk.Sign(data, invalidHasher)
@@ -354,4 +350,19 @@ func (h *invalidHasher) Size() int {
 
 func (h *invalidHasher) BlockSize() int {
 	return 64
+}
+
+func (h *invalidHasher) Algorithm() hash.HashingAlgorithm {
+	return hash.HashingAlgorithm(99) // invalid algorithm
+}
+
+func (h *invalidHasher) Reset() {
+}
+
+func (h *invalidHasher) SumHash() hash.Hash {
+	return h.ComputeHash(nil)
+}
+
+func (h *invalidHasher) Write(p []byte) (n int, err error) {
+	return len(p), nil
 }

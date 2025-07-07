@@ -19,17 +19,16 @@
 package crypto
 
 import (
-	crand "crypto/rand"
 	"fmt"
 	mrand "math/rand"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
+	"github.com/onflow/crypto/sign/testutils"
 )
 
 func getPRG(t *testing.T) *mrand.Rand {

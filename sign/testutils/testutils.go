@@ -164,6 +164,11 @@ func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 				skBytes := sk.Encode()
 				skCheck, err := sign.DecodePrivateKey(salg, skBytes)
 				require.Nil(t, err)
+				if !sk.Equals(skCheck) {
+					t.Logf("Private key mismatch: original=%x, decoded=%x", sk.Encode(), skCheck.Encode())
+					t.Logf("Original algorithm: %v, Decoded algorithm: %v", sk.Algorithm(), skCheck.Algorithm())
+					t.Logf("Original size: %d, Decoded size: %d", sk.Size(), skCheck.Size())
+				}
 				assert.True(t, sk.Equals(skCheck))
 				skCheckBytes := skCheck.Encode()
 				assert.Equal(t, skBytes, skCheckBytes)
@@ -175,6 +180,9 @@ func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 				pkBytes := pk.Encode()
 				pkCheck, err := sign.DecodePublicKey(salg, pkBytes)
 				require.Nil(t, err)
+				if !pk.Equals(pkCheck) {
+					t.Logf("Public key mismatch: original=%x, decoded=%x", pk.Encode(), pkCheck.Encode())
+				}
 				assert.True(t, pk.Equals(pkCheck))
 				pkCheckBytes := pkCheck.Encode()
 				assert.Equal(t, pkBytes, pkCheckBytes)

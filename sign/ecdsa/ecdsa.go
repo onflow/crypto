@@ -34,6 +34,13 @@ import (
 	"github.com/onflow/crypto/sign"
 )
 
+const (
+	minHashSizeECDSA = 32
+	KeyGenSeedMinLen = 32
+	KeyGenSeedMaxLen = 128 // maximum constraint
+	securityBits = 128
+)
+
 func invalidInputsErrorf(msg string, args ...interface{}) error {
 	return fmt.Errorf("crypto: invalid inputs: "+msg, args...)
 }
@@ -258,6 +265,7 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 	}
 	var d big.Int
 	d.SetBytes(der)
+	fmt.Printf("DEBUG: rawDecodePrivateKey - input bytes: %x, decoded D: %s, algo: %v, curve: %p\n", der, d.String(), a.algo, a.curve)
 
 	if d.Cmp(n) >= 0 {
 		return nil, invalidInputsErrorf("input is larger than the curve order of %s", a.algo)
@@ -272,12 +280,15 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 		// error is not expected at this point
 		return nil, fmt.Errorf("building the private key failed: %w", err)
 	}
+	fmt.Printf("DEBUG: rawDecodePrivateKey - after goecdsaPrivateKey, priv.D: %s\n", priv.D.String())
 
-	return &prKeyECDSA{
+	result := &prKeyECDSA{
 		alg:     a,
 		goPrKey: priv,
 		pubKey:  nil, // public key is not constructed
-	}, nil
+	}
+	fmt.Printf("DEBUG: rawDecodePrivateKey - result key algo: %v, curve: %p\n", result.alg.algo, result.alg.curve)
+	return result, nil
 }
 
 func (a *ecdsaAlgo) DecodePrivateKey(der []byte) (sign.PrivateKey, error) {
@@ -402,7 +413,14 @@ func (sk *prKeyECDSA) Algorithm() sign.SigningAlgorithm {
 
 // Size returns the length of the private key in bytes
 func (sk *prKeyECDSA) Size() int {
-	return bitsToBytes((sk.alg.curve.Params().N).BitLen())
+	switch sk.alg.algo {
+	case sign.ECDSAP256:
+		return PrKeyLenECDSAP256
+	case sign.ECDSASecp256k1:
+		return PrKeyLenECDSASecp256k1
+	default:
+		return bitsToBytes((sk.alg.curve.Params().N).BitLen())
+	}
 }
 
 // PublicKey returns the public key associated to the private key
@@ -421,10 +439,14 @@ func (sk *prKeyECDSA) PublicKey() sign.PublicKey {
 // padded to the private key length
 func (sk *prKeyECDSA) rawEncode() []byte {
 	skBytes := sk.goPrKey.D.Bytes()
-	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
+	nLen := sk.Size() // use the Size() method instead of calculating
 	skEncoded := make([]byte, nLen)
-	// pad sk with zeroes
-	copy(skEncoded[nLen-len(skBytes):], skBytes)
+	// pad sk with zeroes - ensure we don't go out of bounds
+	if len(skBytes) <= nLen {
+		copy(skEncoded[nLen-len(skBytes):], skBytes)
+	} else {
+		copy(skEncoded, skBytes[len(skBytes)-nLen:])
+	}
 	return skEncoded
 }
 
@@ -439,13 +461,26 @@ func (sk *prKeyECDSA) Equals(other sign.PrivateKey) bool {
 	// check the key type
 	otherECDSA, ok := other.(*prKeyECDSA)
 	if !ok {
+		fmt.Printf("DEBUG: Type check failed\n")
 		return false
 	}
-	// check the curve
-	if sk.alg.curve != otherECDSA.alg.curve {
+	// check the algorithm instead of curve pointer
+	if sk.alg.algo != otherECDSA.alg.algo {
+		fmt.Printf("DEBUG: Algorithm check failed: %v vs %v\n", sk.alg.algo, otherECDSA.alg.algo)
 		return false
 	}
-	return sk.goPrKey.D.Cmp(otherECDSA.goPrKey.D) == 0
+	if sk.goPrKey == nil || sk.goPrKey.D == nil {
+		fmt.Printf("DEBUG: sk.goPrKey or sk.goPrKey.D is nil\n")
+		return false
+	}
+	if otherECDSA.goPrKey == nil || otherECDSA.goPrKey.D == nil {
+		fmt.Printf("DEBUG: otherECDSA.goPrKey or otherECDSA.goPrKey.D is nil\n")
+		return false
+	}
+	fmt.Printf("DEBUG: Equals - sk algo: %v, curve: %p, other algo: %v, curve: %p\n", sk.alg.algo, sk.alg.curve, otherECDSA.alg.algo, otherECDSA.alg.curve)
+	cmpResult := sk.goPrKey.D.Cmp(otherECDSA.goPrKey.D)
+	fmt.Printf("DEBUG: D comparison result: %d (sk.D=%s, other.D=%s)\n", cmpResult, sk.goPrKey.D.String(), otherECDSA.goPrKey.D.String())
+	return cmpResult == 0
 }
 
 // String returns the hex string representation of the key.
@@ -470,7 +505,14 @@ func (pk *pubKeyECDSA) Algorithm() sign.SigningAlgorithm {
 
 // Size returns the length of the public key in bytes
 func (pk *pubKeyECDSA) Size() int {
-	return 2 * bitsToBytes((pk.goPubKey.Params().P).BitLen())
+	switch pk.alg.algo {
+	case sign.ECDSAP256:
+		return PubKeyLenECDSAP256
+	case sign.ECDSASecp256k1:
+		return PubKeyLenECDSASecp256k1
+	default:
+		return 2 * bitsToBytes((pk.goPubKey.Params().P).BitLen())
+	}
 }
 
 // EncodeCompressed returns a compressed encoding according to X9.62 section 4.3.6.
@@ -488,11 +530,19 @@ func (pk *pubKeyECDSA) EncodeCompressed() []byte {
 func (pk *pubKeyECDSA) rawEncode() []byte {
 	xBytes := pk.goPubKey.X.Bytes()
 	yBytes := pk.goPubKey.Y.Bytes()
-	Plen := bitsToBytes((pk.alg.curve.Params().P).BitLen())
+	Plen := pk.Size() / 2 // use Size() method and divide by 2 for coordinate length
 	pkEncoded := make([]byte, 2*Plen)
-	// pad the public key coordinates with zeroes
-	copy(pkEncoded[Plen-len(xBytes):], xBytes)
-	copy(pkEncoded[2*Plen-len(yBytes):], yBytes)
+	// pad the public key coordinates with zeroes - ensure we don't go out of bounds
+	if len(xBytes) <= Plen {
+		copy(pkEncoded[Plen-len(xBytes):], xBytes)
+	} else {
+		copy(pkEncoded, xBytes[len(xBytes)-Plen:])
+	}
+	if len(yBytes) <= Plen {
+		copy(pkEncoded[2*Plen-len(yBytes):], yBytes)
+	} else {
+		copy(pkEncoded[Plen:], yBytes[len(yBytes)-Plen:])
+	}
 	return pkEncoded
 }
 
@@ -503,15 +553,15 @@ func (pk *pubKeyECDSA) Encode() []byte {
 	return pk.rawEncode()
 }
 
-// Equals test the equality of two private keys
+// Equals test the equality of two public keys
 func (pk *pubKeyECDSA) Equals(other sign.PublicKey) bool {
 	// check the key type
 	otherECDSA, ok := other.(*pubKeyECDSA)
 	if !ok {
 		return false
 	}
-	// check the curve
-	if pk.alg.curve != otherECDSA.alg.curve {
+	// check the algorithm instead of curve pointer
+	if pk.alg.algo != otherECDSA.alg.algo {
 		return false
 	}
 	return (pk.goPubKey.X.Cmp(otherECDSA.goPubKey.X) == 0) &&
