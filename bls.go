@@ -90,8 +90,7 @@ type blsBLS12381Algo struct {
 	algo SigningAlgorithm
 }
 
-// BLS context on the BLS 12-381 curve
-var blsInstance *blsBLS12381Algo
+// BLS context on the BLS 12-381 curve instance is now declared in sign.go
 
 // NewExpandMsgXOFKMAC128 returns a new expand_message_xof instance for
 // the hash-to-curve function, hashing data to G1 on BLS12 381.

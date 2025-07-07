@@ -64,11 +64,7 @@ type ecdsaAlgo struct {
 
 // ECDSA contexts for each supported curve
 //
-// NIST P-256 curve
-var p256Instance *ecdsaAlgo
-
-// SECG secp256k1 curve https://www.secg.org/sec2-v2.pdf
-var secp256k1Instance *ecdsaAlgo
+// NIST P-256 curve and SECG secp256k1 curve instances are now declared in sign.go
 
 func bitsToBytes(bits int) int {
 	return (bits + 7) >> 3
