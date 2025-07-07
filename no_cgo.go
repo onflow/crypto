@@ -32,8 +32,6 @@ type blsBLS12381Algo struct {
 	algo sign.SigningAlgorithm
 }
 
-// BLS context on the BLS 12-381 curve
-var blsInstance *blsBLS12381Algo
 
 func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error) {
 	panic(withFeature("BLS signature"))
