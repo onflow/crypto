@@ -16,14 +16,7 @@
  * limitations under the License.
  */
 
-package crypto
-
-// Elliptic Curve Digital Signature Algorithm is implemented as
-// defined in FIPS 186-4 (although the hash functions implemented in this package are SHA2 and SHA3).
-
-// Most of the implementation is Go based and is not optimized for performance.
-
-// This implementation does not include any security against side-channel attacks.
+package ecdsa
 
 import (
 	"crypto/ecdh"
@@ -41,6 +34,32 @@ import (
 	"github.com/onflow/crypto/sign"
 )
 
+func invalidInputsErrorf(msg string, args ...interface{}) error {
+	return fmt.Errorf("crypto: invalid inputs: "+msg, args...)
+}
+
+func invalidHasherSizeErrorf(msg string, args ...interface{}) error {
+	return fmt.Errorf("crypto: invalid hasher size: "+msg, args...)
+}
+
+func isValidHasher(h hash.Hasher) bool {
+	return h.Size() >= minHashSizeECDSA
+}
+
+func overwrite(data []byte) {
+	for i := range data {
+		data[i] = 0
+	}
+}
+
+// IsInvalidHasherSizeError checks if an error is an invalid hasher size error
+func IsInvalidHasherSizeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return fmt.Sprintf("%s", err)[:len("crypto: invalid hasher size")] == "crypto: invalid hasher size"
+}
+
 const (
 	// NIST P256
 	SignatureLenECDSAP256 = 64
@@ -48,7 +67,6 @@ const (
 	// PubKeyLenECDSAP256 is the size of uncompressed points on P256
 	PubKeyLenECDSAP256 = 64
 
-	// SECG secp256k1
 	SignatureLenECDSASecp256k1 = 64
 	PrKeyLenECDSASecp256k1     = 32
 	// PubKeyLenECDSASecp256k1 is the size of uncompressed points on secp256k1
@@ -77,13 +95,6 @@ func init() {
 		curve: btcec.S256(),
 		algo:  sign.ECDSASecp256k1,
 	}); err != nil {
-		panic(err)
-	}
-
-	// init the BLS12-381 curve context
-	initBLS12381()
-	// register the BLS context on the BLS 12-381 curve instance in the `sign` package
-	if err := sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381}); err != nil {
 		panic(err)
 	}
 }
@@ -118,154 +129,89 @@ func (sk *prKeyECDSA) signHash(h hash.Hash) (sign.Signature, error) {
 //
 // The resulting signature is the concatenation bytes(r)||bytes(s),
 // where r and s are padded to the curve order size.
-// The private key is read only while sha2 and sha3 hashers are
-// modified temporarily.
+//
 //
 // The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
+//   - (signature, nil) if no error occurred
+//   - (nil, invalidInputsError) if the hasher is not supported by the signature algorithm
 //   - (nil, error) if an unexpected error occurs
-//   - (signature, nil) otherwise
 func (sk *prKeyECDSA) Sign(data []byte, alg hash.Hasher) (sign.Signature, error) {
-	if alg == nil {
-		return nil, errNilHasher
+	if !isValidHasher(alg) {
+		return nil, invalidHasherSizeErrorf("hasher's output size should be at least %d bytes for %s", minHashSizeECDSA, sk.alg.algo)
 	}
-	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
-	if alg.Size() < nLen {
-		return nil, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d, got %d", nLen, alg.Size())
-	}
-
 	h := alg.ComputeHash(data)
 	return sk.signHash(h)
 }
 
-// verifyHash implements ECDSA signature verification
+// The signature is the concatenation bytes(r) || bytes(s),
+// where `r` and `s` are padded to the curve order size.
 func (pk *pubKeyECDSA) verifyHash(sig sign.Signature, h hash.Hash) (bool, error) {
 	nLen := bitsToBytes((pk.alg.curve.Params().N).BitLen())
-
 	if len(sig) != 2*nLen {
 		return false, nil
 	}
-
-	var r big.Int
-	var s big.Int
+	var r, s big.Int
 	r.SetBytes(sig[:nLen])
 	s.SetBytes(sig[nLen:])
 	return ecdsa.Verify(pk.goPubKey, h, &r, &s), nil
 }
 
-// Verify verifies a signature of an input data under the public key.
+// Verify verifies a signature of an input message using the public key receiver.
 //
-// If the input signature slice has an invalid length or fails to deserialize into valid
-// scalars, the function returns false without an error.
-//
-// Public keys are read only, sha2 and sha3 hashers are
-// modified temporarily.
 //
 // The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
+//   - (true, nil) if the signature is valid
+//   - (false, invalidInputsError) if the hasher is not supported by the signature algorithm
 //   - (false, error) if an unexpected error occurs
-//   - (validity, nil) otherwise
 func (pk *pubKeyECDSA) Verify(sig sign.Signature, data []byte, alg hash.Hasher) (bool, error) {
-	if alg == nil {
-		return false, errNilHasher
+	if !isValidHasher(alg) {
+		return false, invalidHasherSizeErrorf("hasher's output size should be at least %d bytes for %s", minHashSizeECDSA, pk.alg.algo)
 	}
-
-	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((pk.alg.curve.Params().N).BitLen())
-	if alg.Size() < nLen {
-		return false, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d, got %d", nLen, alg.Size())
-	}
-
 	h := alg.ComputeHash(data)
 	return pk.verifyHash(sig, h)
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
-// If FormatCheck returns false then the input is not a valid ECDSA
+//
+// This function is only defined for ECDSA algos for now.
+//
+// If SignatureFormatCheck returns false then the input is not a valid
 // signature and will fail a verification against any message and public key.
-func (a *ecdsaAlgo) SignatureFormatCheck(sig sign.Signature) (bool, error) {
-	N := a.curve.Params().N
-	nLen := bitsToBytes(N.BitLen())
-
-	if len(sig) != 2*nLen {
+func (a *ecdsaAlgo) SignatureFormatCheck(s sign.Signature) (bool, error) {
+	nLen := bitsToBytes((a.curve.Params().N).BitLen())
+	if len(s) != 2*nLen {
 		return false, nil
 	}
+	var r, sVal big.Int
+	r.SetBytes(s[:nLen])
+	sVal.SetBytes(s[nLen:])
 
-	var r big.Int
-	var s big.Int
-	r.SetBytes(sig[:nLen])
-	s.SetBytes(sig[nLen:])
-
-	if r.Sign() == 0 || s.Sign() == 0 {
+	n := a.curve.Params().N
+	if r.Sign() == 0 || sVal.Sign() == 0 {
 		return false, nil
 	}
-
-	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 {
+	if r.Cmp(n) >= 0 || sVal.Cmp(n) >= 0 {
 		return false, nil
 	}
-
-	// We could also check whether r and r+N are quadratic residues modulo (p)
-	// using Euler's criterion, but this may be too heavy for a light sanity check.
 	return true, nil
 }
 
-var one = new(big.Int).SetInt64(1)
-
-// goecdsaMapKey maps the input seed to a private key
-// of the Go crypto/ecdsa library.
-// The private scalar `d` satisfies 0 < d < n.
-// Returned error is expected to be nil.
-func goecdsaMapKey(curve elliptic.Curve, seed []byte) (*ecdsa.PrivateKey, error) {
-	d := new(big.Int).SetBytes(seed)
-	n := new(big.Int).Sub(curve.Params().N, one)
-	d.Mod(d, n)
-	d.Add(d, one)
-	return goecdsaPrivateKey(curve, d) // n > d > 0 at this point
+func goecdsaMapKey(curve elliptic.Curve, input []byte) (*ecdsa.PrivateKey, error) {
+	var d big.Int
+	d.SetBytes(input)
+	return goecdsaPrivateKey(curve, &d)
 }
 
-// goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
-// input curve and scalar.
-// Input scalar is assumed to be a non-zero integer modulo the curve order `n`.
-// Error returns:
-//   - invalidInputsError if the input curve is unsupported
 func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
-	priv.D = d
 	priv.PublicKey.Curve = curve
-
-	// compute the crypto/ecdsa public key
-	if curve == elliptic.P256() {
-		// use crypto/ecdh implementation to perform base scalar multiplication
-		// of an ECDH private key, because crypto/elliptic deprecated `ScalarBaseMult`
-		ecdhPriv, err := priv.ECDH()
-		if err != nil {
-			// at this point, no error is expected because the function can't be called
-			// with a zero scalar modulo `n`
-			return nil, fmt.Errorf("non expected error when creating an ECDH private key: %w", err)
-		}
-		// crypto/ecdh serialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3).
-		// The bytes returned are `0x04 || X || Y` because the point is guaranteed to be non-infinity
-		ecdhPubBytes := ecdhPriv.PublicKey().Bytes()
-		pLen := bitsToBytes(curve.Params().P.BitLen())
-		priv.PublicKey.X = new(big.Int).SetBytes(ecdhPubBytes[1 : 1+pLen])
-		priv.PublicKey.Y = new(big.Int).SetBytes(ecdhPubBytes[1+pLen:])
-	} else if curve == btcec.S256() {
-		// `ScalarBaseMult` is not deprecated in btcec's type `KoblitzCurve`
-		priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d.Bytes())
-	} else {
-		return nil, invalidInputsErrorf("the curve is not supported")
-	}
+	priv.D = d
+	priv.PublicKey.X, priv.PublicKey.Y = curve.ScalarBaseMult(d.Bytes())
 	return priv, nil
 }
 
-// GeneratePrivateKey generates a private key for ECDSA
-// deterministically using the input seed.
+// GeneratePrivateKey generates a private key for ECDSA.
 //
 // It is recommended to use a secure crypto RNG to generate the seed.
 // The seed must have enough entropy.
