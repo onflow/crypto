@@ -67,19 +67,25 @@ type EcdsaAlgo = ecdsaAlgo
 
 func init() {
 	// register ECDSA contexts for each supported curve in the `sign` package
-	sign.RegisterSigner(sign.ECDSAP256, &ecdsaAlgo{
+	if err := sign.RegisterSigner(sign.ECDSAP256, &ecdsaAlgo{
 		curve: elliptic.P256(),
 		algo:  sign.ECDSAP256,
-	})
-	sign.RegisterSigner(sign.ECDSASecp256k1, &ecdsaAlgo{
+	}); err != nil {
+		panic(err)
+	}
+	if err := sign.RegisterSigner(sign.ECDSASecp256k1, &ecdsaAlgo{
 		curve: btcec.S256(),
 		algo:  sign.ECDSASecp256k1,
-	})
+	}); err != nil {
+		panic(err)
+	}
 
 	// init the BLS12-381 curve context
 	initBLS12381()
 	// register the BLS context on the BLS 12-381 curve instance in the `sign` package
-	sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381})
+	if err := sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381}); err != nil {
+		panic(err)
+	}
 }
 
 func bitsToBytes(bits int) int {
