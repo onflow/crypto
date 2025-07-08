@@ -30,6 +30,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 
+	"github.com/onflow/crypto/common"
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
 )
@@ -53,11 +54,6 @@ func isValidHasher(h hash.Hasher) bool {
 	return h.Size() >= minHashSizeECDSA
 }
 
-func overwrite(data []byte) {
-	for i := range data {
-		data[i] = 0
-	}
-}
 
 // IsInvalidHasherSizeError checks if an error is an invalid hasher size error
 func IsInvalidHasherSizeError(err error) bool {
@@ -243,7 +239,7 @@ func (a *ecdsaAlgo) GeneratePrivateKey(seed []byte) (sign.PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("HKDF computation failed : %w", err)
 	}
-	defer overwrite(okm) // overwrite okm
+	defer common.Overwrite(okm) // overwrite okm
 
 	sk, err := goecdsaMapKey(a.curve, okm)
 	if err != nil {
