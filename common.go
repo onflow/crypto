@@ -19,7 +19,6 @@
 package crypto
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 )
@@ -38,18 +37,6 @@ const (
 	KeyGenSeedMaxLen = 256
 )
 
-// TODO: update this code to make sure
-// the function isn't removed by the compiler
-// https://github.com/golang/go/issues/21865
-func overwrite(data []byte) {
-	_, err := rand.Read(data) // checking err is enough
-	if err != nil {
-		// zero the buffer if randomizing failed
-		for i := 0; i < len(data); i++ {
-			data[i] = 0
-		}
-	}
-}
 
 // invalidInputsError is an error returned when a crypto API receives invalid inputs.
 // It allows a function caller differentiate unexpected program errors from errors caused by

@@ -65,9 +65,6 @@ func BLSInvalidSignature() sign.Signature {
 	panic(withFeature("BLS signature"))
 }
 
-func isG2Compressed() bool {
-	panic(withFeature("BLS12-381 curve"))
-}
 
 func NewBLSThresholdSignatureParticipant(
 	groupPublicKey sign.PublicKey,

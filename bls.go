@@ -271,7 +271,11 @@ func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error
 	// HKDF secret = IKM || I2OSP(0, 1)
 	secret := make([]byte, len(ikm)+1)
 	copy(secret, ikm)
-	defer overwrite(secret) // overwrite secret
+	defer func() {
+		for i := range secret {
+			secret[i] = 0
+		}
+	}()
 	// HKDF info = key_info || I2OSP(L, 2)
 	keyInfo := []byte{} // use empty key diversifier. TODO: update header to accept input identifier
 	info := string(append(keyInfo, byte(okmLength>>8), byte(okmLength)))
@@ -283,7 +287,11 @@ func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error
 		if err != nil {
 			return nil, fmt.Errorf("HKDF computation failed: %w", err)
 		}
-		defer overwrite(okm) // overwrite okm
+		defer func() {
+			for i := range okm {
+				okm[i] = 0
+			}
+		}()
 
 		// map the bytes to a private key using modular reduction
 		// SK = OS2IP(OKM) mod r
