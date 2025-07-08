@@ -50,7 +50,7 @@ var thresholdSignatureMessage = []byte("random message")
 
 // centralized test of the stateful threshold signature using the threshold key generation.
 func testCentralizedStatefulAPI(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	seed := make([]byte, KeyGenSeedMinLen)
 	_, err := rand.Read(seed)
 	n := 10
@@ -337,7 +337,7 @@ func testDistributedStatefulAPI_FeldmanVSS(t *testing.T) {
 	log.SetLevel(log.ErrorLevel)
 	log.Info("DKG starts")
 	gt = t
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// number of participants to test
 	n := 5
 	lead := rand.Intn(n) // random
@@ -397,7 +397,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 	log.SetLevel(log.ErrorLevel)
 	log.Info("DKG starts")
 	gt = t
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// number of participants to test
 	n := 5
 	for threshold := MinimumThreshold; threshold < n; threshold++ {
@@ -569,7 +569,7 @@ func testCentralizedStatelessAPI(t *testing.T) {
 	n := 10
 	for threshold := MinimumThreshold; threshold < n; threshold++ {
 		// generate threshold keys
-		rand := getPRG(t)
+		rand := testutils.GetPRG(t)
 		_, err := rand.Read(seed)
 		require.NoError(t, err)
 		skShares, pkShares, pkGroup, err := BLSThresholdKeyGen(n, threshold, seed)

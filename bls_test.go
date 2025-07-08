@@ -33,15 +33,16 @@ import (
 
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
+	"github.com/onflow/crypto/sign/testutils"
 )
 
 // TestBLSMainMethods is a sanity check of main signature scheme methods (keyGen, sign, verify)
 func TestBLSMainMethods(t *testing.T) {
 	// test the key generation seed lengths
-	testKeyGenSeed(t, sign.BLSBLS12381, KeyGenSeedMinLen, KeyGenSeedMaxLen)
+	testutils.TestKeyGenSeed(t, sign.BLSBLS12381, KeyGenSeedMinLen, KeyGenSeedMaxLen)
 	// test the consistency with different inputs
 	hasher := NewExpandMsgXOFKMAC128("test tag")
-	testGenSignVerify(t, sign.BLSBLS12381, hasher)
+	testutils.TestGenSignVerify(t, sign.BLSBLS12381, hasher)
 
 	// specific signature test for BLS:
 	// Test a signature with a point encoded with a coordinate x not reduced mod p.
@@ -138,7 +139,7 @@ func invalidSK(t *testing.T) sign.PrivateKey {
 
 // BLS tests
 func TestBLSBLS12381Hasher(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// generate a key pair
 	sk := randomSK(t, rand)
 	sig := make([]byte, SignatureLenBLSBLS12381)
@@ -197,7 +198,7 @@ func TestBLSBLS12381Hasher(t *testing.T) {
 // TestBLSEncodeDecode tests encoding and decoding of BLS keys
 func TestBLSEncodeDecode(t *testing.T) {
 	// generic tests
-	testEncodeDecode(t, sign.BLSBLS12381)
+	testutils.TestEncodeDecode(t, sign.BLSBLS12381)
 
 	// specific tests for BLS
 
@@ -276,12 +277,12 @@ func TestBLSEncodeDecode(t *testing.T) {
 
 // TestBLSEquals tests equal for BLS keys
 func TestBLSEquals(t *testing.T) {
-	testEquals(t, sign.BLSBLS12381, sign.ECDSAP256)
+	testutils.TestEquals(t, sign.BLSBLS12381, sign.ECDSAP256)
 }
 
 // TestBLSUtils tests some utility functions
 func TestBLSUtils(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// generate a key pair
 	sk := randomSK(t, rand)
 	// test Algorithm()
@@ -292,7 +293,7 @@ func TestBLSUtils(t *testing.T) {
 
 // BLS Proof of Possession test
 func TestBLSPOP(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	seed := make([]byte, KeyGenSeedMinLen)
 	input := make([]byte, 100)
 
@@ -347,7 +348,7 @@ func TestBLSPOP(t *testing.T) {
 // Verify the aggregated signature using the multi-signature verification with
 // one message.
 func TestBLSAggregateSignatures(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// random message
 	input := make([]byte, 100)
 	_, err := rand.Read(input)
@@ -472,7 +473,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 // the public key of the aggregated private key is equal to the aggregated
 // public key
 func TestBLSAggregatePublicKeys(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// number of keys to aggregate
 	pkNum := rand.Intn(100) + 1
 	pks := make([]sign.PublicKey, 0, pkNum)
@@ -595,7 +596,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 // BLS multi-signature
 // public keys removal sanity check
 func TestBLSRemovePubKeys(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// number of keys to aggregate
 	pkNum := rand.Intn(100) + 1
 	pks := make([]sign.PublicKey, 0, pkNum)
@@ -683,7 +684,7 @@ func TestBLSRemovePubKeys(t *testing.T) {
 // batch verification technique and compares the result to verifying each signature
 // separately.
 func TestBLSBatchVerify(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// random message
 	input := make([]byte, 100)
 	_, err := rand.Read(input)
@@ -920,7 +921,7 @@ func BenchmarkBatchVerify(b *testing.B) {
 // and verify the aggregated signature using the multi-signature verification with
 // many messages.
 func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 	// number of signatures to aggregate
 	sigsNum := rand.Intn(40) + 1
 	sigs := make([]sign.Signature, 0, sigsNum)
@@ -1035,7 +1036,7 @@ func TestBLSAggregateSignaturesManyMessages(t *testing.T) {
 
 	t.Run("variable number of distinct keys and messages", func(t *testing.T) {
 		// use a specific PRG for easier reproduction
-		prg := getPRG(t)
+		prg := testutils.GetPRG(t)
 		// number of signatures to aggregate
 		N := 100
 		sigs := make([]sign.Signature, 0, N)
@@ -1203,7 +1204,7 @@ func BenchmarkAggregate(b *testing.B) {
 }
 
 func TestBLSIdentity(t *testing.T) {
-	rand := getPRG(t)
+	rand := testutils.GetPRG(t)
 
 	var identitySig []byte
 	msg := []byte("random_message")
