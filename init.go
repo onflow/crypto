@@ -20,7 +20,6 @@ package crypto
 
 import (
 	"github.com/onflow/crypto/sign"
-	_ "github.com/onflow/crypto/sign/ecdsa"
 )
 
 func init() {
