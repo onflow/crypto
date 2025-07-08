@@ -106,13 +106,13 @@ func TestBLSMainMethods(t *testing.T) {
 // Signing bench
 func BenchmarkBLSSingleSign(b *testing.B) {
 	halg := NewExpandMsgXOFKMAC128("bench tag")
-	benchSign(b, sign.BLSBLS12381, halg)
+	testutils.BenchSign(b, sign.BLSBLS12381, halg)
 }
 
 // Verifying bench
 func BenchmarkBLSSingleVerify(b *testing.B) {
 	halg := NewExpandMsgXOFKMAC128("bench tag")
-	benchVerify(b, sign.BLSBLS12381, halg)
+	testutils.BenchVerify(b, sign.BLSBLS12381, halg)
 }
 
 // utility function to generate a random BLS private key
@@ -286,9 +286,9 @@ func TestBLSUtils(t *testing.T) {
 	// generate a key pair
 	sk := randomSK(t, rand)
 	// test Algorithm()
-	testKeysAlgorithm(t, sk, sign.BLSBLS12381)
+	testutils.TestKeysAlgorithm(t, sk, sign.BLSBLS12381)
 	// test Size()
-	testKeySize(t, sk, PrKeyLenBLSBLS12381, PubKeyLenBLSBLS12381)
+	testutils.TestKeySize(t, sk, PrKeyLenBLSBLS12381, PubKeyLenBLSBLS12381)
 }
 
 // BLS Proof of Possession test

@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/crypto/sign"
+	"github.com/onflow/crypto/sign/testutils"
 )
 
 func TestBLSThresholdSignature(t *testing.T) {

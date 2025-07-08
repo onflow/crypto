@@ -192,7 +192,7 @@ func BenchmarkMapToG1(b *testing.B) {
 
 // test subgroup membership check in G1 and G2
 func TestSubgroupCheck(t *testing.T) {
-	prg := getPRG(t)
+	prg := testutils.GetPRG(t)
 	seed := make([]byte, 192)
 	_, err := prg.Read(seed)
 	require.NoError(t, err)
@@ -244,7 +244,7 @@ func BenchmarkSubgroupCheck(b *testing.B) {
 // specific test of G1 points Encode and decode (BLS signature since the library is set for min_sig).
 // G2 points read and write are implicitly tested by public keys Encode/Decode.
 func TestReadWriteG1(t *testing.T) {
-	prg := getPRG(t)
+	prg := testutils.GetPRG(t)
 	seed := make([]byte, frBytesLen)
 	bytes := make([]byte, g1BytesLen)
 	// generate a random G1 point, encode it, decode it,
