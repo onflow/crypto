@@ -261,7 +261,6 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 	}
 	var d big.Int
 	d.SetBytes(der)
-	fmt.Printf("DEBUG: rawDecodePrivateKey - input bytes: %x, decoded D: %s, algo: %v, curve: %p\n", der, d.String(), a.algo, a.curve)
 
 	if d.Cmp(n) >= 0 {
 		return nil, invalidInputsErrorf("input is larger than the curve order of %s", a.algo)
@@ -276,14 +275,12 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 		// error is not expected at this point
 		return nil, fmt.Errorf("building the private key failed: %w", err)
 	}
-	fmt.Printf("DEBUG: rawDecodePrivateKey - after goecdsaPrivateKey, priv.D: %s\n", priv.D.String())
 
 	result := &prKeyECDSA{
 		alg:     a,
 		goPrKey: priv,
 		pubKey:  nil, // public key is not constructed
 	}
-	fmt.Printf("DEBUG: rawDecodePrivateKey - result key algo: %v, curve: %p\n", result.alg.algo, result.alg.curve)
 	return result, nil
 }
 
@@ -457,26 +454,19 @@ func (sk *prKeyECDSA) Equals(other sign.PrivateKey) bool {
 	// check the key type
 	otherECDSA, ok := other.(*prKeyECDSA)
 	if !ok {
-		fmt.Printf("DEBUG: Type check failed\n")
 		return false
 	}
 	// check the algorithm instead of curve pointer
 	if sk.alg.algo != otherECDSA.alg.algo {
-		fmt.Printf("DEBUG: Algorithm check failed: %v vs %v\n", sk.alg.algo, otherECDSA.alg.algo)
 		return false
 	}
 	if sk.goPrKey == nil || sk.goPrKey.D == nil {
-		fmt.Printf("DEBUG: sk.goPrKey or sk.goPrKey.D is nil\n")
 		return false
 	}
 	if otherECDSA.goPrKey == nil || otherECDSA.goPrKey.D == nil {
-		fmt.Printf("DEBUG: otherECDSA.goPrKey or otherECDSA.goPrKey.D is nil\n")
 		return false
 	}
-	fmt.Printf("DEBUG: Equals - sk algo: %v, curve: %p, other algo: %v, curve: %p\n", sk.alg.algo, sk.alg.curve, otherECDSA.alg.algo, otherECDSA.alg.curve)
-	cmpResult := sk.goPrKey.D.Cmp(otherECDSA.goPrKey.D)
-	fmt.Printf("DEBUG: D comparison result: %d (sk.D=%s, other.D=%s)\n", cmpResult, sk.goPrKey.D.String(), otherECDSA.goPrKey.D.String())
-	return cmpResult == 0
+	return sk.goPrKey.D.Cmp(otherECDSA.goPrKey.D) == 0
 }
 
 // String returns the hex string representation of the key.
