@@ -34,6 +34,23 @@ import (
 	"github.com/onflow/crypto/sign/testutils"
 )
 
+func IsNilHasherError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return len(errStr) >= len("crypto: invalid hasher size") && errStr[:len("crypto: invalid hasher size")] == "crypto: invalid hasher size"
+}
+
+// IsInvalidInputsError checks if an error is an invalid inputs error
+func IsInvalidInputsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return len(errStr) >= len("crypto: invalid inputs") && errStr[:len("crypto: invalid inputs")] == "crypto: invalid inputs"
+}
+
 var ecdsaCurves = []sign.SigningAlgorithm{
 	sign.ECDSAP256,
 	sign.ECDSASecp256k1,

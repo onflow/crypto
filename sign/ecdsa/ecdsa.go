@@ -51,6 +51,9 @@ func invalidHasherSizeErrorf(msg string, args ...interface{}) error {
 }
 
 func isValidHasher(h hash.Hasher) bool {
+	if h == nil {
+		return false
+	}
 	return h.Size() >= minHashSizeECDSA
 }
 
@@ -63,21 +66,6 @@ func IsInvalidHasherSizeError(err error) bool {
 	return fmt.Sprintf("%s", err)[:len("crypto: invalid hasher size")] == "crypto: invalid hasher size"
 }
 
-func IsNilHasherError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return fmt.Sprintf("%s", err) == "hasher cannot be nil"
-}
-
-// IsInvalidInputsError checks if an error is an invalid inputs error
-func IsInvalidInputsError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errStr := err.Error()
-	return errStr[:len("crypto: invalid inputs")] == "crypto: invalid inputs"
-}
 
 const (
 	// NIST P256
