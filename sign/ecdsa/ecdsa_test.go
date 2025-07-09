@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"crypto/elliptic"
+	crand "crypto/rand"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
@@ -51,6 +52,7 @@ var ecdsaSigLen = map[sign.SigningAlgorithm]int{
 }
 
 func TestECDSA(t *testing.T) {
+
 	for _, curve := range ecdsaCurves {
 		t.Logf("Testing ECDSA for curve %s", curve)
 		// test key generation seed limits
@@ -58,9 +60,173 @@ func TestECDSA(t *testing.T) {
 		// test consistency
 		halg := hash.NewSHA3_256()
 		testutils.TestGenSignVerify(t, curve, halg)
-		testutils.TestEncodeDecode(t, curve)
-		testutils.TestEquals(t, curve, sign.BLSBLS12381)
+	}
+}
+
+type dummyHasher struct{ size int }
+
+func newDummyHasher(size int) hash.Hasher               { return &dummyHasher{size} }
+func (d *dummyHasher) Algorithm() hash.HashingAlgorithm { return hash.UnknownHashingAlgorithm }
+func (d *dummyHasher) Size() int                        { return d.size }
+func (d *dummyHasher) ComputeHash([]byte) hash.Hash     { return make([]byte, d.size) }
+func (d *dummyHasher) Write([]byte) (int, error)        { return 0, nil }
+func (d *dummyHasher) SumHash() hash.Hash               { return make([]byte, d.size) }
+func (d *dummyHasher) Reset()                           {}
+
+func TestECDSAHasher(t *testing.T) {
+	for _, curve := range ecdsaCurves {
+		// generate a key pair
 		seed := make([]byte, KeyGenSeedMinLen)
+		n, err := crand.Read(seed)
+		require.Equal(t, n, KeyGenSeedMinLen)
+		require.NoError(t, err)
+		sk, err := sign.GeneratePrivateKey(curve, seed)
+		require.NoError(t, err)
+		sig := make([]byte, ecdsaSigLen[curve])
+
+		// empty hasher
+		t.Run("Empty hasher", func(t *testing.T) {
+			_, err := sk.Sign(seed, nil)
+			assert.Error(t, err)
+			assert.True(t, IsNilHasherError(err))
+			_, err = sk.PublicKey().Verify(sig, seed, nil)
+			assert.Error(t, err)
+			assert.True(t, IsNilHasherError(err))
+		})
+
+		// hasher with large output size
+		t.Run("large size hasher is accepted", func(t *testing.T) {
+			dummy := newDummyHasher(500)
+			_, err := sk.Sign(seed, dummy)
+			assert.NoError(t, err)
+			_, err = sk.PublicKey().Verify(sig, seed, dummy)
+			assert.NoError(t, err)
+		})
+
+		// hasher with small output size
+		t.Run("small size hasher is rejected", func(t *testing.T) {
+			dummy := newDummyHasher(31) // 31 is one byte less than the supported curves' order
+			_, err := sk.Sign(seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+			_, err = sk.PublicKey().Verify(sig, seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+		})
+	}
+}
+
+// Signing bench
+func BenchmarkECDSAP256Sign(b *testing.B) {
+	halg := hash.NewSHA3_256()
+	testutils.BenchSign(b, sign.ECDSAP256, halg)
+}
+
+// Verifying bench
+func BenchmarkECDSAP256Verify(b *testing.B) {
+	halg := hash.NewSHA3_256()
+	testutils.BenchVerify(b, sign.ECDSAP256, halg)
+}
+
+// Signing bench
+func BenchmarkECDSASecp256k1Sign(b *testing.B) {
+	halg := hash.NewSHA3_256()
+	testutils.BenchSign(b, sign.ECDSASecp256k1, halg)
+}
+
+// Verifying bench
+func BenchmarkECDSASecp256k1Verify(b *testing.B) {
+	halg := hash.NewSHA3_256()
+	testutils.BenchVerify(b, sign.ECDSASecp256k1, halg)
+}
+
+// TestECDSAEncodeDecode tests encoding and decoding of ECDSA keys
+func TestECDSAEncodeDecode(t *testing.T) {
+	for _, curve := range ecdsaCurves {
+		testutils.TestEncodeDecode(t, curve)
+
+		//  zero private key
+		t.Run("zero private key", func(t *testing.T) {
+			skBytes := make([]byte, ecdsaPrKeyLen[curve])
+			sk, err := sign.DecodePrivateKey(curve, skBytes)
+			require.Error(t, err, "decoding identity private key should fail")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "zero private keys are not a valid")
+			assert.Nil(t, sk)
+		})
+
+		// group order private key
+		t.Run("group order private key", func(t *testing.T) {
+			groupOrder := make(map[sign.SigningAlgorithm]string)
+			groupOrder[sign.ECDSAP256] = "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"
+			groupOrder[sign.ECDSASecp256k1] = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+			orderBytes, err := hex.DecodeString(groupOrder[curve])
+			require.NoError(t, err)
+			sk, err := sign.DecodePrivateKey(curve, orderBytes)
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is larger than the curve order")
+			assert.Nil(t, sk)
+		})
+
+		// this is the edge case of a zero-coordinates point.
+		// This is not the infinity point case, it only represents the (0,0) point.
+		// For both curves supported in the package, this point is not on curve.
+		// Infinity point serialization isn't defined by the package for ECDSA and can't be deserialized.
+		t.Run("all zeros public key", func(t *testing.T) {
+			pkBytes := make([]byte, ecdsaPubKeyLen[curve])
+			pk, err := sign.DecodePublicKey(curve, pkBytes)
+			require.Error(t, err, "point is not on curve")
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, "input is not a point on curve")
+			assert.Nil(t, pk)
+		})
+
+		// Test a public key serialization with a point encoded with
+		// x or y not reduced mod p.
+		// This test checks that:
+		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
+		//  - public key decoding only accepts reduced x and y
+		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
+			invalidPK1s := map[sign.SigningAlgorithm]string{
+				sign.ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+				sign.ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			invalidPK2s := map[sign.SigningAlgorithm]string{
+				sign.ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+				sign.ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			}
+			// invalidpk1 with x >= p
+			invalidPk1, err := hex.DecodeString(invalidPK1s[curve])
+			require.NoError(t, err)
+			_, err = sign.DecodePublicKey(curve, invalidPk1)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+			// invalidpk2 with y >= p
+			invalidPk2, err := hex.DecodeString(invalidPK2s[curve])
+			require.NoError(t, err)
+			_, err = sign.DecodePublicKey(curve, invalidPk2)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
+		})
+	}
+}
+
+// TestECDSAEquals tests equal for ECDSA keys
+func TestECDSAEquals(t *testing.T) {
+	for i, curve := range ecdsaCurves {
+		testutils.TestEquals(t, curve, ecdsaCurves[i^1])
+	}
+}
+
+// TestECDSAUtils tests some utility functions
+func TestECDSAUtils(t *testing.T) {
+	for _, curve := range ecdsaCurves {
+		// generate a key pair
+		seed := make([]byte, KeyGenSeedMinLen)
+		n, err := crand.Read(seed)
+		require.Equal(t, n, KeyGenSeedMinLen)
+		require.NoError(t, err)
 		sk, err := sign.GeneratePrivateKey(curve, seed)
 		require.NoError(t, err)
 		testutils.TestKeysAlgorithm(t, sk, curve)
@@ -68,300 +234,207 @@ func TestECDSA(t *testing.T) {
 	}
 }
 
-func TestECDSAHasher(t *testing.T) {
-	for _, curve := range ecdsaCurves {
-		t.Logf("Testing ECDSA for curve %s", curve)
-		halg := hash.NewSHA2_256()
-		testutils.TestGenSignVerify(t, curve, halg)
-		halg = hash.NewSHA3_256()
-		testutils.TestGenSignVerify(t, curve, halg)
-		halg = hash.NewSHA2_384()
-		testutils.TestGenSignVerify(t, curve, halg)
-		halg = hash.NewSHA3_384()
-		testutils.TestGenSignVerify(t, curve, halg)
-
-		seed := make([]byte, KeyGenSeedMinLen)
-		sk, err := sign.GeneratePrivateKey(curve, seed)
-		require.NoError(t, err)
-		invalidHasher := &invalidHasher{}
-		data := []byte("some data")
-		_, err = sk.Sign(data, invalidHasher)
-		assert.Error(t, err)
-		assert.True(t, IsInvalidHasherSizeError(err))
-		pk := sk.PublicKey()
-		_, err = pk.Verify([]byte("signature"), data, invalidHasher)
-		assert.Error(t, err)
-		assert.True(t, IsInvalidHasherSizeError(err))
-	}
-}
-
-func BenchmarkECDSAP256Sign(b *testing.B) {
-	testutils.BenchSign(b, sign.ECDSAP256, hash.NewSHA3_256())
-}
-
-func BenchmarkECDSAP256Verify(b *testing.B) {
-	testutils.BenchVerify(b, sign.ECDSAP256, hash.NewSHA3_256())
-}
-
-func BenchmarkECDSASecp256k1Sign(b *testing.B) {
-	testutils.BenchSign(b, sign.ECDSASecp256k1, hash.NewSHA3_256())
-}
-
-func BenchmarkECDSASecp256k1Verify(b *testing.B) {
-	testutils.BenchVerify(b, sign.ECDSASecp256k1, hash.NewSHA3_256())
-}
-
-// TestECDSAEncodeDecode tests encoding and decoding of ECDSA keys
-func TestECDSAEncodeDecode(t *testing.T) {
-	for _, curve := range ecdsaCurves {
-		t.Logf("Testing ECDSA encode/decode for curve %s", curve)
-
-		seed := make([]byte, KeyGenSeedMinLen)
-		for i := 0; i < len(seed); i++ {
-			seed[i] = byte(i)
-		}
-
-		sk, err := sign.GeneratePrivateKey(curve, seed)
-		require.NoError(t, err)
-
-		skBytes := sk.Encode()
-		assert.Equal(t, len(skBytes), ecdsaPrKeyLen[curve])
-
-		skDecoded, err := sign.DecodePrivateKey(curve, skBytes)
-		require.NoError(t, err)
-		assert.True(t, sk.Equals(skDecoded))
-
-		pk := sk.PublicKey()
-		pkBytes := pk.Encode()
-		assert.Equal(t, len(pkBytes), ecdsaPubKeyLen[curve])
-
-		pkDecoded, err := sign.DecodePublicKey(curve, pkBytes)
-		require.NoError(t, err)
-		assert.True(t, pk.Equals(pkDecoded))
-
-		pkCompressedBytes := pk.EncodeCompressed()
-		expectedCompressedLen := ecdsaPrKeyLen[curve] + 1 // 32 + 1 for both curves
-		assert.Equal(t, len(pkCompressedBytes), expectedCompressedLen)
-
-		pkCompressedDecoded, err := sign.DecodePublicKeyCompressed(curve, pkCompressedBytes)
-		require.NoError(t, err)
-		assert.True(t, pk.Equals(pkCompressedDecoded))
-
-		data := []byte("test data")
-		hasher := hash.NewSHA3_256()
-		sig, err := sk.Sign(data, hasher)
-		require.NoError(t, err)
-		assert.Equal(t, len(sig), ecdsaSigLen[curve])
-
-		valid, err := pk.Verify(sig, data, hasher)
-		require.NoError(t, err)
-		assert.True(t, valid)
-
-		wrongData := []byte("wrong data")
-		valid, err = pk.Verify(sig, wrongData, hasher)
-		require.NoError(t, err)
-		assert.False(t, valid)
-	}
-}
-
-func TestECDSAEquals(t *testing.T) {
-	testutils.TestEquals(t, sign.ECDSAP256, sign.ECDSASecp256k1)
-	testutils.TestEquals(t, sign.ECDSASecp256k1, sign.ECDSAP256)
-}
-
-func TestECDSAUtils(t *testing.T) {
-	assert.Equal(t, bitsToBytes(256), 32)
-	assert.Equal(t, bitsToBytes(255), 32)
-	assert.Equal(t, bitsToBytes(257), 33)
-	assert.Equal(t, bitsToBytes(8), 1)
-	assert.Equal(t, bitsToBytes(7), 1)
-	assert.Equal(t, bitsToBytes(9), 2)
-}
-
+// TestECDSAPublicKeyComputation is a sanity check that the public
+// key derivation from the private key is valid.
+// This is a sanity check of the underlined base scalar multiplication.
+// Derived public keys are compared against a hardcoded vector.
 func TestECDSAPublicKeyComputation(t *testing.T) {
-	for _, curve := range ecdsaCurves {
-		seed := make([]byte, KeyGenSeedMinLen)
-		for i := 0; i < len(seed); i++ {
-			seed[i] = byte(i)
-		}
+	testVec := []struct {
+		curve sign.SigningAlgorithm
+		sk    string
+		pk    string
+	}{
+		{
+			sign.ECDSASecp256k1,
+			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
+			"0x36f292f6c287b6e72ca8128465647c7f88730f84ab27a1e934dbd2da753930fa39a09ddcf3d28fb30cc683de3fc725e095ec865c3d41aef6065044cb12b1ff61",
+		},
+		{
+			sign.ECDSAP256,
+			"6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95",
+			"0x78a80dfe190a6068be8ddf05644c32d2540402ffc682442f6a9eeb96125d86813789f92cf4afabf719aaba79ecec54b27e33a188f83158f6dd15ecb231b49808",
+		},
+	}
 
-		sk, err := sign.GeneratePrivateKey(curve, seed)
+	for _, test := range testVec {
+		// get the private key (the scalar)
+		bytes, err := hex.DecodeString(test.sk)
 		require.NoError(t, err)
-
-		pk1 := sk.PublicKey()
-		pk2 := sk.PublicKey() // call again to test caching
-
-		assert.True(t, pk1.Equals(pk2))
-
-		skECDSA := sk.(*prKeyECDSA)
-		expectedX := skECDSA.goPrKey.PublicKey.X
-		expectedY := skECDSA.goPrKey.PublicKey.Y
-
-		pkECDSA := pk1.(*pubKeyECDSA)
-		assert.Equal(t, expectedX, pkECDSA.goPubKey.X)
-		assert.Equal(t, expectedY, pkECDSA.goPubKey.Y)
+		sk, err := sign.DecodePrivateKey(test.curve, bytes)
+		require.NoError(t, err)
+		// computed public key (base scalar point result)
+		computedPk := sk.PublicKey().String()
+		require.NoError(t, err)
+		// check that the computed public key matches the expected one
+		assert.Equal(t, test.pk, computedPk)
 	}
 }
 
 func TestSignatureFormatCheck(t *testing.T) {
+
 	for _, curve := range ecdsaCurves {
-		t.Run(curve.String(), func(t *testing.T) {
-			seed := make([]byte, KeyGenSeedMinLen)
-			sk, err := sign.GeneratePrivateKey(curve, seed)
+		t.Run("valid signature", func(t *testing.T) {
+			len := ecdsaSigLen[curve]
+			sig := sign.Signature(make([]byte, len))
+			_, err := crand.Read(sig)
 			require.NoError(t, err)
-
-			data := []byte("test data")
-			hasher := hash.NewSHA3_256()
-			sig, err := sk.Sign(data, hasher)
-			require.NoError(t, err)
-
+			sig[len/2] = 0    // force s to be less than the curve order
+			sig[len-1] |= 1   // force s to be non zero
+			sig[0] = 0        // force r to be less than the curve order
+			sig[len/2-1] |= 1 // force r to be non zero
 			valid, err := sign.SignatureFormatCheck(curve, sig)
-			require.NoError(t, err)
+			assert.Nil(t, err)
 			assert.True(t, valid)
+		})
 
-			invalidSig := make([]byte, len(sig)-1)
-			valid, err = sign.SignatureFormatCheck(curve, invalidSig)
-			require.NoError(t, err)
+		t.Run("invalid length", func(t *testing.T) {
+			len := ecdsaSigLen[curve]
+			shortSig := sign.Signature(make([]byte, len/2))
+			valid, err := sign.SignatureFormatCheck(curve, shortSig)
+			assert.Nil(t, err)
 			assert.False(t, valid)
 
-			zeroRSig := make([]byte, len(sig))
-			copy(zeroRSig[len(sig)/2:], sig[len(sig)/2:]) // copy s part
-			valid, err = sign.SignatureFormatCheck(curve, zeroRSig)
+			longSig := sign.Signature(make([]byte, len*2))
+			valid, err = sign.SignatureFormatCheck(curve, longSig)
+			assert.Nil(t, err)
+			assert.False(t, valid)
+		})
+
+		t.Run("zero values", func(t *testing.T) {
+			// signature with a zero s
+			len := ecdsaSigLen[curve]
+			sig0s := sign.Signature(make([]byte, len))
+			_, err := crand.Read(sig0s[:len/2])
 			require.NoError(t, err)
+
+			valid, err := sign.SignatureFormatCheck(curve, sig0s)
+			assert.Nil(t, err)
 			assert.False(t, valid)
 
-			zeroSSig := make([]byte, len(sig))
-			copy(zeroSSig[:len(sig)/2], sig[:len(sig)/2]) // copy r part
-			valid, err = sign.SignatureFormatCheck(curve, zeroSSig)
+			// signature with a zero r
+			sig0r := sign.Signature(make([]byte, len))
+			_, err = crand.Read(sig0r[len/2:])
 			require.NoError(t, err)
-			assert.False(t, valid)
 
-			largeRSig := make([]byte, len(sig))
-			copy(largeRSig, sig)
-			for i := 0; i < len(sig)/2; i++ {
-				largeRSig[i] = 0xFF
+			valid, err = sign.SignatureFormatCheck(curve, sig0r)
+			assert.Nil(t, err)
+			assert.False(t, valid)
+		})
+
+		t.Run("large values", func(t *testing.T) {
+			len := ecdsaSigLen[curve]
+			sigLargeS := sign.Signature(make([]byte, len))
+			_, err := crand.Read(sigLargeS[:len/2])
+			require.NoError(t, err)
+			// make sure s is larger than the curve order
+			for i := len / 2; i < len; i++ {
+				sigLargeS[i] = 0xFF
 			}
-			valid, err = sign.SignatureFormatCheck(curve, largeRSig)
-			require.NoError(t, err)
+
+			valid, err := sign.SignatureFormatCheck(curve, sigLargeS)
+			assert.Nil(t, err)
 			assert.False(t, valid)
 
-			largeSSig := make([]byte, len(sig))
-			copy(largeSSig, sig)
-			for i := len(sig) / 2; i < len(sig); i++ {
-				largeSSig[i] = 0xFF
-			}
-			valid, err = sign.SignatureFormatCheck(curve, largeSSig)
+			sigLargeR := sign.Signature(make([]byte, len))
+			_, err = crand.Read(sigLargeR[len/2:])
 			require.NoError(t, err)
+			// make sure s is larger than the curve order
+			for i := 0; i < len/2; i++ {
+				sigLargeR[i] = 0xFF
+			}
+
+			valid, err = sign.SignatureFormatCheck(curve, sigLargeR)
+			assert.Nil(t, err)
 			assert.False(t, valid)
 		})
 	}
 }
 
 func TestEllipticUnmarshalSecp256k1(t *testing.T) {
-	seed := make([]byte, KeyGenSeedMinLen)
-	sk, err := sign.GeneratePrivateKey(sign.ECDSASecp256k1, seed)
-	require.NoError(t, err)
+	testVectors := []string{
+		"028b10bf56476bf7da39a3286e29df389177a2fa0fca2d73348ff78887515d8da1", // IsOnCurve for elliptic returns false
+		"03d39427f07f680d202fe8504306eb29041aceaf4b628c2c69b0ec248155443166", // odd, IsOnCurve for elliptic returns false
+		"0267d1942a6cbe4daec242ea7e01c6cdb82dadb6e7077092deb55c845bf851433e", // arith of sqrt in elliptic doesn't match secp256k1
+		"0345d45eda6d087918b041453a96303b78c478dce89a4ae9b3c933a018888c5e06", // odd, arith of sqrt in elliptic doesn't match secp256k1
+	}
 
-	pk := sk.PublicKey()
-	compressedBytes := pk.EncodeCompressed()
+	for _, testVector := range testVectors {
+		// get the compressed bytes
+		publicBytes, err := hex.DecodeString(testVector)
+		require.NoError(t, err)
 
-	x, y := elliptic.UnmarshalCompressed(btcec.S256(), compressedBytes)
-	assert.Nil(t, x)
-	assert.Nil(t, y)
+		// decompress, check that those are perfectly valid Secp256k1 public keys
+		retrieved, err := sign.DecodePublicKeyCompressed(sign.ECDSASecp256k1, publicBytes)
+		require.NoError(t, err)
 
-	pkDecoded, err := sign.DecodePublicKeyCompressed(sign.ECDSASecp256k1, compressedBytes)
-	require.NoError(t, err)
-	assert.True(t, pk.Equals(pkDecoded))
+		// check the compression is canonical by re-compressing to the same bytes
+		require.Equal(t, retrieved.EncodeCompressed(), publicBytes)
+
+		// check that elliptic fails at decompressing them
+		x, y := elliptic.UnmarshalCompressed(btcec.S256(), publicBytes)
+		require.Nil(t, x)
+		require.Nil(t, y)
+	}
 }
 
 func BenchmarkECDSADecode(b *testing.B) {
-	for _, curve := range ecdsaCurves {
-		b.Run(curve.String(), func(b *testing.B) {
-			seed := make([]byte, KeyGenSeedMinLen)
-			sk, err := sign.GeneratePrivateKey(curve, seed)
-			require.NoError(b, err)
+	// random message
+	seed := make([]byte, 50)
+	_, _ = crand.Read(seed)
 
-			skBytes := sk.Encode()
-			pk := sk.PublicKey()
-			pkBytes := pk.Encode()
+	for _, curve := range []sign.SigningAlgorithm{sign.ECDSASecp256k1, sign.ECDSAP256} {
+		sk, _ := sign.GeneratePrivateKey(curve, seed)
+		comp := sk.PublicKey().EncodeCompressed()
+		uncomp := sk.PublicKey().Encode()
 
-			b.Run("private key", func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					_, err := sign.DecodePrivateKey(curve, skBytes)
-					require.NoError(b, err)
-				}
-			})
+		b.Run("compressed point on "+curve.String(), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, err := sign.DecodePublicKeyCompressed(curve, comp)
+				require.NoError(b, err)
+			}
+			b.StopTimer()
+		})
 
-			b.Run("public key", func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					_, err := sign.DecodePublicKey(curve, pkBytes)
-					require.NoError(b, err)
-				}
-			})
+		b.Run("uncompressed point on "+curve.String(), func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, err := sign.DecodePublicKey(curve, uncomp)
+				require.NoError(b, err)
+			}
+			b.StopTimer()
 		})
 	}
 }
 
-// TestECDSAKeyGenerationBreakingChange tests that key generation hasn't changed
+// TestECDSAKeyGenerationBreakingChange detects if the deterministic key generation
+// changes behaviors (same seed outputs a different key than before)
 func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
-	testVectors := []struct {
-		curve    sign.SigningAlgorithm
-		seed     string
-		expected string
+	testVec := []struct {
+		curve      sign.SigningAlgorithm
+		seed       string
+		expectedSK string
 	}{
 		{
-			curve:    sign.ECDSAP256,
-			seed:     "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-			expected: "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
+			sign.ECDSASecp256k1,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x4723d238a9702296f96bf64f1288c8b1eb93a4bff8b1482be4172c745bf30acb",
 		},
 		{
-			curve:    sign.ECDSASecp256k1,
-			seed:     "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-			expected: "c28a9f80738efe59be9296b7e8c2e5b8b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5",
+			sign.ECDSAP256,
+			"00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+			"0x3cadd4123b493233252ffdeccaef07066b73e2c3a9a08905669c5a857027708b",
 		},
 	}
 
-	for _, tv := range testVectors {
-		t.Run(tv.curve.String(), func(t *testing.T) {
-			seed, err := hex.DecodeString(tv.seed)
-			require.NoError(t, err)
-
-			sk, err := sign.GeneratePrivateKey(tv.curve, seed)
-			require.NoError(t, err)
-
-			skBytes := sk.Encode()
-			actual := hex.EncodeToString(skBytes)
-
-			t.Logf("Generated key for %s: %s", tv.curve, actual)
-		})
+	for _, test := range testVec {
+		t.Logf("testing keyGen change for curve %s", test.curve)
+		// key generation
+		seedBytes, err := hex.DecodeString(test.seed)
+		require.NoError(t, err)
+		sk, err := sign.GeneratePrivateKey(test.curve, seedBytes)
+		require.NoError(t, err)
+		// test change
+		assert.Equal(t, test.expectedSK, sk.String())
 	}
-}
-
-type invalidHasher struct{}
-
-func (h *invalidHasher) ComputeHash(data []byte) hash.Hash {
-	return make([]byte, 16) // 16 bytes < 32 bytes minimum
-}
-
-func (h *invalidHasher) Size() int {
-	return 16
-}
-
-func (h *invalidHasher) BlockSize() int {
-	return 64
-}
-
-func (h *invalidHasher) Algorithm() hash.HashingAlgorithm {
-	return hash.HashingAlgorithm(99) // invalid algorithm
-}
-
-func (h *invalidHasher) Reset() {
-}
-
-func (h *invalidHasher) SumHash() hash.Hash {
-	return h.ComputeHash(nil)
-}
-
-func (h *invalidHasher) Write(p []byte) (n int, err error) {
-	return len(p), nil
 }
