@@ -208,7 +208,7 @@ func NewBLSThresholdSignatureInspector(
 
 // SignShare generates a signature share using the current private key share.
 //
-// The function does not add the share to the internal pool of shares and do
+// The function does not add the share to the internal pool of shares and does
 // not update the internal state.
 // This function is thread safe and non-blocking
 //
@@ -351,7 +351,7 @@ func (s *blsThresholdSignatureInspector) TrustedAdd(orig int, share Signature) (
 // This function is thread-safe and locks the internal state.
 //
 // The share is only added if the signature is valid, the signer index is valid,
-// and has not been added yet. Moreover, the share is added only if not enough shares were collected.
+// and has not been added yet. Moreover, the share is not added if enough shares were already collected.
 //
 // Returns:
 //   - First boolean: true if the share is valid and no error is returned, false otherwise.
@@ -361,7 +361,8 @@ func (s *blsThresholdSignatureInspector) TrustedAdd(orig int, share Signature) (
 //     public key is not considered an invalid input.
 //   - duplicatedSignerError: if signer was already added.
 //   - other errors: if an unexpected exception occurred.
-func (s *blsThresholdSignatureInspector) VerifyAndAdd(orig int, share Signature) (bool, bool, error) {
+func (s *blsThresholdSignatureInspector) VerifyAndAdd(orig int, share Signature) (
+	shareIsValid bool, enoughSharesCollected bool, err error) {
 	// validate index
 	if err := s.validIndex(orig); err != nil {
 		return false, false, err
@@ -389,7 +390,7 @@ func (s *blsThresholdSignatureInspector) VerifyAndAdd(orig int, share Signature)
 }
 
 // ThresholdSignature returns the threshold signature if the threshold was reached.
-// For safety, the function attemps the reconstruction and only returns a signature that is valid against the group public key.
+// For safety, the function attempts the reconstruction and only returns a signature that is valid against the group public key.
 // This is done by first reconstructing the signature and then validating it against the group public key.
 // The reconstructed may fail the validation if at least one signature share added via `TrustedAdd` is invalid.
 // The threshold signature is reconstructed only once and is cached for subsequent calls.
@@ -422,7 +423,7 @@ func (s *blsThresholdSignatureInspector) ThresholdSignature() (Signature, error)
 }
 
 // reconstructThresholdSignature reconstructs the threshold signature from at least (t+1) shares.
-// The function attemps the reconstruction and only returns a signature that is valid against the group public key.
+// The function attempts the reconstruction and only returns a signature that is valid against the group public key.
 // This is done by first reconstructing the signature and then validating it against the group public key.
 //
 // Returns:
@@ -473,8 +474,8 @@ func (s *blsThresholdSignatureInspector) reconstructThresholdSignature() (Signat
 // BLSReconstructThresholdSignature is a stateless BLS API that takes a list of
 // BLS signatures and their signers' indices and returns the threshold signature.
 //
-// size is the number of participants. It must be in the range [ThresholdSignMinSize..ThresholdSignMaxSize].
-// threshold is the threshold value. It must be in the range [MinimumThreshold..size-1].
+// size is the number of participants. It must be in the range [ThresholdSignMinSize, ThresholdSignMaxSize].
+// threshold is the threshold value. It must be in the range [MinimumThreshold, size-1].
 // The function does not use or require input public keys. Therefore, it does not check the validity of the
 // shares against individual public keys, nor does it check the validity of the resulting signature
 // against the group public key.
@@ -489,12 +490,11 @@ func (s *blsThresholdSignatureInspector) reconstructThresholdSignature() (Signat
 //
 // Returns:
 //   - (nil, invalidInputsError): if
-//   - number of shares does not match the number of signers
-//   - the inputs are not in the correct range
+//     -- number of shares does not match the number of signers
+//     -- the inputs are not in the correct range
 //   - (nil, notEnoughSharesError): if the threshold is not reached
 //   - (nil, duplicatedSignerError): if input signers are not distinct
-//   - (nil, errInvalidSignature): if at least one of the first (threshold+1) signatures
-//     does not serialize to a valid E1 point
+//   - (nil, errInvalidSignature): if at least one of the first (threshold+1) signatures does not serialize to a valid E1 point
 //   - (threshold_sig, nil): otherwise
 func BLSReconstructThresholdSignature(size int, threshold int,
 	shares []Signature, signers []int) (Signature, error) {

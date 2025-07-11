@@ -101,7 +101,7 @@ type ThresholdSignatureInspector interface {
 	// a group signature. This function is thread-safe and locks the internal state.
 	//
 	// Returns:
-	//   - true: if and only if at least `threshold+1`` shares were added
+	//   - true: if and only if at least `threshold+1` shares were added
 	EnoughShares() bool
 
 	// TrustedAdd adds a signature share to the internal pool of shares
@@ -127,7 +127,7 @@ type ThresholdSignatureInspector interface {
 	// This function is thread-safe and locks the internal state.
 	//
 	// The share is only added if the signature is valid, the signer index is valid,
-	// and has not been added yet. Moreover, the share is added only if not enough shares were collected.
+	// and has not been added yet. Moreover, the share is not added if enough shares were already collected.
 	//
 	// Returns:
 	//   - First boolean: true if the share is valid and no error is returned, false otherwise.
