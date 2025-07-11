@@ -393,7 +393,7 @@ func (s *blsThresholdSignatureInspector) VerifyAndAdd(orig int, share Signature)
 // For safety, the function attempts the reconstruction and only returns a signature that is valid against the group public key.
 // This is done by first reconstructing the signature and then validating it against the group public key.
 // The reconstructed may fail the validation if at least one signature share added via `TrustedAdd` is invalid.
-// The threshold signature is reconstructed only once and is cached for subsequent calls.
+// The valid threshold signature is reconstructed only once and is cached for subsequent calls.
 //
 // The function is thread-safe.
 //
