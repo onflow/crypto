@@ -33,15 +33,16 @@ import (
 
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
+	"github.com/onflow/crypto/sign/internal"
 )
 
 // TestBLSMainMethods is a sanity check of main signature scheme methods (keyGen, sign, verify)
 func TestBLSMainMethods(t *testing.T) {
 	// test the key generation seed lengths
-	testKeyGenSeed(t, sign.BLSBLS12381, KeyGenSeedMinLen, KeyGenSeedMaxLen)
+	internal.TestKeyGenSeed(t, sign.BLSBLS12381, KeyGenSeedMinLen, KeyGenSeedMaxLen)
 	// test the consistency with different inputs
 	hasher := NewExpandMsgXOFKMAC128("test tag")
-	testGenSignVerify(t, sign.BLSBLS12381, hasher)
+	internal.TestGenSignVerify(t, sign.BLSBLS12381, hasher)
 
 	// specific signature test for BLS:
 	// Test a signature with a point encoded with a coordinate x not reduced mod p.

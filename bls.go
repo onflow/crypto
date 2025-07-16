@@ -90,6 +90,14 @@ type blsBLS12381Algo struct {
 	algo sign.SigningAlgorithm
 }
 
+// init the BLS12-381 curve context
+func init() {
+	// register the BLS context on the BLS 12-381 curve instance in the `sign` package
+	if err := sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381}); err != nil {
+		panic(err)
+	}
+}
+
 // NewExpandMsgXOFKMAC128 returns a new expand_message_xof instance for
 // the hash-to-curve function, hashing data to G1 on BLS12 381.
 // This instance must only be used to generate signatures (and not PoP),
