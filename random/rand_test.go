@@ -22,11 +22,12 @@ import (
 	"bytes"
 	mrand "math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/chacha20"
+
+	"github.com/onflow/crypto/internal"
 )
 
 // sanity check for the underlying implementation of Chacha20
@@ -98,13 +99,6 @@ func TestChacha20Compliance(t *testing.T) {
 	})
 }
 
-func getPRG(t *testing.T) *mrand.Rand {
-	random := time.Now().UnixNano()
-	t.Logf("rng seed is %d", random)
-	rng := mrand.New(mrand.NewSource(random))
-	return rng
-}
-
 // The tests are targeting the PRG implementations in the package.
 // For now, the tests are only used for Chacha20 PRG, but can be ported
 // to test another PRG implementation.
@@ -112,7 +106,7 @@ func getPRG(t *testing.T) *mrand.Rand {
 // Simple unit testing of UintN using a basic randomness test.
 // It doesn't perform advanced statistical tests.
 func TestUintN(t *testing.T) {
-	rand := getPRG(t)
+	rand := internal.GetPRG(t)
 	seed := make([]byte, Chacha20SeedLen)
 	_, err := rand.Read(seed)
 	require.NoError(t, err)
@@ -154,7 +148,7 @@ func TestUintN(t *testing.T) {
 //
 // SubPermutation tests cover Permutation as well.
 func TestSubPermutation(t *testing.T) {
-	rand := getPRG(t)
+	rand := internal.GetPRG(t)
 
 	seed := make([]byte, Chacha20SeedLen)
 	_, err := rand.Read(seed)
@@ -231,7 +225,7 @@ func TestSubPermutation(t *testing.T) {
 // Simple unit testing of Shuffle using a basic randomness test.
 // It doesn't perform advanced statistical tests.
 func TestShuffle(t *testing.T) {
-	rand := getPRG(t)
+	rand := internal.GetPRG(t)
 
 	seed := make([]byte, Chacha20SeedLen)
 	_, err := rand.Read(seed)
@@ -306,7 +300,7 @@ func TestShuffle(t *testing.T) {
 }
 
 func TestSamples(t *testing.T) {
-	rand := getPRG(t)
+	rand := internal.GetPRG(t)
 
 	seed := make([]byte, Chacha20SeedLen)
 	_, err := rand.Read(seed)
@@ -391,7 +385,7 @@ func TestSamples(t *testing.T) {
 // TestStateRestore tests the serilaization and deserialization functions
 // Store and Restore
 func TestStateRestore(t *testing.T) {
-	rand := getPRG(t)
+	rand := internal.GetPRG(t)
 
 	// generate a seed
 	seed := make([]byte, Chacha20SeedLen)

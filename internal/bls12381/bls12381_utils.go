@@ -64,6 +64,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/onflow/crypto/internal"
 	"github.com/onflow/crypto/random"
 )
 
@@ -89,7 +90,15 @@ const (
 	badEncoding     = C.BAD_ENCODING
 	badValue        = C.BAD_VALUE
 	pointNotOnCurve = C.POINT_NOT_ON_CURVE
+
+	// expandMsgOutput is the output length of the expand_message step as required by the
+	// hash_to_curve algorithm (and the map to G1 step).
+	expandMsgOutput = int(C.MAP_TO_G1_INPUT_LEN)
 )
+
+var BLS12381Order = []byte{0x73, 0xED, 0xA7, 0x53, 0x29, 0x9D, 0x7D, 0x48, 0x33, 0x39,
+	0xD8, 0x08, 0x09, 0xA1, 0xD8, 0x05, 0x53, 0xBD, 0xA4, 0x02, 0xFF, 0xFE,
+	0x5B, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01}
 
 // header of the point at infinity serializations
 var g1SerHeader byte // g1 (G1 identity)
@@ -98,10 +107,8 @@ var g2SerHeader byte // g2 (G2 identity)
 // `g1` serialization
 var g1Serialization []byte
 
-var g2PublicKey pubKeyBLSBLS12381
-
 // initialization of BLS12-381 curve
-func initBLS12381() {
+func init() {
 	C.types_sanity()
 
 	if isG1Compressed() {
@@ -115,9 +122,6 @@ func initBLS12381() {
 	} else {
 		g2SerHeader = 0x40
 	}
-	// set a global point to infinity
-	C.E2_set_infty((*C.E2)(&g2PublicKey.point))
-	g2PublicKey.isIdentity = true
 }
 
 // String returns a hex-encoded representation of the scalar.
@@ -186,7 +190,7 @@ func (p *pointE2) isInfinity() bool {
 // returns `true` if generated element is zero.
 func randFr(x *scalar, rand random.Rand) bool {
 	// use extra 128 bits to reduce the modular reduction bias
-	bytes := make([]byte, frBytesLen+securityBits/8)
+	bytes := make([]byte, frBytesLen+internal.SecurityBits/8)
 	rand.Read(bytes)
 	// modular reduction
 	return mapToFr(x, bytes)
@@ -218,11 +222,27 @@ func writeScalar(dest []byte, x *scalar) {
 	C.Fr_write_bytes((*C.uchar)(&dest[0]), (*C.Fr)(x))
 }
 
+// encode returns a byte encoding of the scalar.
+// The encoding is a raw encoding in big endian padded to the group order
+func (x *scalar) encode() []byte {
+	dest := make([]byte, frBytesLen)
+	writeScalar(dest, x)
+	return dest
+}
+
 // writePointE2 writes a G2 point in a slice of bytes
 // The slice should be of size g2BytesLen and the serialization
 // follows the Zcash format specified in draft-irtf-cfrg-pairing-friendly-curves
 func writePointE2(dest []byte, a *pointE2) {
 	C.E2_write_bytes((*C.uchar)(&dest[0]), (*C.E2)(a))
+}
+
+// encode returns a byte encoding of the scalar.
+// The encoding is a raw encoding in big endian padded to the group order
+func (a *pointE2) encode() []byte {
+	dest := make([]byte, g2BytesLen)
+	writePointE2(dest, a)
+	return dest
 }
 
 // writePointE1 writes a G1 point in a slice of bytes
@@ -244,12 +264,12 @@ func readScalarFrStar(a *scalar, src []byte) error {
 	case valid:
 		return nil
 	case badEncoding:
-		return invalidInputsErrorf("input length must be %d, got %d",
+		return internal.InvalidInputsErrorf("input length must be %d, got %d",
 			frBytesLen, len(src))
 	case badValue:
-		return invalidInputsErrorf("scalar is not in the correct range")
+		return internal.InvalidInputsErrorf("scalar is not in the correct range")
 	default:
-		return invalidInputsErrorf("reading the scalar failed")
+		return internal.InvalidInputsErrorf("reading the scalar failed")
 	}
 }
 
@@ -266,9 +286,9 @@ func readPointE2(a *pointE2, src []byte) error {
 	case valid:
 		return nil
 	case badEncoding, badValue:
-		return invalidInputsErrorf("input could not deserialize to an E2 point")
+		return internal.InvalidInputsErrorf("input could not deserialize to an E2 point")
 	case pointNotOnCurve:
-		return invalidInputsErrorf("input is not a point on curve E2")
+		return internal.InvalidInputsErrorf("input is not a point on curve E2")
 	default:
 		return errors.New("reading E2 point failed")
 	}
@@ -287,9 +307,9 @@ func readPointE1(a *pointE1, src []byte) error {
 	case valid:
 		return nil
 	case badEncoding, badValue:
-		return invalidInputsErrorf("input could not deserialize to a E1 point")
+		return internal.InvalidInputsErrorf("input could not deserialize to a E1 point")
 	case pointNotOnCurve:
-		return invalidInputsErrorf("input is not a point on curve E1")
+		return internal.InvalidInputsErrorf("input is not a point on curve E1")
 	default:
 		return errors.New("reading E1 point failed")
 	}

@@ -79,9 +79,6 @@ const (
 	// Cipher suite used for BLS PoP of the form : BLS_POP_ || h2cSuiteID || SchemeTag_
 	// The PoP cipher suite is guaranteed to be different than all signature ciphersuites
 	blsPOPCipherSuite = "BLS_POP_" + h2cSuiteID + schemeTag
-	// expandMsgOutput is the output length of the expand_message step as required by the
-	// hash_to_curve algorithm (and the map to G1 step).
-	expandMsgOutput = int(C.MAP_TO_G1_INPUT_LEN)
 )
 
 // blsBLS12381Algo, embeds SignAlgo
@@ -90,12 +87,18 @@ type blsBLS12381Algo struct {
 	algo sign.SigningAlgorithm
 }
 
+var g2PublicKey pubKeyBLSBLS12381
+
 // init the BLS12-381 curve context
 func init() {
 	// register the BLS context on the BLS 12-381 curve instance in the `sign` package
 	if err := sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381}); err != nil {
 		panic(err)
 	}
+
+	// set a global point to infinity
+	C.E2_set_infty((*C.E2)(&g2PublicKey.point))
+	g2PublicKey.isIdentity = true
 }
 
 // NewExpandMsgXOFKMAC128 returns a new expand_message_xof instance for

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/crypto/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -190,7 +191,7 @@ func BenchmarkMapToG1(b *testing.B) {
 
 // test subgroup membership check in G1 and G2
 func TestSubgroupCheck(t *testing.T) {
-	prg := getPRG(t)
+	prg := internal.GetPRG(t)
 	seed := make([]byte, 192)
 	_, err := prg.Read(seed)
 	require.NoError(t, err)
@@ -242,7 +243,7 @@ func BenchmarkSubgroupCheck(b *testing.B) {
 // specific test of G1 points Encode and decode (BLS signature since the library is set for min_sig).
 // G2 points read and write are implicitly tested by public keys Encode/Decode.
 func TestReadWriteG1(t *testing.T) {
-	prg := getPRG(t)
+	prg := internal.GetPRG(t)
 	seed := make([]byte, frBytesLen)
 	bytes := make([]byte, g1BytesLen)
 	// generate a random G1 point, encode it, decode it,
@@ -266,7 +267,7 @@ func TestReadWriteG1(t *testing.T) {
 		seed := make([]byte, frBytesLen)
 		unsafeMapToG1(&p, seed) // this results in the infinity point given how `unsafeMapToG1` works with an empty scalar
 		writePointE1(bytes, &p)
-		require.True(t, IsBLSSignatureIdentity(bytes)) // sanity check
+		require.Equal(t, bytes, g1Serialization) // sanity check
 		err := readPointE1(&q, bytes)
 		require.NoError(t, err)
 		assert.True(t, p.equals(&q))
@@ -285,13 +286,13 @@ func TestMapToFr(t *testing.T) {
 	isZero := mapToFr(&x, bytes)
 	assert.True(t, isZero)
 	assert.True(t, x.isZero())
-	assert.Equal(t, expectedEncoding, newPrKeyBLSBLS12381(&x).Encode())
+	assert.Equal(t, expectedEncoding, x.encode())
 	// curve order bytes
 	copy(bytes[offset:], BLS12381Order)
 	isZero = mapToFr(&x, bytes)
 	assert.True(t, isZero)
 	assert.True(t, x.isZero())
-	assert.Equal(t, expectedEncoding, newPrKeyBLSBLS12381(&x).Encode())
+	assert.Equal(t, expectedEncoding, x.encode())
 	// curve order + 1
 	g1, err := hex.DecodeString("824aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb813e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e")
 	require.NoError(t, err)
@@ -300,20 +301,21 @@ func TestMapToFr(t *testing.T) {
 	assert.False(t, isZero)
 	assert.False(t, x.isZero())
 	expectedEncoding[frBytesLen-1] = 1
-	sk := newPrKeyBLSBLS12381(&x)
-	assert.Equal(t, expectedEncoding, sk.Encode())
+	assert.Equal(t, expectedEncoding, x.encode())
 	// check scalar is equal to "1" in the lower layer (scalar multiplication)
-	assert.Equal(t, sk.PublicKey().Encode(), g1, "scalar should be 1, check endianness in the C layer")
+	var y pointE2
+	generatorScalarMultG2(&y, &x)
+	assert.Equal(t, y.encode(), g1, "scalar should be 1, check endianness in the C layer")
 	// 1
 	copy(bytes[offset:], expectedEncoding)
 	isZero = mapToFr(&x, bytes)
 	assert.False(t, isZero)
 	assert.False(t, x.isZero())
 	expectedEncoding[frBytesLen-1] = 1
-	sk = newPrKeyBLSBLS12381(&x)
-	assert.Equal(t, expectedEncoding, sk.Encode())
+	assert.Equal(t, expectedEncoding, x.encode())
 	// check scalar is equal to "1" in the lower layer (scalar multiplication)
-	assert.Equal(t, sk.PublicKey().Encode(), g1, "scalar should be 1, check endianness in the C layer")
+	generatorScalarMultG2(&y, &x)
+	assert.Equal(t, y.encode(), g1, "scalar should be 1, check endianness in the C layer")
 }
 
 // pairing bench

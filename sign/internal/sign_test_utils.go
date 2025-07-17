@@ -21,24 +21,16 @@ package internal
 import (
 	crand "crypto/rand"
 	"fmt"
-	mrand "math/rand"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/crypto/common"
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/internal"
 	"github.com/onflow/crypto/sign"
 )
-
-func GetPRG(t *testing.T) *mrand.Rand {
-	random := time.Now().UnixNano()
-	t.Logf("rng seed is %d", random)
-	rng := mrand.New(mrand.NewSource(random))
-	return rng
-}
 
 func TestKeyGenErrors(t *testing.T) {
 	seed := make([]byte, 50)
@@ -78,7 +70,7 @@ func TestGenSignVerify(t *testing.T, salg sign.SigningAlgorithm, halg hash.Hashe
 	t.Run(fmt.Sprintf("Generation/Signature/Verification for %s", salg), func(t *testing.T) {
 		seed := make([]byte, sign.KeyGenSeedMinLen)
 		input := make([]byte, 100)
-		rand := GetPRG(t)
+		rand := internal.GetPRG(t)
 
 		loops := 50
 		for j := 0; j < loops; j++ {
@@ -171,13 +163,9 @@ func TestKeyGenSeed(t *testing.T, salg sign.SigningAlgorithm, minLen int, maxLen
 	})
 }
 
-var BLS12381Order = []byte{0x73, 0xED, 0xA7, 0x53, 0x29, 0x9D, 0x7D, 0x48, 0x33, 0x39,
-	0xD8, 0x08, 0x09, 0xA1, 0xD8, 0x05, 0x53, 0xBD, 0xA4, 0x02, 0xFF, 0xFE,
-	0x5B, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01}
-
 func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 	t.Run(fmt.Sprintf("generic encode/decode for %s", salg), func(t *testing.T) {
-		rand := GetPRG(t)
+		rand := internal.GetPRG(t)
 
 		t.Run("happy path tests", func(t *testing.T) {
 			loops := 50
@@ -266,7 +254,7 @@ func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 
 func TestEquals(t *testing.T, salg sign.SigningAlgorithm, otherSigAlgo sign.SigningAlgorithm) {
 	t.Run(fmt.Sprintf("equals for %s", salg), func(t *testing.T) {
-		rand := GetPRG(t)
+		rand := internal.GetPRG(t)
 		// generate a key pair
 		seed := make([]byte, sign.KeyGenSeedMinLen)
 		n, err := rand.Read(seed)

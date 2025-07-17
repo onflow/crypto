@@ -18,6 +18,8 @@
 
 package hash
 
+import "github.com/onflow/crypto/internal"
+
 //revive:disable:var-naming
 
 // HashingAlgorithm is an identifier for a hashing algorithm.
@@ -52,7 +54,7 @@ func (h HashingAlgorithm) String() string {
 
 const (
 	// minimum targeted bits of security
-	securityBits = 128
+	securityBits = internal.SecurityBits
 
 	// Lengths of hash outputs in bytes
 	HashLenSHA2_256   = 32
