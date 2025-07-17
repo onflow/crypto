@@ -129,6 +129,7 @@ func randomSK(t *testing.T, rand *mrand.Rand) sign.PrivateKey {
 	return sk
 }
 
+/*
 // utility function to generate a non BLS private key
 func invalidSK(t *testing.T) sign.PrivateKey {
 	seed := make([]byte, sign.KeyGenSeedMinLen)
@@ -138,7 +139,7 @@ func invalidSK(t *testing.T) sign.PrivateKey {
 	sk, err := sign.GeneratePrivateKey(sign.ECDSAP256, seed)
 	require.NoError(t, err)
 	return sk
-}
+}*/
 
 // BLS tests
 func TestBLSBLS12381Hasher(t *testing.T) {
@@ -280,6 +281,7 @@ func TestBLSEncodeDecode(t *testing.T) {
 
 // TestBLSEquals tests equal for BLS keys
 func TestBLSEquals(t *testing.T) {
+	// TODO: use a dummy algo instead of ECDSA
 	signinternal.TestEquals(t, sign.BLSBLS12381, sign.ECDSAP256)
 }
 
