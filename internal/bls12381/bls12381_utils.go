@@ -85,11 +85,11 @@ const (
 	G2BytesLen = int(C.G2_SER_BYTES)
 
 	// error constants imported from the C layer
-	valid           = C.VALID
-	invalid         = C.INVALID
-	badEncoding     = C.BAD_ENCODING
-	badValue        = C.BAD_VALUE
-	pointNotOnCurve = C.POINT_NOT_ON_CURVE
+	Valid           = C.VALID
+	Invalid         = C.INVALID
+	BadEncoding     = C.BAD_ENCODING
+	BadValue        = C.BAD_VALUE
+	PointNotOnCurve = C.POINT_NOT_ON_CURVE
 
 	// expandMsgOutput is the output length of the expand_message step as required by the
 	// hash_to_curve algorithm (and the map to G1 step).
@@ -185,6 +185,11 @@ func (p *PointE2) IsInfinity() bool {
 	return bool(C.E2_is_infty((*C.E2)(p)))
 }
 
+// Comparison to point at infinity in G2.
+func (p *PointE2) SetInfinity() {
+	C.E2_set_infty((*C.E2)(p))
+}
+
 // generates a random element in F_r using input random source,
 // and saves the random in `x`.
 // returns `true` if generated element is zero.
@@ -261,12 +266,12 @@ func ReadScalarFrStar(a *Scalar, src []byte) error {
 		(C.int)(len(src)))
 
 	switch read {
-	case valid:
+	case Valid:
 		return nil
-	case badEncoding:
+	case BadEncoding:
 		return internal.InvalidInputsErrorf("input length must be %d, got %d",
 			FrBytesLen, len(src))
-	case badValue:
+	case BadValue:
 		return internal.InvalidInputsErrorf("scalar is not in the correct range")
 	default:
 		return internal.InvalidInputsErrorf("reading the scalar failed")
@@ -283,11 +288,11 @@ func ReadPointE2(a *PointE2, src []byte) error {
 		(C.int)(len(src)))
 
 	switch read {
-	case valid:
+	case Valid:
 		return nil
-	case badEncoding, badValue:
+	case BadEncoding, BadValue:
 		return internal.InvalidInputsErrorf("input could not deserialize to an E2 point")
-	case pointNotOnCurve:
+	case PointNotOnCurve:
 		return internal.InvalidInputsErrorf("input is not a point on curve E2")
 	default:
 		return errors.New("reading E2 point failed")
@@ -304,26 +309,26 @@ func ReadPointE1(a *PointE1, src []byte) error {
 		(C.int)(len(src)))
 
 	switch read {
-	case valid:
+	case Valid:
 		return nil
-	case badEncoding, badValue:
+	case BadEncoding, BadValue:
 		return internal.InvalidInputsErrorf("input could not deserialize to a E1 point")
-	case pointNotOnCurve:
+	case PointNotOnCurve:
 		return internal.InvalidInputsErrorf("input is not a point on curve E1")
 	default:
 		return errors.New("reading E1 point failed")
 	}
 }
 
-// checkMembershipG1 wraps a call to a subgroup check in G1 since cgo can't be used
-// in go test files.
-func CheckMembershipG1(pt *PointE1) bool {
+// CheckMembershipG1 checks if input E1 point is on the subgroup G1.
+// It assumes input `p` is on E1.
+func (pt *PointE1) CheckMembershipG1() bool {
 	return bool(C.E1_in_G1((*C.E1)(pt)))
 }
 
-// checkMembershipG2 wraps a call to a subgroup check in G2 since cgo can't be used
-// in go test files.
-func CheckMembershipG2(pt *PointE2) bool {
+// CheckMembershipG2 checks if input E2 point is on the subgroup G2.
+// It assumes input `p` is on E2.
+func (pt *PointE2) CheckMembershipG2() bool {
 	return bool(C.E2_in_G2((*C.E2)(pt)))
 }
 
@@ -332,7 +337,7 @@ func CheckMembershipG2(pt *PointE2) bool {
 func MapToG1(data []byte) *PointE1 {
 	l := len(data)
 	var h PointE1
-	if C.map_to_G1((*C.E1)(&h), (*C.uchar)(&data[0]), (C.int)(l)) != valid {
+	if C.map_to_G1((*C.E1)(&h), (*C.uchar)(&data[0]), (C.int)(l)) != Valid {
 		return nil
 	}
 	return &h
@@ -383,7 +388,7 @@ func hashToG1Bytes(data, dst []byte) []byte {
 
 	// map the hash to G1
 	var point PointE1
-	if C.map_to_G1((*C.E1)(&point), (*C.uchar)(&hash[0]), (C.int)(len(hash))) != valid {
+	if C.map_to_G1((*C.E1)(&point), (*C.uchar)(&hash[0]), (C.int)(len(hash))) != Valid {
 		return nil
 	}
 

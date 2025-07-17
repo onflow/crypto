@@ -199,19 +199,19 @@ func TestSubgroupCheck(t *testing.T) {
 	t.Run("G1", func(t *testing.T) {
 		var p PointE1
 		unsafeMapToG1(&p, seed) // point in G1
-		assert.True(t, CheckMembershipG1(&p))
+		assert.True(t, p.CheckMembershipG1())
 
 		UnsafeMapToG1Complement(&p, seed) // point in E2\G2
-		assert.False(t, CheckMembershipG1(&p))
+		assert.False(t, p.CheckMembershipG1())
 	})
 
 	t.Run("G2", func(t *testing.T) {
 		var p PointE2
 		unsafeMapToG2(&p, seed) // point in G2
-		assert.True(t, CheckMembershipG2(&p))
+		assert.True(t, p.CheckMembershipG2())
 
 		unsafeMapToG2Complement(&p, seed) // point in E2\G2
-		assert.False(t, CheckMembershipG2(&p))
+		assert.False(t, p.CheckMembershipG2())
 	})
 }
 

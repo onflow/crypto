@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package crypto
+package bls
 
 // BLS signature scheme implementation using the BLS12-381 curve
 // ([zcash]https://electriccoin.co/blog/new-snark-curve/).
@@ -41,8 +41,9 @@ package crypto
 //  - SPoCK scheme based on BLS: verifies two signatures are generated from the same message,
 //    even though the message is unknown to the verifier.
 
-// #cgo noescape E2_in_G2
-// #cgo nocallback E2_in_G2
+// #cgo CFLAGS: -I${SRCDIR}/ -I${SRCDIR}/../../internal/bls12381 -I${SRCDIR}/../../internal/bls12381/blst_src -I${SRCDIR}/../../internal/bls12381/blst_src/build -D__BLST_CGO__ -Wall -fno-builtin-memcpy -fno-builtin-memset -Wno-unused-function -Wno-unused-macros -Wno-unused-variable
+// #cgo amd64 CFLAGS: -D__ADX__ -mno-avx
+// #cgo loong64 mips64 mips64le ppc64 ppc64le riscv64 s390x CFLAGS: -D__BLST_NO_ASM__
 // #cgo noescape bls_sign
 // #cgo nocallback bls_sign
 // #cgo noescape bls_verify
@@ -55,19 +56,23 @@ import (
 	"crypto/hkdf"
 	"crypto/sha256"
 	"fmt"
+	"unsafe"
 
+	"github.com/onflow/crypto/common"
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/internal"
+	bls12 "github.com/onflow/crypto/internal/bls12381"
 	"github.com/onflow/crypto/sign"
 )
 
 const (
 	// SignatureLenBLSBLS12381 is the serialization size of a `G_1` element.
-	SignatureLenBLSBLS12381 = g1BytesLen
+	SignatureLenBLSBLS12381 = bls12.G1BytesLen
 	// PubKeyLenBLSBLS12381 is the serialization size of a `G_2` element.
-	PubKeyLenBLSBLS12381 = g2BytesLen
+	PubKeyLenBLSBLS12381 = bls12.G2BytesLen
 	// PrKeyLenBLSBLS12381 is the serialization size of a `F_r` element,
 	// where `r` is the order of `G_1` and `G_2`.
-	PrKeyLenBLSBLS12381 = frBytesLen
+	PrKeyLenBLSBLS12381 = bls12.FrBytesLen
 
 	// Hash to curve params
 	// hash to curve suite ID of the form : CurveID_ || HashID_ || MapID_ || encodingVariant_
@@ -97,7 +102,7 @@ func init() {
 	}
 
 	// set a global point to infinity
-	C.E2_set_infty((*C.E2)(&g2PublicKey.point))
+	g2PublicKey.point.SetInfinity()
 	g2PublicKey.isIdentity = true
 }
 
@@ -134,7 +139,7 @@ func internalExpandMsgXOFKMAC128(key string) hash.Hasher {
 	const blsKMACFunction = "H2C"
 	// the error is ignored as the parameter lengths are chosen to be in the correct range for kmac
 	// (tested by TestBLSBLS12381Hasher)
-	kmac, _ := hash.NewKMAC_128([]byte(key), []byte(blsKMACFunction), expandMsgOutput)
+	kmac, _ := hash.NewKMAC_128([]byte(key), []byte(blsKMACFunction), bls12.ExpandMsgOutput)
 	return kmac
 }
 
@@ -144,10 +149,10 @@ func internalExpandMsgXOFKMAC128(key string) hash.Hasher {
 //   - invalidHasherSizeError if the hasher's output size is not `expandMsgOutput` (128 bytes)
 func checkBLSHasher(hasher hash.Hasher) error {
 	if hasher == nil {
-		return errNilHasher
+		return internal.ErrNilHasher
 	}
-	if hasher.Size() != expandMsgOutput {
-		return invalidHasherSizeErrorf("hasher's size needs to be %d, got %d", expandMsgOutput, hasher.Size())
+	if hasher.Size() != bls12.ExpandMsgOutput {
+		return internal.InvalidHasherSizeErrorf("hasher's size needs to be %d, got %d", bls12.ExpandMsgOutput, hasher.Size())
 	}
 	return nil
 }
@@ -177,10 +182,12 @@ func (sk *prKeyBLSBLS12381) Sign(data []byte, kmac hash.Hasher) (sign.Signature,
 	h := kmac.ComputeHash(data)
 
 	s := make([]byte, SignatureLenBLSBLS12381)
-	C.bls_sign((*C.uchar)(&s[0]),
-		(*C.Fr)(&sk.scalar),
+	C.bls_sign(
+		(*C.uchar)(&s[0]),
+		(*C.Fr)(unsafe.Pointer(&sk.scalar)),
 		(*C.uchar)(&h[0]),
-		(C.int)(len(h)))
+		(C.int)(len(h)),
+	)
 	return s, nil
 }
 
@@ -222,15 +229,17 @@ func (pk *pubKeyBLSBLS12381) Verify(s sign.Signature, data []byte, kmac hash.Has
 		return false, nil
 	}
 
-	verif := C.bls_verify((*C.E2)(&pk.point),
+	verif := C.bls_verify(
+		(*C.E2)(unsafe.Pointer(&pk.point)),
 		(*C.uchar)(&s[0]),
 		(*C.uchar)(&h[0]),
-		(C.int)(len(h)))
+		(C.int)(len(h)),
+	)
 
 	switch verif {
-	case invalid:
+	case bls12.Invalid:
 		return false, nil
-	case valid:
+	case bls12.Valid:
 		return true, nil
 	default:
 		return false, fmt.Errorf("signature verification failed: code %d", verif)
@@ -246,7 +255,7 @@ func (pk *pubKeyBLSBLS12381) Verify(s sign.Signature, data []byte, kmac hash.Has
 // suspected to be equal to identity, which avoids failing the aggregated
 // signature verification.
 func IsBLSSignatureIdentity(s sign.Signature) bool {
-	return bytes.Equal(s, g1Serialization)
+	return bytes.Equal(s, bls12.G1Serialization)
 }
 
 // GeneratePrivateKey deterministically generates a private key for BLS on BLS12-381 curve.
@@ -258,10 +267,10 @@ func IsBLSSignatureIdentity(s sign.Signature) bool {
 // The generated private key (resp. its corresponding public key) is guaranteed
 // to not be equal to the identity element of Z_r (resp. G2).
 func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error) {
-	if len(ikm) < KeyGenSeedMinLen || len(ikm) > KeyGenSeedMaxLen {
-		return nil, invalidInputsErrorf(
+	if len(ikm) < sign.KeyGenSeedMinLen || len(ikm) > sign.KeyGenSeedMaxLen {
+		return nil, common.InvalidInputsErrorf(
 			"seed length should be at least %d bytes and at most %d bytes",
-			KeyGenSeedMinLen, KeyGenSeedMaxLen)
+			sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen)
 	}
 
 	// HKDF parameters
@@ -277,12 +286,12 @@ func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error
 
 	// L is the OKM length
 	// L = ceil((3 * ceil(log2(r))) / 16) which makes L (security_bits/8)-larger than r size
-	okmLength := (3 * frBytesLen) / 2
+	okmLength := (3 * bls12.FrBytesLen) / 2
 
 	// HKDF secret = IKM || I2OSP(0, 1)
 	secret := make([]byte, len(ikm)+1)
 	copy(secret, ikm)
-	defer overwrite(secret) // overwrite secret
+	defer internal.Overwrite(secret) // overwrite secret
 	// HKDF info = key_info || I2OSP(L, 2)
 	keyInfo := []byte{} // use empty key diversifier. TODO: update header to accept input identifier
 	info := string(append(keyInfo, byte(okmLength>>8), byte(okmLength)))
@@ -294,11 +303,11 @@ func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error
 		if err != nil {
 			return nil, fmt.Errorf("HKDF computation failed: %w", err)
 		}
-		defer overwrite(okm) // overwrite okm
+		defer internal.Overwrite(okm) // overwrite okm
 
 		// map the bytes to a private key using modular reduction
 		// SK = OS2IP(OKM) mod r
-		isZero := mapToFr(&sk.scalar, okm)
+		isZero := bls12.MapToFr(&sk.scalar, okm)
 		if !isZero {
 			return sk, nil
 		}
@@ -329,7 +338,7 @@ func BLSInvalidSignature() sign.Signature {
 func (a *blsBLS12381Algo) DecodePrivateKey(privateKeyBytes []byte) (sign.PrivateKey, error) {
 	sk := newPrKeyBLSBLS12381(nil)
 
-	err := readScalarFrStar(&sk.scalar, privateKeyBytes)
+	err := bls12.ReadScalarFrStar(&sk.scalar, privateKeyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the private key: %w", err)
 	}
@@ -345,22 +354,23 @@ func (a *blsBLS12381Algo) DecodePrivateKey(privateKeyBytes []byte) (sign.Private
 // public key outputs `false`.
 func (a *blsBLS12381Algo) DecodePublicKey(publicKeyBytes []byte) (sign.PublicKey, error) {
 	if len(publicKeyBytes) != PubKeyLenBLSBLS12381 {
-		return nil, invalidInputsErrorf("input length must be %d, got %d",
+		return nil, internal.InvalidInputsErrorf("input length must be %d, got %d",
 			PubKeyLenBLSBLS12381, len(publicKeyBytes))
 	}
+
 	var pk pubKeyBLSBLS12381
-	err := readPointE2(&pk.point, publicKeyBytes)
+	err := bls12.ReadPointE2(&pk.point, publicKeyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("decode public key failed: %w", err)
 	}
 
 	// membership check in G2
-	if !bool(C.E2_in_G2((*C.E2)(&pk.point))) {
-		return nil, invalidInputsErrorf("input key is infinity or does not encode a BLS12-381 point in the valid group")
+	if !pk.point.CheckMembershipG2() {
+		return nil, common.InvalidInputsErrorf("input key is infinity or does not encode a BLS12-381 point in the valid group")
 	}
 
 	// check point is non-infinity and cache it
-	pk.isIdentity = (&pk.point).isInfinity()
+	pk.isIdentity = (&pk.point).IsInfinity()
 
 	return &pk, nil
 }
@@ -368,14 +378,13 @@ func (a *blsBLS12381Algo) DecodePublicKey(publicKeyBytes []byte) (sign.PublicKey
 // DecodePublicKeyCompressed decodes a slice of bytes into a public key.
 // since we use the compressed representation by default, this checks the default and delegates to DecodePublicKeyCompressed
 func (a *blsBLS12381Algo) DecodePublicKeyCompressed(publicKeyBytes []byte) (sign.PublicKey, error) {
-	if !isG2Compressed() {
+	if !bls12.IsG2Compressed() {
 		panic("library is not configured to use compressed public key serialization")
 	}
 	return a.DecodePublicKey(publicKeyBytes)
 }
 
-// SignatureFormatCheck verifies the format of a serialized signature,
-// regardless of messages or public keys.
+// SignatureFormatCheck checks if the signature has the correct format.
 func (a *blsBLS12381Algo) SignatureFormatCheck(sig sign.Signature) (bool, error) {
 	panic(fmt.Sprintf("%s does not support signature format check", a.algo))
 }
@@ -385,7 +394,7 @@ type prKeyBLSBLS12381 struct {
 	// public key
 	pk *pubKeyBLSBLS12381
 	// private key data
-	scalar scalar
+	scalar bls12.Scalar
 }
 
 var _ sign.PrivateKey = (*prKeyBLSBLS12381)(nil)
@@ -393,7 +402,7 @@ var _ sign.PrivateKey = (*prKeyBLSBLS12381)(nil)
 // newPrKeyBLSBLS12381 creates a new BLS private key with the given scalar.
 // If no scalar is provided, the function allocates an
 // empty scalar.
-func newPrKeyBLSBLS12381(x *scalar) *prKeyBLSBLS12381 {
+func newPrKeyBLSBLS12381(x *bls12.Scalar) *prKeyBLSBLS12381 {
 	if x != nil {
 		return &prKeyBLSBLS12381{
 			// the embedded public key is only computed when needed
@@ -419,10 +428,10 @@ func (sk *prKeyBLSBLS12381) Size() int {
 func (sk *prKeyBLSBLS12381) computePublicKey() {
 	var newPk pubKeyBLSBLS12381
 	// compute public key pk = g2^sk
-	generatorScalarMultG2(&newPk.point, &sk.scalar)
+	bls12.GeneratorScalarMultG2(&newPk.point, &sk.scalar)
 
 	// cache the identity comparison
-	newPk.isIdentity = (&sk.scalar).isZero()
+	newPk.isIdentity = (&sk.scalar).IsZero()
 
 	sk.pk = &newPk
 }
@@ -439,8 +448,8 @@ func (sk *prKeyBLSBLS12381) PublicKey() sign.PublicKey {
 // Encode returns a byte encoding of the private key.
 // The encoding is a raw encoding in big endian padded to the group order
 func (a *prKeyBLSBLS12381) Encode() []byte {
-	dest := make([]byte, frBytesLen)
-	writeScalar(dest, &a.scalar)
+	dest := make([]byte, bls12.FrBytesLen)
+	bls12.WriteScalar(dest, &a.scalar)
 	return dest
 }
 
@@ -450,7 +459,7 @@ func (sk *prKeyBLSBLS12381) Equals(other sign.PrivateKey) bool {
 	if !ok {
 		return false
 	}
-	return (&sk.scalar).equals(&otherBLS.scalar)
+	return (&sk.scalar).Equals(&otherBLS.scalar)
 }
 
 // String returns the hex string representation of the key.
@@ -471,7 +480,7 @@ type pubKeyBLSBLS12381 struct {
 	// sure the comparison is performed after an instance is created.
 	//
 	// public key G2 point
-	point pointE2
+	point bls12.PointE2
 	// G2 identity check cache
 	isIdentity bool
 }
@@ -481,14 +490,14 @@ var _ sign.PublicKey = (*pubKeyBLSBLS12381)(nil)
 // newPubKeyBLSBLS12381 creates a new BLS public key with the given point.
 // If no scalar is provided, the function allocates an
 // empty scalar.
-func newPubKeyBLSBLS12381(p *pointE2) *pubKeyBLSBLS12381 {
+func newPubKeyBLSBLS12381(p *bls12.PointE2) *pubKeyBLSBLS12381 {
 	if p != nil {
 		key := &pubKeyBLSBLS12381{
 			point: *p,
 		}
 		// cache the identity comparison for a faster check
 		// during signature verifications
-		key.isIdentity = p.isInfinity()
+		key.isIdentity = p.IsInfinity()
 		return key
 	}
 	return &pubKeyBLSBLS12381{}
@@ -508,7 +517,7 @@ func (pk *pubKeyBLSBLS12381) Size() int {
 // The encoding is a compressed encoding of the point
 // [zcash] https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-zcash-serialization-format-
 func (a *pubKeyBLSBLS12381) EncodeCompressed() []byte {
-	if !isG2Compressed() {
+	if !bls12.IsG2Compressed() {
 		panic("library is not configured to use compressed public key serialization")
 	}
 	return a.Encode()
@@ -519,8 +528,8 @@ func (a *pubKeyBLSBLS12381) EncodeCompressed() []byte {
 //
 // The function should evolve in the future to support uncompressed compresion too.
 func (a *pubKeyBLSBLS12381) Encode() []byte {
-	dest := make([]byte, g2BytesLen)
-	writePointE2(dest, &a.point)
+	dest := make([]byte, bls12.G2BytesLen)
+	bls12.WritePointE2(dest, &a.point)
 	return dest
 }
 
@@ -530,7 +539,7 @@ func (pk *pubKeyBLSBLS12381) Equals(other sign.PublicKey) bool {
 	if !ok {
 		return false
 	}
-	return pk.point.equals(&otherBLS.point)
+	return pk.point.Equals(&otherBLS.point)
 }
 
 // String returns the hex string representation of the key.
@@ -546,18 +555,20 @@ func (pk *pubKeyBLSBLS12381) String() string {
 func (sk *prKeyBLSBLS12381) signWithXMDSHA256(data []byte) sign.Signature {
 
 	dst := []byte("BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_")
-	hash := make([]byte, expandMsgOutput)
+	hash := make([]byte, bls12.ExpandMsgOutput)
 	// XMD using SHA256
 	C.xmd_sha256((*C.uchar)(&hash[0]),
-		(C.int)(expandMsgOutput),
+		(C.int)(bls12.ExpandMsgOutput),
 		(*C.uchar)(&data[0]), (C.int)(len(data)),
 		(*C.uchar)(&dst[0]), (C.int)(len(dst)))
 
 	// sign the hash
 	s := make([]byte, SignatureLenBLSBLS12381)
-	C.bls_sign((*C.uchar)(&s[0]),
-		(*C.Fr)(&sk.scalar),
+	C.bls_sign(
+		(*C.uchar)(&s[0]),
+		(*C.Fr)(unsafe.Pointer(&sk.scalar)),
 		(*C.uchar)(&hash[0]),
-		(C.int)(len(hash)))
+		(C.int)(len(hash)),
+	)
 	return s
 }
