@@ -52,8 +52,12 @@ path ?= ./
 c-format:
 	cd $(path)
 	clang-format -style=llvm -dump-config > .clang-format
-	clang-format -i *.c
-	clang-format -i *.h
+	@if ls *.c >/dev/null 2>&1; then \
+		clang-format -i *.c; \
+	fi
+	@if ls *.h >/dev/null 2>&1; then \
+		clang-format -i *.h; \
+	fi
 	rm -f .clang-format
 	git diff --exit-code
 
