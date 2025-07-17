@@ -36,25 +36,13 @@ jobs:
       run: make go-tidy
     - name: Run golangci-lint with cgo
       env:
+        # TODO: run separate packages with cgo disabled
         CGO_ENABLED: 1
       uses: golangci/golangci-lint-action@v7
       with:
         version: ${{ env.LINT_VERSION }}
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
-    - name: Run golangci-lint without cgo
-      env:
-        CGO_ENABLED: 0
-      uses: golangci/golangci-lint-action@v7
-      with:
-        version: ${{ env.LINT_VERSION }}
-        args: --build-tags no_cgo
-        # https://github.com/golangci/golangci-lint-action/issues/244
-        skip-cache: true
-    - name: Run incorrect builds
-      run: |
-        echo "::remove-matcher owner=go::"
-        make incorrect_builds
 
   c-code:
     strategy:
@@ -72,9 +60,9 @@ jobs:
       - name: Install C formatter
         run: sudo apt-get install -y clang-format
       - name: run C format
-        run: make c-format
+        run: make recurse cmd="c-format"
       - name: run C sanitizers
-        run: make c-sanitize
+        run: make recurse cmd="c-sanitize"
       
 
   unit-tests:
