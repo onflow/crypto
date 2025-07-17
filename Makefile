@@ -37,13 +37,11 @@ test:
 	CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./...
 
 
-# recurse through all subdirectories and run the given command "cmd"
+# recurse through all subdirectories and run the argument command "cmd"
 .PHONY: recurse
 recurse:
-	@for dir in */ ; do \
-		if [ -d "$$dir" ]; then \
-			( make $(cmd) path="$$dir"); \
-		fi \
+	@find . -type d ! -path '*/\.*' | while read dir; do \
+		( make $(cmd) path="$$dir"); \
 	done
 
 # format C code
@@ -97,9 +95,10 @@ c-msan:
 # sanitize C code
 .SILENT: c-sanitize
 path ?= ./
-c-sanitize: c-asan "path=$(path)"
+c-sanitize: 
 # - address sanitization and other checks (only on linux)
 # - memory sanitization (target m-san) is disabled because of multiple false positives
+	make c-asan path=$(path)
 
 # Go tidy
 .PHONY: go-tidy
