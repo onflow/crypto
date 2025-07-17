@@ -42,7 +42,7 @@ test:
 recurse:
 	@for dir in */ ; do \
 		if [ -d "$$dir" ]; then \
-			( make $(cmd) -path="$$dir"); \
+			( make $(cmd) path="$$dir"); \
 		fi \
 	done
 
@@ -93,7 +93,7 @@ c-msan:
 # sanitize C code
 .SILENT: c-sanitize
 path ?= ./
-c-sanitize: c-asan $(path)
+c-sanitize: c-asan "path=$(path)"
 # - address sanitization and other checks (only on linux)
 # - memory sanitization (target m-san) is disabled because of multiple false positives
 
