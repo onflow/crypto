@@ -48,15 +48,15 @@ recurse:
 .PHONY: c-format
 path ?= ./
 c-format:
-	cd $(path)
-	clang-format -style=llvm -dump-config > .clang-format
-	@if ls *.c >/dev/null 2>&1; then \
+	cd $(path) && \
+	clang-format -style=llvm -dump-config > .clang-format && \
+	if ls *.c >/dev/null 2>&1; then \
 		clang-format -i *.c; \
-	fi
-	@if ls *.h >/dev/null 2>&1; then \
+	fi && \
+	if ls *.h >/dev/null 2>&1; then \
 		clang-format -i *.h; \
-	fi
-	rm -f .clang-format
+	fi && \
+	rm -f .clang-format && \
 	git diff --exit-code
 
 
@@ -65,7 +65,7 @@ c-format:
 path ?= ./
 c-asan:
 # - address sanitization and other checks (only on linux)
-	cd $(path)
+	cd $(path) && \
 	if [ $(UNAME) = "Linux" ]; then \
 		CGO_CFLAGS=$(ADX_FLAG) CC="clang -O0 -g -fsanitize=address -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment" \
 		LD="-fsanitize=address -fsanitize=leak" go test; \
@@ -83,7 +83,7 @@ c-msan:
 # by asan. If you would like to run this command, you can use `NO_MSAN` to diable msan in some C functions.
 # For instance "void NO_MSAN f() {...}" disables msan in function f. `NO_MSAN` is already defined in
 # bls12381_utils.h
-	cd $(path)
+	cd $(path) && \
 	if [ $(UNAME) = "Linux" ]; then \
 		CGO_CFLAGS=$(ADX_FLAG) CC="clang -DMSAN -O0 -g -fsanitize=memory -fno-omit-frame-pointer -fsanitize-memory-track-origins" \
 		LD="-fsanitize=memory" go test; \
@@ -95,10 +95,11 @@ c-msan:
 # sanitize C code
 .SILENT: c-sanitize
 path ?= ./
-c-sanitize: 
+c-sanitize: c-asan
 # - address sanitization and other checks (only on linux)
 # - memory sanitization (target m-san) is disabled because of multiple false positives
-	make c-asan path=$(path)
+ 
+
 
 # Go tidy
 .PHONY: go-tidy
