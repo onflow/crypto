@@ -69,9 +69,9 @@ import (
 )
 
 // Go wrappers around BLST C types
-type pointE1 C.E1
-type pointE2 C.E2
-type scalar C.Fr
+type PointE1 C.E1
+type PointE2 C.E2
+type Scalar C.Fr
 
 // Note that scalars and field elements F_r are represented in Go by the same type
 // called `scalar`, which is internally represented by C type `Fr`. Scalars used by the
@@ -79,10 +79,10 @@ type scalar C.Fr
 
 const (
 	// BLS12-381 related lengths imported from the C layer
-	frBytesLen = int(C.Fr_BYTES)
-	fpBytesLen = int(C.Fp_BYTES)
-	g1BytesLen = int(C.G1_SER_BYTES)
-	g2BytesLen = int(C.G2_SER_BYTES)
+	FrBytesLen = int(C.Fr_BYTES)
+	FpBytesLen = int(C.Fp_BYTES)
+	G1BytesLen = int(C.G1_SER_BYTES)
+	G2BytesLen = int(C.G2_SER_BYTES)
 
 	// error constants imported from the C layer
 	valid           = C.VALID
@@ -93,7 +93,7 @@ const (
 
 	// expandMsgOutput is the output length of the expand_message step as required by the
 	// hash_to_curve algorithm (and the map to G1 step).
-	expandMsgOutput = int(C.MAP_TO_G1_INPUT_LEN)
+	ExpandMsgOutput = int(C.MAP_TO_G1_INPUT_LEN)
 )
 
 var BLS12381Order = []byte{0x73, 0xED, 0xA7, 0x53, 0x29, 0x9D, 0x7D, 0x48, 0x33, 0x39,
@@ -105,19 +105,19 @@ var g1SerHeader byte // g1 (G1 identity)
 var g2SerHeader byte // g2 (G2 identity)
 
 // `g1` serialization
-var g1Serialization []byte
+var G1Serialization []byte
 
 // initialization of BLS12-381 curve
 func init() {
 	C.types_sanity()
 
-	if isG1Compressed() {
+	if IsG1Compressed() {
 		g1SerHeader = 0xC0
 	} else {
 		g1SerHeader = 0x40
 	}
-	g1Serialization = append([]byte{g1SerHeader}, make([]byte, g1BytesLen-1)...)
-	if isG2Compressed() {
+	G1Serialization = append([]byte{g1SerHeader}, make([]byte, G1BytesLen-1)...)
+	if IsG2Compressed() {
 		g2SerHeader = 0xC0
 	} else {
 		g2SerHeader = 0x40
@@ -125,26 +125,26 @@ func init() {
 }
 
 // String returns a hex-encoded representation of the scalar.
-func (a *scalar) String() string {
-	encoding := make([]byte, frBytesLen)
-	writeScalar(encoding, a)
+func (a *Scalar) String() string {
+	encoding := make([]byte, FrBytesLen)
+	WriteScalar(encoding, a)
 	return fmt.Sprintf("%#x", encoding)
 }
 
 // String returns a hex-encoded representation of the E2 point.
-func (p *pointE2) String() string {
-	encoding := make([]byte, g2BytesLen)
-	writePointE2(encoding, p)
+func (p *PointE2) String() string {
+	encoding := make([]byte, G2BytesLen)
+	WritePointE2(encoding, p)
 	return fmt.Sprintf("%#x", encoding)
 }
 
 // Scalar multiplication of a generic point `p` in E1
-func (p *pointE1) scalarMultE1(res *pointE1, expo *scalar) {
+func (p *PointE1) ScalarMultE1(res *PointE1, expo *Scalar) {
 	C.E1_mult((*C.E1)(res), (*C.E1)(p), (*C.Fr)(expo))
 }
 
 // Scalar multiplication of generator g1 in G1
-func generatorScalarMultG1(res *pointE1, expo *scalar) {
+func GeneratorScalarMultG1(res *PointE1, expo *Scalar) {
 	C.G1_mult_gen((*C.E1)(res), (*C.Fr)(expo))
 }
 
@@ -154,63 +154,63 @@ func generatorScalarMultG1(res *pointE1, expo *scalar) {
 // multiple pairing computation. Therefore, convert the
 // resulting point to affine coordinate to save pre-pairing
 // conversions.
-func generatorScalarMultG2(res *pointE2, expo *scalar) {
+func GeneratorScalarMultG2(res *PointE2, expo *Scalar) {
 	C.G2_mult_gen_to_affine((*C.E2)(res), (*C.Fr)(expo))
 }
 
 // comparison in F_r where r is the group order of G1/G2
 // (both scalars should be reduced mod r)
-func (x *scalar) equals(other *scalar) bool {
+func (x *Scalar) Equals(other *Scalar) bool {
 	return bool(C.Fr_is_equal((*C.Fr)(x), (*C.Fr)(other)))
 }
 
 // comparison in E1
-func (p *pointE1) equals(other *pointE1) bool {
+func (p *PointE1) Equals(other *PointE1) bool {
 	return bool(C.E1_is_equal((*C.E1)(p), (*C.E1)(other)))
 }
 
 // comparison in E2
-func (p *pointE2) equals(other *pointE2) bool {
+func (p *PointE2) Equals(other *PointE2) bool {
 	return bool(C.E2_is_equal((*C.E2)(p), (*C.E2)(other)))
 }
 
 // Comparison to zero in F_r.
 // Scalar must be already reduced modulo r
-func (x *scalar) isZero() bool {
+func (x *Scalar) IsZero() bool {
 	return bool(C.Fr_is_zero((*C.Fr)(x)))
 }
 
 // Comparison to point at infinity in G2.
-func (p *pointE2) isInfinity() bool {
+func (p *PointE2) IsInfinity() bool {
 	return bool(C.E2_is_infty((*C.E2)(p)))
 }
 
 // generates a random element in F_r using input random source,
 // and saves the random in `x`.
 // returns `true` if generated element is zero.
-func randFr(x *scalar, rand random.Rand) bool {
+func RandFr(x *Scalar, rand random.Rand) bool {
 	// use extra 128 bits to reduce the modular reduction bias
-	bytes := make([]byte, frBytesLen+internal.SecurityBits/8)
+	bytes := make([]byte, FrBytesLen+internal.SecurityBits/8)
 	rand.Read(bytes)
 	// modular reduction
-	return mapToFr(x, bytes)
+	return MapToFr(x, bytes)
 }
 
 // generates a random element in F_r* using input random source,
 // and saves the random in `x`.
-func randFrStar(x *scalar, rand random.Rand) {
+func RandFrStar(x *Scalar, rand random.Rand) {
 	isZero := true
 	// extremely unlikely this loop runs more than once,
 	// but force the output to be non-zero instead of propagating an error.
 	for isZero {
-		isZero = randFr(x, rand)
+		isZero = RandFr(x, rand)
 	}
 }
 
 // mapToFr reads a scalar from a slice of bytes and maps it to Fr using modular reduction.
 // The resulting element `k` therefore satisfies 0 <= k < r.
 // It returns true if scalar is zero and false otherwise.
-func mapToFr(x *scalar, src []byte) bool {
+func MapToFr(x *Scalar, src []byte) bool {
 	isZero := C.map_bytes_to_Fr((*C.Fr)(x),
 		(*C.uchar)(&src[0]),
 		(C.int)(len(src)))
@@ -218,43 +218,43 @@ func mapToFr(x *scalar, src []byte) bool {
 }
 
 // writeScalar writes a scalar in a slice of bytes
-func writeScalar(dest []byte, x *scalar) {
+func WriteScalar(dest []byte, x *Scalar) {
 	C.Fr_write_bytes((*C.uchar)(&dest[0]), (*C.Fr)(x))
 }
 
 // encode returns a byte encoding of the scalar.
 // The encoding is a raw encoding in big endian padded to the group order
-func (x *scalar) encode() []byte {
-	dest := make([]byte, frBytesLen)
-	writeScalar(dest, x)
+func (x *Scalar) Encode() []byte {
+	dest := make([]byte, FrBytesLen)
+	WriteScalar(dest, x)
 	return dest
 }
 
 // writePointE2 writes a G2 point in a slice of bytes
 // The slice should be of size g2BytesLen and the serialization
 // follows the Zcash format specified in draft-irtf-cfrg-pairing-friendly-curves
-func writePointE2(dest []byte, a *pointE2) {
+func WritePointE2(dest []byte, a *PointE2) {
 	C.E2_write_bytes((*C.uchar)(&dest[0]), (*C.E2)(a))
 }
 
 // encode returns a byte encoding of the scalar.
 // The encoding is a raw encoding in big endian padded to the group order
-func (a *pointE2) encode() []byte {
-	dest := make([]byte, g2BytesLen)
-	writePointE2(dest, a)
+func (a *PointE2) Encode() []byte {
+	dest := make([]byte, G2BytesLen)
+	WritePointE2(dest, a)
 	return dest
 }
 
 // writePointE1 writes a G1 point in a slice of bytes
 // The slice should be of size g1BytesLen and the serialization
 // follows the Zcash format specified in draft-irtf-cfrg-pairing-friendly-curves
-func writePointE1(dest []byte, a *pointE1) {
+func WritePointE1(dest []byte, a *PointE1) {
 	C.E1_write_bytes((*C.uchar)(&dest[0]), (*C.E1)(a))
 }
 
 // read an F_r* element from a byte slice
 // and stores it into a `scalar` type element.
-func readScalarFrStar(a *scalar, src []byte) error {
+func ReadScalarFrStar(a *Scalar, src []byte) error {
 	read := C.Fr_star_read_bytes(
 		(*C.Fr)(a),
 		(*C.uchar)(&src[0]),
@@ -265,7 +265,7 @@ func readScalarFrStar(a *scalar, src []byte) error {
 		return nil
 	case badEncoding:
 		return internal.InvalidInputsErrorf("input length must be %d, got %d",
-			frBytesLen, len(src))
+			FrBytesLen, len(src))
 	case badValue:
 		return internal.InvalidInputsErrorf("scalar is not in the correct range")
 	default:
@@ -277,7 +277,7 @@ func readScalarFrStar(a *scalar, src []byte) error {
 // The slice is expected to be of size g2BytesLen and the deserialization
 // follows the Zcash format specified in draft-irtf-cfrg-pairing-friendly-curves.
 // No G2 membership check is performed.
-func readPointE2(a *pointE2, src []byte) error {
+func ReadPointE2(a *PointE2, src []byte) error {
 	read := C.E2_read_bytes((*C.E2)(a),
 		(*C.uchar)(&src[0]),
 		(C.int)(len(src)))
@@ -298,7 +298,7 @@ func readPointE2(a *pointE2, src []byte) error {
 // The slice should be of size g1BytesLen and the deserialization
 // follows the Zcash format specified in draft-irtf-cfrg-pairing-friendly-curves.
 // No G1 membership check is performed.
-func readPointE1(a *pointE1, src []byte) error {
+func ReadPointE1(a *PointE1, src []byte) error {
 	read := C.E1_read_bytes((*C.E1)(a),
 		(*C.uchar)(&src[0]),
 		(C.int)(len(src)))
@@ -317,21 +317,21 @@ func readPointE1(a *pointE1, src []byte) error {
 
 // checkMembershipG1 wraps a call to a subgroup check in G1 since cgo can't be used
 // in go test files.
-func checkMembershipG1(pt *pointE1) bool {
+func CheckMembershipG1(pt *PointE1) bool {
 	return bool(C.E1_in_G1((*C.E1)(pt)))
 }
 
 // checkMembershipG2 wraps a call to a subgroup check in G2 since cgo can't be used
 // in go test files.
-func checkMembershipG2(pt *pointE2) bool {
+func CheckMembershipG2(pt *PointE2) bool {
 	return bool(C.E2_in_G2((*C.E2)(pt)))
 }
 
 // This is only a TEST/DEBUG/BENCH function.
 // It returns the hash-to-G1 point from a slice of 128 bytes
-func mapToG1(data []byte) *pointE1 {
+func MapToG1(data []byte) *PointE1 {
 	l := len(data)
-	var h pointE1
+	var h PointE1
 	if C.map_to_G1((*C.E1)(&h), (*C.uchar)(&data[0]), (C.int)(l)) != valid {
 		return nil
 	}
@@ -341,26 +341,26 @@ func mapToG1(data []byte) *pointE1 {
 // mapToG1 is a test function, it wraps a call to C since cgo can't be used in go test files.
 // It maps input bytes to a point in G2 and stores it in input point.
 // THIS IS NOT the kind of mapping function that is used in BLS signature.
-func unsafeMapToG1(pt *pointE1, seed []byte) {
+func unsafeMapToG1(pt *PointE1, seed []byte) {
 	C.unsafe_map_bytes_to_G1((*C.E1)(pt), (*C.uchar)(&seed[0]), (C.int)(len(seed)))
 }
 
 // unsafeMapToG1Complement is a test function, it wraps a call to C since cgo can't be used in go test files.
 // It generates a random point in E2\G2 and stores it in input point.
-func unsafeMapToG1Complement(pt *pointE1, seed []byte) {
+func UnsafeMapToG1Complement(pt *PointE1, seed []byte) {
 	C.unsafe_map_bytes_to_G1complement((*C.E1)(pt), (*C.uchar)(&seed[0]), (C.int)(len(seed)))
 }
 
 // unsafeMapToG2 is a test function, it wraps a call to C since cgo can't be used in go test files.
 // It maps input bytes to a point in G2 and stores it in input point.
 // THIS IS NOT the kind of mapping function that is used in BLS signature.
-func unsafeMapToG2(pt *pointE2, seed []byte) {
+func unsafeMapToG2(pt *PointE2, seed []byte) {
 	C.unsafe_map_bytes_to_G2((*C.E2)(pt), (*C.uchar)(&seed[0]), (C.int)(len(seed)))
 }
 
 // unsafeMapToG2Complement is a test function, it wraps a call to C since cgo can't be used in go test files.
 // It generates a random point in E2\G2 and stores it in input point.
-func unsafeMapToG2Complement(pt *pointE2, seed []byte) {
+func unsafeMapToG2Complement(pt *PointE2, seed []byte) {
 	C.unsafe_map_bytes_to_G2complement((*C.E2)(pt), (*C.uchar)(&seed[0]), (C.int)(len(seed)))
 }
 
@@ -368,7 +368,7 @@ func unsafeMapToG2Complement(pt *pointE2, seed []byte) {
 // It hashes `data` to a G1 point using the tag `dst` and returns the G1 point serialization.
 // The function uses xmd with SHA256 in the hash-to-field.
 func hashToG1Bytes(data, dst []byte) []byte {
-	hash := make([]byte, expandMsgOutput)
+	hash := make([]byte, ExpandMsgOutput)
 
 	inputLength := len(data)
 	if len(data) == 0 {
@@ -377,49 +377,49 @@ func hashToG1Bytes(data, dst []byte) []byte {
 
 	// XMD using SHA256
 	C.xmd_sha256((*C.uchar)(&hash[0]),
-		(C.int)(expandMsgOutput),
+		(C.int)(ExpandMsgOutput),
 		(*C.uchar)(&data[0]), (C.int)(inputLength),
 		(*C.uchar)(&dst[0]), (C.int)(len(dst)))
 
 	// map the hash to G1
-	var point pointE1
+	var point PointE1
 	if C.map_to_G1((*C.E1)(&point), (*C.uchar)(&hash[0]), (C.int)(len(hash))) != valid {
 		return nil
 	}
 
 	// serialize the point
-	pointBytes := make([]byte, g1BytesLen)
-	writePointE1(pointBytes, &point)
+	pointBytes := make([]byte, G1BytesLen)
+	WritePointE1(pointBytes, &point)
 	return pointBytes
 }
 
-func isG1Compressed() bool {
-	return g1BytesLen == fpBytesLen
+func IsG1Compressed() bool {
+	return G1BytesLen == FpBytesLen
 }
 
-func isG2Compressed() bool {
-	return g2BytesLen == 2*fpBytesLen
+func IsG2Compressed() bool {
+	return G2BytesLen == 2*FpBytesLen
 }
 
 // This is only a TEST function used to bench the package pairing
 // It assumes E1 and E2 inputs are in G1 and G2 respectively, and have the same length.
-func multi_pairing(p1 []pointE1, p2 []pointE2) {
+func multiPairing(p1 []PointE1, p2 []PointE2) {
 	var res C.Fp12
 	_ = C.Fp12_multi_pairing(&res, (*C.E1)(&p1[0]), (*C.E2)(&p2[0]), (C.int)(len(p1)))
 }
 
 // Addition in E1, used in benchmark
-func addE1(res *pointE1, p1 *pointE1, p2 *pointE1) {
+func addE1(res *PointE1, p1 *PointE1, p2 *PointE1) {
 	C.E1_add((*C.E1)(res), (*C.E1)(p1), (*C.E1)(p2))
 }
 
 // Addition in E2, used in benchmark
-func addE2(res *pointE2, p1 *pointE2, p2 *pointE2) {
+func addE2(res *PointE2, p1 *PointE2, p2 *PointE2) {
 	C.E2_add((*C.E2)(res), (*C.E2)(p1), (*C.E2)(p2))
 }
 
 // modular multiplication in F_r, used in benchmark only
 // it currently calls a Montgomery multiplication
-func multFr(res *scalar, f1 *scalar, f2 *scalar) {
+func multFr(res *Scalar, f1 *Scalar, f2 *Scalar) {
 	C.Fr_mul_montg((*C.Fr)(res), (*C.Fr)(f1), (*C.Fr)(f2))
 }

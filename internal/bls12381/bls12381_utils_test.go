@@ -37,23 +37,23 @@ func TestScalarMultBLS12381(t *testing.T) {
 	expoBytes, err := hex.DecodeString("444465cb6cc2dba9474e6beeb6a9013fbf1260d073429fb14a31e63e89129390")
 	require.NoError(t, err)
 
-	var expo scalar
-	isZero := mapToFr(&expo, expoBytes)
+	var expo Scalar
+	isZero := MapToFr(&expo, expoBytes)
 	require.False(t, isZero)
 
 	// G1 generator multiplication
 	// Note that generator and random point multiplications
 	// are implemented with the same algorithm
 	t.Run("G1", func(t *testing.T) {
-		if !isG1Compressed() {
+		if !IsG1Compressed() {
 			t.Skip()
 		}
-		var p pointE1
-		generatorScalarMultG1(&p, &expo)
+		var p PointE1
+		GeneratorScalarMultG1(&p, &expo)
 		expected, err := hex.DecodeString("96484ca50719f5d2533047960878b6bae8289646c0f00a942a1e6992be9981a9e0c7a51e9918f9b19d178cf04a8018a4")
 		require.NoError(t, err)
-		pBytes := make([]byte, g1BytesLen)
-		writePointE1(pBytes, &p)
+		pBytes := make([]byte, G1BytesLen)
+		WritePointE1(pBytes, &p)
 		assert.Equal(t, pBytes, expected)
 	})
 
@@ -61,37 +61,37 @@ func TestScalarMultBLS12381(t *testing.T) {
 	// Note that generator and random point multiplications
 	// are implemented with the same algorithm
 	t.Run("G2", func(t *testing.T) {
-		if !isG2Compressed() {
+		if !IsG2Compressed() {
 			t.Skip()
 		}
-		var p pointE2
-		generatorScalarMultG2(&p, &expo)
+		var p PointE2
+		GeneratorScalarMultG2(&p, &expo)
 		expected, err := hex.DecodeString("b35f5043f166848805b98da62dcb9c5d2f25e497bd0d9c461d4a00d19e4e67cc1e813de3c99479d5a2c62fb754fd7df40c4fd60c46834c8ae665343a3ff7dc3cc929de34ad62b7b55974f4e3fd20990d3e564b96e4d33de87716052d58cf823e")
 		require.NoError(t, err)
-		pBytes := make([]byte, g2BytesLen)
-		writePointE2(pBytes, &p)
+		pBytes := make([]byte, G2BytesLen)
+		WritePointE2(pBytes, &p)
 		assert.Equal(t, pBytes, expected)
 	})
 }
 
 // G1 and G2 operations
 func BenchmarkGroupOperations(b *testing.B) {
-	seed := make([]byte, 2*frBytesLen)
+	seed := make([]byte, 2*FrBytesLen)
 	_, err := rand.Read(seed)
 	require.NoError(b, err)
 
-	var expo scalar
-	isZero := mapToFr(&expo, seed)
+	var expo Scalar
+	isZero := MapToFr(&expo, seed)
 	require.False(b, isZero)
 
-	var res pointE1
+	var res PointE1
 	// G1 generator multiplication
 	// Note that generator and random point multiplications
 	// are currently implemented with the same algorithm
 	b.Run("G1 gen expo", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			generatorScalarMultG1(&res, &expo)
+			GeneratorScalarMultG1(&res, &expo)
 		}
 	})
 
@@ -101,7 +101,7 @@ func BenchmarkGroupOperations(b *testing.B) {
 	b.Run("E1 rand expo", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			res.scalarMultE1(&res, &expo)
+			res.ScalarMultE1(&res, &expo)
 		}
 	})
 
@@ -109,16 +109,16 @@ func BenchmarkGroupOperations(b *testing.B) {
 	// Note that generator and random point multiplications
 	// are implemented with the same algorithm
 	b.Run("G2 gen expo", func(b *testing.B) {
-		var res pointE2
+		var res PointE2
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			generatorScalarMultG2(&res, &expo)
+			GeneratorScalarMultG2(&res, &expo)
 		}
 	})
 
-	var p1, p2 pointE1
-	unsafeMapToG1(&p1, seed[:frBytesLen])
-	unsafeMapToG1(&p2, seed[frBytesLen:])
+	var p1, p2 PointE1
+	unsafeMapToG1(&p1, seed[:FrBytesLen])
+	unsafeMapToG1(&p2, seed[FrBytesLen:])
 
 	b.Run("G1 add", func(b *testing.B) {
 		b.ResetTimer()
@@ -127,9 +127,9 @@ func BenchmarkGroupOperations(b *testing.B) {
 		}
 	})
 
-	var q1, q2 pointE2
-	unsafeMapToG2(&q1, seed[:frBytesLen])
-	unsafeMapToG2(&q2, seed[frBytesLen:])
+	var q1, q2 PointE2
+	unsafeMapToG2(&q1, seed[:FrBytesLen])
+	unsafeMapToG2(&q2, seed[FrBytesLen:])
 
 	b.Run("G2 add", func(b *testing.B) {
 		b.ResetTimer()
@@ -141,7 +141,7 @@ func BenchmarkGroupOperations(b *testing.B) {
 
 // Sanity-check of the map-to-G1 with regards to the IETF draft hash-to-curve
 func TestMapToG1(t *testing.T) {
-	if !isG1Compressed() {
+	if !IsG1Compressed() {
 		t.Skip()
 	}
 	// test vectors from https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-14#appendix-J.9.1
@@ -177,14 +177,14 @@ func TestMapToG1(t *testing.T) {
 
 // Hashing to G1 bench
 func BenchmarkMapToG1(b *testing.B) {
-	input := make([]byte, expandMsgOutput)
+	input := make([]byte, ExpandMsgOutput)
 	for i := 0; i < len(input); i++ {
 		input[i] = byte(i)
 	}
 	b.ResetTimer()
-	var p *pointE1
+	var p *PointE1
 	for i := 0; i < b.N; i++ {
-		p = mapToG1(input)
+		p = MapToG1(input)
 	}
 	require.NotNil(b, p)
 }
@@ -197,45 +197,45 @@ func TestSubgroupCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("G1", func(t *testing.T) {
-		var p pointE1
+		var p PointE1
 		unsafeMapToG1(&p, seed) // point in G1
-		assert.True(t, checkMembershipG1(&p))
+		assert.True(t, CheckMembershipG1(&p))
 
-		unsafeMapToG1Complement(&p, seed) // point in E2\G2
-		assert.False(t, checkMembershipG1(&p))
+		UnsafeMapToG1Complement(&p, seed) // point in E2\G2
+		assert.False(t, CheckMembershipG1(&p))
 	})
 
 	t.Run("G2", func(t *testing.T) {
-		var p pointE2
+		var p PointE2
 		unsafeMapToG2(&p, seed) // point in G2
-		assert.True(t, checkMembershipG2(&p))
+		assert.True(t, CheckMembershipG2(&p))
 
 		unsafeMapToG2Complement(&p, seed) // point in E2\G2
-		assert.False(t, checkMembershipG2(&p))
+		assert.False(t, CheckMembershipG2(&p))
 	})
 }
 
 // subgroup membership check bench
 func BenchmarkSubgroupCheck(b *testing.B) {
-	seed := make([]byte, g2BytesLen)
+	seed := make([]byte, G2BytesLen)
 	_, err := rand.Read(seed)
 	require.NoError(b, err)
 
 	b.Run("G1", func(b *testing.B) {
-		var p pointE1
+		var p PointE1
 		unsafeMapToG1(&p, seed) // point in G1
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = checkMembershipG1(&p) // G1
+			_ = CheckMembershipG1(&p) // G1
 		}
 	})
 
 	b.Run("G2", func(b *testing.B) {
-		var p pointE2
+		var p PointE2
 		unsafeMapToG2(&p, seed) // point in G2
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = checkMembershipG2(&p) // G2
+			_ = CheckMembershipG2(&p) // G2
 		}
 	})
 }
@@ -244,33 +244,35 @@ func BenchmarkSubgroupCheck(b *testing.B) {
 // G2 points read and write are implicitly tested by public keys Encode/Decode.
 func TestReadWriteG1(t *testing.T) {
 	prg := internal.GetPRG(t)
-	seed := make([]byte, frBytesLen)
-	bytes := make([]byte, g1BytesLen)
+	seed := make([]byte, FrBytesLen)
+	bytes := make([]byte, G1BytesLen)
 	// generate a random G1 point, encode it, decode it,
 	// and compare it the original point
 	t.Run("random points", func(t *testing.T) {
 		iterations := 50
 		for i := 0; i < iterations; i++ {
-			var p, q pointE1
+			var p, q PointE1
 			_, err := prg.Read(seed)
 			unsafeMapToG1(&p, seed)
 			require.NoError(t, err)
-			writePointE1(bytes, &p)
-			err = readPointE1(&q, bytes)
+			WritePointE1(bytes, &p)
+			err = ReadPointE1(&q, bytes)
 			require.NoError(t, err)
-			assert.True(t, p.equals(&q))
+			assert.True(t, p.Equals(&q))
 		}
 	})
 
 	t.Run("infinity", func(t *testing.T) {
-		var p, q pointE1
-		seed := make([]byte, frBytesLen)
+		var p, q PointE1
+		seed := make([]byte, FrBytesLen)
 		unsafeMapToG1(&p, seed) // this results in the infinity point given how `unsafeMapToG1` works with an empty scalar
-		writePointE1(bytes, &p)
-		require.Equal(t, bytes, g1Serialization) // sanity check
-		err := readPointE1(&q, bytes)
+		WritePointE1(bytes, &p)
+		unsafeMapToG1(&p, seed) // this results in the infinity point given how `unsafeMapToG1` works with an empty scalar
+		WritePointE1(bytes, &p)
+		require.Equal(t, bytes, G1Serialization) // sanity check
+		err := ReadPointE1(&q, bytes)
 		require.NoError(t, err)
-		assert.True(t, p.equals(&q))
+		assert.True(t, p.Equals(&q))
 	})
 }
 
@@ -278,44 +280,44 @@ func TestReadWriteG1(t *testing.T) {
 //   - inputs `0` and curve order `r`
 //   - inputs `1` and `r+1`
 func TestMapToFr(t *testing.T) {
-	var x scalar
+	var x Scalar
 	offset := 10
-	bytes := make([]byte, frBytesLen+offset)
-	expectedEncoding := make([]byte, frBytesLen)
+	bytes := make([]byte, FrBytesLen+offset)
+	expectedEncoding := make([]byte, FrBytesLen)
 	// zero bytes
-	isZero := mapToFr(&x, bytes)
+	isZero := MapToFr(&x, bytes)
 	assert.True(t, isZero)
-	assert.True(t, x.isZero())
-	assert.Equal(t, expectedEncoding, x.encode())
+	assert.True(t, x.IsZero())
+	assert.Equal(t, expectedEncoding, x.Encode())
 	// curve order bytes
 	copy(bytes[offset:], BLS12381Order)
-	isZero = mapToFr(&x, bytes)
+	isZero = MapToFr(&x, bytes)
 	assert.True(t, isZero)
-	assert.True(t, x.isZero())
-	assert.Equal(t, expectedEncoding, x.encode())
+	assert.True(t, x.IsZero())
+	assert.Equal(t, expectedEncoding, x.Encode())
 	// curve order + 1
 	g1, err := hex.DecodeString("824aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb813e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e")
 	require.NoError(t, err)
 	bytes[len(bytes)-1] += 1
-	isZero = mapToFr(&x, bytes)
+	isZero = MapToFr(&x, bytes)
 	assert.False(t, isZero)
-	assert.False(t, x.isZero())
-	expectedEncoding[frBytesLen-1] = 1
-	assert.Equal(t, expectedEncoding, x.encode())
+	assert.False(t, x.IsZero())
+	expectedEncoding[FrBytesLen-1] = 1
+	assert.Equal(t, expectedEncoding, x.Encode())
 	// check scalar is equal to "1" in the lower layer (scalar multiplication)
-	var y pointE2
-	generatorScalarMultG2(&y, &x)
-	assert.Equal(t, y.encode(), g1, "scalar should be 1, check endianness in the C layer")
+	var y PointE2
+	GeneratorScalarMultG2(&y, &x)
+	assert.Equal(t, y.Encode(), g1, "scalar should be 1, check endianness in the C layer")
 	// 1
 	copy(bytes[offset:], expectedEncoding)
-	isZero = mapToFr(&x, bytes)
+	isZero = MapToFr(&x, bytes)
 	assert.False(t, isZero)
-	assert.False(t, x.isZero())
-	expectedEncoding[frBytesLen-1] = 1
-	assert.Equal(t, expectedEncoding, x.encode())
+	assert.False(t, x.IsZero())
+	expectedEncoding[FrBytesLen-1] = 1
+	assert.Equal(t, expectedEncoding, x.Encode())
 	// check scalar is equal to "1" in the lower layer (scalar multiplication)
-	generatorScalarMultG2(&y, &x)
-	assert.Equal(t, y.encode(), g1, "scalar should be 1, check endianness in the C layer")
+	GeneratorScalarMultG2(&y, &x)
+	assert.Equal(t, y.Encode(), g1, "scalar should be 1, check endianness in the C layer")
 }
 
 // pairing bench
@@ -323,22 +325,22 @@ func BenchmarkPairing(b *testing.B) {
 	const pairingsNumber = 3
 
 	// Build random G1 ad G2 points
-	seed := make([]byte, pairingsNumber*frBytesLen)
+	seed := make([]byte, pairingsNumber*FrBytesLen)
 	_, err := rand.Read(seed)
 	require.NoError(b, err)
 
-	pointsG1 := make([]pointE1, pairingsNumber)
-	pointsG2 := make([]pointE2, pairingsNumber)
+	pointsG1 := make([]PointE1, pairingsNumber)
+	pointsG2 := make([]PointE2, pairingsNumber)
 	for i := 0; i < pairingsNumber; i++ {
-		unsafeMapToG1(&pointsG1[i], seed[i*frBytesLen:(i+1)*frBytesLen])
-		unsafeMapToG2(&pointsG2[i], seed[i*frBytesLen:(i+1)*frBytesLen])
+		unsafeMapToG1(&pointsG1[i], seed[i*FrBytesLen:(i+1)*FrBytesLen])
+		unsafeMapToG2(&pointsG2[i], seed[i*FrBytesLen:(i+1)*FrBytesLen])
 	}
 
 	for p := 1; p <= pairingsNumber; p++ {
 		b.Run(fmt.Sprintf("%d pairing(s)", p), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				multi_pairing(pointsG1[:p], pointsG2[:p])
+				multiPairing(pointsG1[:p], pointsG2[:p])
 			}
 		})
 	}
@@ -346,14 +348,14 @@ func BenchmarkPairing(b *testing.B) {
 
 // F_r operations
 func BenchmarkFrOperation(b *testing.B) {
-	seed := make([]byte, 2*frBytesLen)
+	seed := make([]byte, 2*FrBytesLen)
 	_, err := rand.Read(seed)
 	require.NoError(b, err)
 
-	var f1, f2 scalar
-	isZero := mapToFr(&f1, seed[:frBytesLen])
+	var f1, f2 Scalar
+	isZero := MapToFr(&f1, seed[:FrBytesLen])
 	require.False(b, isZero)
-	isZero = mapToFr(&f2, seed[frBytesLen:])
+	isZero = MapToFr(&f2, seed[FrBytesLen:])
 	require.False(b, isZero)
 
 	b.Run("modular mult", func(b *testing.B) {
