@@ -34,7 +34,6 @@ endif
 # test all packages
 .PHONY: test
 test:
-	# TODO: run some packages with cgo disabled
 	CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./...
 
 

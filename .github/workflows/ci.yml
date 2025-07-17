@@ -41,6 +41,17 @@ jobs:
       uses: golangci/golangci-lint-action@v7
       with:
         version: ${{ env.LINT_VERSION }}
+        args: internal/bls12381 sign/bls
+        # https://github.com/golangci/golangci-lint-action/issues/244
+        skip-cache: true
+    - name: Run golangci-lint without cgo
+      env:
+        # TODO: run separate packages with cgo disabled
+        CGO_ENABLED: 0
+      uses: golangci/golangci-lint-action@v7
+      with:
+        version: ${{ env.LINT_VERSION }}
+        args: --skip-dirs='^(internal/bls12381|sign/bls)$'
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
 
