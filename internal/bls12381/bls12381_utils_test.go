@@ -226,7 +226,7 @@ func BenchmarkSubgroupCheck(b *testing.B) {
 		unsafeMapToG1(&p, seed) // point in G1
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = CheckMembershipG1(&p) // G1
+			_ = p.CheckMembershipG1() // G1
 		}
 	})
 
@@ -235,7 +235,7 @@ func BenchmarkSubgroupCheck(b *testing.B) {
 		unsafeMapToG2(&p, seed) // point in G2
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = CheckMembershipG2(&p) // G2
+			_ = p.CheckMembershipG2() // G2
 		}
 	})
 }
