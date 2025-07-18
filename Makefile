@@ -45,7 +45,7 @@ recurse:
 	  skip="no"; \
 	  for p in $$exclude; do \
 	    case "$$dir" in \
-	      "$$p"/*) skip="yes"; break ;; \
+	      "$$p"*) skip="yes"; break ;; \
 	    esac; \
 	  done; \
 	  if [ "$$skip" = "no" ]; then \
