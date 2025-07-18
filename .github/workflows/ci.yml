@@ -73,7 +73,7 @@ jobs:
       - name: run C format
         run: make recurse cmd="c-format" exclude="./. ./internal/blst ./internal/bls12381/blst_src ./_tmp"
       - name: run C sanitizers
-        run: make recurse cmd="c-sanitize" exclude="./. ./random ./hash ./sign/ecdsa ./_tmp"
+        run: make recurse cmd="c-sanitize" exclude="./. ./internal/blst ./internal/bls12381/blst_src ./random ./hash ./sign/ecdsa ./_tmp"
       
 
   unit-tests:
