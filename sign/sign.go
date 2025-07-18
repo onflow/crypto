@@ -23,6 +23,7 @@ import (
 	"reflect"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/internal"
 )
 
 // SigningAlgorithm is an identifier for a signing algorithm
@@ -38,6 +39,16 @@ const (
 	ECDSAP256
 	// ECDSASecp256k1 is ECDSA on secp256k1 curve
 	ECDSASecp256k1
+)
+
+// Key generation constants
+const (
+	// KeyGenSeedMinLen is the minimum seed length for key generation.
+	// The seed must be at least double the security bits and have enough entropy.
+	// It is still recommended that seed is generated using a secure RNG.
+	KeyGenSeedMinLen = 2 * (internal.SecurityBits / 8)
+	// KeyGenSeedMaxLen is the maximum seed length for key generation.
+	KeyGenSeedMaxLen = 256
 )
 
 // String returns the string representation of this signing algorithm.

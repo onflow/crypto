@@ -22,7 +22,6 @@
 
 #include "bls12381_utils.h"
 #include "assert.h"
-#include "bls_include.h"
 
 // compile all blst C src along with this file
 #include "blst_src.c"

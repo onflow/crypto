@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package crypto
+package bls
 
 // This file contains tests against the library BLST (https://github.com/supranational/blst).
 // The purpose of these tests is to detect differences with a different implementation of BLS on the BLS12-381
@@ -41,13 +41,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
+	bls12 "github.com/onflow/crypto/internal/bls12381"
 	"github.com/onflow/crypto/internal/blst"
 	"github.com/onflow/crypto/sign"
 )
 
 // validPrivateKeyBytesFlow generates bytes of a valid private key in Flow library
 func validPrivateKeyBytesFlow(t *rapid.T) []byte {
-	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
+	seed := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
 	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	// TODO: require.NoError(t, err) seems to mess with rapid
 	if err != nil {
@@ -58,7 +59,7 @@ func validPrivateKeyBytesFlow(t *rapid.T) []byte {
 
 // validPublicKeyBytesFlow generates bytes of a valid public key in Flow library
 func validPublicKeyBytesFlow(t *rapid.T) []byte {
-	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
+	seed := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
 	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	require.NoError(t, err)
 	return sk.PublicKey().Encode()
@@ -66,7 +67,7 @@ func validPublicKeyBytesFlow(t *rapid.T) []byte {
 
 // validSignatureBytesFlow generates bytes of a valid signature in Flow library
 func validSignatureBytesFlow(t *rapid.T) []byte {
-	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
+	seed := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
 	sk, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	require.NoError(t, err)
 	hasher := NewExpandMsgXOFKMAC128("random_tag")
@@ -78,14 +79,14 @@ func validSignatureBytesFlow(t *rapid.T) []byte {
 
 // validPrivateKeyBytesBLST generates bytes of a valid private key in BLST library
 func validPrivateKeyBytesBLST(t *rapid.T) []byte {
-	randomSlice := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen)
+	randomSlice := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen)
 	ikm := randomSlice.Draw(t, "ikm").([]byte)
 	return blst.KeyGen(ikm).Serialize()
 }
 
 // validPublicKeyBytesBLST generates bytes of a valid public key in BLST library
 func validPublicKeyBytesBLST(t *rapid.T) []byte {
-	ikm := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "ikm").([]byte)
+	ikm := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "ikm").([]byte)
 	blstS := blst.KeyGen(ikm)
 	blstG2 := new(blst.P2Affine).From(blstS)
 	return blstG2.Compress()
@@ -93,7 +94,7 @@ func validPublicKeyBytesBLST(t *rapid.T) []byte {
 
 // validSignatureBytesBLST generates bytes of a valid signature in BLST library
 func validSignatureBytesBLST(t *rapid.T) []byte {
-	ikm := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "ikm").([]byte)
+	ikm := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "ikm").([]byte)
 	blstS := blst.KeyGen(ikm[:])
 	blstG1 := new(blst.P1Affine).From(blstS)
 	return blstG1.Compress()
@@ -156,16 +157,16 @@ func testEncodeDecodePublicKeyCrossBLST(t *rapid.T) {
 // testEncodeDecodeG1CrossBLST tests encoding and decoding of G1 points are consistent with BLST.
 // This test assumes signature serialization is identical to BLST.
 func testEncodeDecodeG1CrossBLST(t *rapid.T) {
-	randomSlice := rapid.SliceOfN(rapid.Byte(), g1BytesLen, g1BytesLen)
+	randomSlice := rapid.SliceOfN(rapid.Byte(), bls12.G1BytesLen, bls12.G1BytesLen)
 	validSignatureFlow := rapid.Custom(validSignatureBytesFlow)
 	validSignatureBLST := rapid.Custom(validSignatureBytesBLST)
 	// sigBytes are bytes of either a valid serialization of a E1/G1 point, or random bytes
 	sigBytes := rapid.OneOf(randomSlice, validSignatureFlow, validSignatureBLST).Example().([]byte)
 
 	// check decoding results are consistent
-	var pointFlow pointE1
-	err := readPointE1(&pointFlow, sigBytes)
-	flowPass := (err == nil) && (checkMembershipG1(&pointFlow))
+	var pointFlow bls12.PointE1
+	err := bls12.ReadPointE1(&pointFlow, sigBytes)
+	flowPass := (err == nil) && (pointFlow.CheckMembershipG1())
 
 	var pointBLST blst.P1Affine
 	// res is non-nil iff point is in G1
@@ -176,8 +177,8 @@ func testEncodeDecodeG1CrossBLST(t *rapid.T) {
 
 	// check both serializations of G1 points are equal
 	if flowPass && blstPass {
-		sigFlowOutBytes := make([]byte, g1BytesLen)
-		writePointE1(sigFlowOutBytes, &pointFlow)
+		sigFlowOutBytes := make([]byte, bls12.G1BytesLen)
+		bls12.WritePointE1(sigFlowOutBytes, &pointFlow)
 		sigBLSTOutBytes := pointBLST.Compress()
 		assert.Equal(t, sigFlowOutBytes, sigBLSTOutBytes)
 	}
@@ -221,7 +222,7 @@ func testSignHashCrossBLST(t *rapid.T) {
 }
 
 func testKeyGenCrossBLST(t *rapid.T) {
-	seed := rapid.SliceOfN(rapid.Byte(), KeyGenSeedMinLen, KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
+	seed := rapid.SliceOfN(rapid.Byte(), sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen).Draw(t, "seed").([]byte)
 
 	skFlow, err := sign.GeneratePrivateKey(sign.BLSBLS12381, seed)
 	if err != nil {

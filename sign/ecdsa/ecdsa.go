@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package crypto
+package ecdsa
 
 // Elliptic Curve Digital Signature Algorithm is implemented as
 // defined in FIPS 186-4 (although the hash functions implemented in this package are SHA2 and SHA3).
@@ -38,6 +38,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/internal"
 	"github.com/onflow/crypto/sign"
 )
 
@@ -77,13 +78,6 @@ func init() {
 		curve: btcec.S256(),
 		algo:  sign.ECDSASecp256k1,
 	}); err != nil {
-		panic(err)
-	}
-
-	// init the BLS12-381 curve context
-	initBLS12381()
-	// register the BLS context on the BLS 12-381 curve instance in the `sign` package
-	if err := sign.RegisterSigner(sign.BLSBLS12381, &blsBLS12381Algo{algo: sign.BLSBLS12381}); err != nil {
 		panic(err)
 	}
 }
@@ -128,12 +122,12 @@ func (sk *prKeyECDSA) signHash(h hash.Hash) (sign.Signature, error) {
 //   - (signature, nil) otherwise
 func (sk *prKeyECDSA) Sign(data []byte, alg hash.Hasher) (sign.Signature, error) {
 	if alg == nil {
-		return nil, errNilHasher
+		return nil, internal.ErrNilHasher
 	}
 	// check hasher's size is at least the curve order in bytes
 	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
 	if alg.Size() < nLen {
-		return nil, invalidHasherSizeErrorf(
+		return nil, internal.InvalidHasherSizeErrorf(
 			"hasher's size should be at least %d, got %d", nLen, alg.Size())
 	}
 
@@ -171,13 +165,13 @@ func (pk *pubKeyECDSA) verifyHash(sig sign.Signature, h hash.Hash) (bool, error)
 //   - (validity, nil) otherwise
 func (pk *pubKeyECDSA) Verify(sig sign.Signature, data []byte, alg hash.Hasher) (bool, error) {
 	if alg == nil {
-		return false, errNilHasher
+		return false, internal.ErrNilHasher
 	}
 
 	// check hasher's size is at least the curve order in bytes
 	nLen := bitsToBytes((pk.alg.curve.Params().N).BitLen())
 	if alg.Size() < nLen {
-		return false, invalidHasherSizeErrorf(
+		return false, internal.InvalidHasherSizeErrorf(
 			"hasher's size should be at least %d, got %d", nLen, alg.Size())
 	}
 
@@ -259,7 +253,7 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, err
 		// `ScalarBaseMult` is not deprecated in btcec's type `KoblitzCurve`
 		priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d.Bytes())
 	} else {
-		return nil, invalidInputsErrorf("the curve is not supported")
+		return nil, internal.InvalidInputsErrorf("the curve is not supported")
 	}
 	return priv, nil
 }
@@ -270,9 +264,9 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, err
 // It is recommended to use a secure crypto RNG to generate the seed.
 // The seed must have enough entropy.
 func (a *ecdsaAlgo) GeneratePrivateKey(seed []byte) (sign.PrivateKey, error) {
-	if len(seed) < KeyGenSeedMinLen || len(seed) > KeyGenSeedMaxLen {
-		return nil, invalidInputsErrorf("seed byte length should be between %d and %d",
-			KeyGenSeedMinLen, KeyGenSeedMaxLen)
+	if len(seed) < sign.KeyGenSeedMinLen || len(seed) > sign.KeyGenSeedMaxLen {
+		return nil, internal.InvalidInputsErrorf("seed byte length should be between %d and %d",
+			sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen)
 	}
 
 	// use HKDF to extract the seed entropy and expand it into key bytes
@@ -283,14 +277,14 @@ func (a *ecdsaAlgo) GeneratePrivateKey(seed []byte) (sign.PrivateKey, error) {
 	info := ""         // HKDF info
 	// use extra 128 bits to reduce the modular reduction bias
 	nLen := bitsToBytes((a.curve.Params().N).BitLen())
-	okmLength := nLen + (securityBits / 8)
+	okmLength := nLen + (internal.SecurityBits / 8)
 
 	// instantiate HKDF and extract okm
 	okm, err := hkdf.Key(hashFunction, seed, salt, info, okmLength)
 	if err != nil {
 		return nil, fmt.Errorf("HKDF computation failed : %w", err)
 	}
-	defer overwrite(okm) // overwrite okm
+	defer internal.Overwrite(okm) // overwrite okm
 
 	sk, err := goecdsaMapKey(a.curve, okm)
 	if err != nil {
@@ -308,17 +302,17 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (sign.PrivateKey, error) {
 	n := a.curve.Params().N
 	nLen := bitsToBytes(n.BitLen())
 	if len(der) != nLen {
-		return nil, invalidInputsErrorf("input has incorrect %s key size", a.algo)
+		return nil, internal.InvalidInputsErrorf("input has incorrect %s key size", a.algo)
 	}
 	var d big.Int
 	d.SetBytes(der)
 
 	if d.Cmp(n) >= 0 {
-		return nil, invalidInputsErrorf("input is larger than the curve order of %s", a.algo)
+		return nil, internal.InvalidInputsErrorf("input is larger than the curve order of %s", a.algo)
 	}
 
 	if d.Sign() == 0 {
-		return nil, invalidInputsErrorf("zero private keys are not a valid %s key", a.algo)
+		return nil, internal.InvalidInputsErrorf("zero private keys are not a valid %s key", a.algo)
 	}
 
 	priv, err := goecdsaPrivateKey(a.curve, &d) // n > d > 0 at this point
@@ -348,7 +342,7 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (sign.PublicKey, error) {
 	p := (curve.Params().P)
 	pLen := bitsToBytes(p.BitLen())
 	if len(der) != 2*pLen {
-		return nil, invalidInputsErrorf("input has incorrect %s key size, got %d, expects %d",
+		return nil, internal.InvalidInputsErrorf("input has incorrect %s key size, got %d, expects %d",
 			a.algo, len(der), 2*pLen)
 	}
 	var x, y big.Int
@@ -357,7 +351,7 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (sign.PublicKey, error) {
 
 	// check the coordinates are valid field elements
 	if x.Cmp(p) >= 0 || y.Cmp(p) >= 0 {
-		return nil, invalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
+		return nil, internal.InvalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
 	}
 
 	// all the curves supported for now have a cofactor equal to 1,
@@ -374,15 +368,15 @@ func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (sign.PublicKey, error) {
 
 		_, err := ecdh.P256().NewPublicKey(ecdhPubBytes)
 		if err != nil {
-			return nil, invalidInputsErrorf("input is not a point on curve P-256: %w", err)
+			return nil, internal.InvalidInputsErrorf("input is not a point on curve P-256: %w", err)
 		}
 	} else if curve == btcec.S256() {
 		// `IsOnCurve` is not deprecated in btcec's type `KoblitzCurve`
 		if !btcec.S256().IsOnCurve(&x, &y) {
-			return nil, invalidInputsErrorf("input is not a point on curve secp256k1")
+			return nil, internal.InvalidInputsErrorf("input is not a point on curve secp256k1")
 		}
 	} else {
-		return nil, invalidInputsErrorf("curve is not supported")
+		return nil, internal.InvalidInputsErrorf("curve is not supported")
 	}
 
 	pk := ecdsa.PublicKey{
@@ -409,14 +403,14 @@ func (a *ecdsaAlgo) DecodePublicKey(der []byte) (sign.PublicKey, error) {
 func (a *ecdsaAlgo) DecodePublicKeyCompressed(pkBytes []byte) (sign.PublicKey, error) {
 	expectedLen := bitsToBytes(a.curve.Params().BitSize) + 1
 	if len(pkBytes) != expectedLen {
-		return nil, invalidInputsErrorf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes))
+		return nil, internal.InvalidInputsErrorf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes))
 	}
 	var goPubKey *ecdsa.PublicKey
 
 	if a.curve == elliptic.P256() {
 		x, y := elliptic.UnmarshalCompressed(a.curve, pkBytes)
 		if x == nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
+			return nil, internal.InvalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
 		}
 		goPubKey = new(ecdsa.PublicKey)
 		goPubKey.Curve = a.curve
@@ -427,12 +421,12 @@ func (a *ecdsaAlgo) DecodePublicKeyCompressed(pkBytes []byte) (sign.PublicKey, e
 		// use `btcec` because elliptic's `UnmarshalCompressed` doesn't work for SEC Koblitz curves
 		pk, err := btcec.ParsePubKey(pkBytes)
 		if err != nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
+			return nil, internal.InvalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
 		}
 		// convert to a crypto/ecdsa key
 		goPubKey = pk.ToECDSA()
 	} else {
-		return nil, invalidInputsErrorf("the input curve is not supported")
+		return nil, internal.InvalidInputsErrorf("the input curve is not supported")
 	}
 	return &pubKeyECDSA{a, goPubKey}, nil
 }
