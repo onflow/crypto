@@ -39,9 +39,18 @@ test:
 
 # recurse through all subdirectories and run the argument command "cmd"
 .PHONY: recurse
+exclude ?= ""
 recurse:
-	@find . -type d ! -path '*/\.*' | while read dir; do \
-		( make $(cmd) path="$$dir"); \
+	find . -type d | while read dir; do \
+	  skip="no"; \
+	  for p in $$exclude; do \
+	    case "$$dir" in \
+	      "$$p"/*) skip="yes"; break ;; \
+	    esac; \
+	  done; \
+	  if [ "$$skip" = "no" ]; then \
+	    (make $(cmd) path="$$dir") \
+	  fi; \
 	done
 
 # format C code

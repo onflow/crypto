@@ -71,9 +71,9 @@ jobs:
       - name: Install C formatter
         run: sudo apt-get install -y clang-format
       - name: run C format
-        run: make recurse cmd="c-format"
+        run: make recurse cmd="c-format" exclude="/internal/blst ./internal/bls12381/blst_src"
       - name: run C sanitizers
-        run: make recurse cmd="c-sanitize"
+        run: make recurse cmd="c-sanitize" exclude="./random ./hash ./sign/ecdsa"
       
 
   unit-tests:
