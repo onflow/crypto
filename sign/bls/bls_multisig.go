@@ -22,8 +22,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"unsafe"
 
-	"github.com/onflow/crypto/common"
+	"github.com/onflow/crypto"
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/internal"
 	bls12 "github.com/onflow/crypto/internal/bls12381"
@@ -171,7 +172,7 @@ func AggregateBLSPrivateKeys(keys []sign.PrivateKey) (sign.PrivateKey, error) {
 	}
 
 	var sum bls12.Scalar
-	C.Fr_sum_vector((*C.Fr)(&sum), (*C.Fr)(&scalars[0]),
+	C.Fr_sum_vector((*C.Fr)(unsafe.Pointer(&sum)), (*C.Fr)(unsafe.Pointer(&scalars[0])),
 		(C.int)(len(scalars)))
 	return newPrKeyBLSBLS12381(&sum), nil
 }
@@ -206,8 +207,7 @@ func AggregateBLSPublicKeys(keys []sign.PublicKey) (sign.PublicKey, error) {
 	}
 
 	var sum bls12.PointE2
-	C.E2_sum_vector_to_affine((*C.E2)(&sum), (*C.E2)(&points[0]),
-		(C.int)(len(points)))
+	bls12.SumE2VectorToAffine(&sum, points)
 
 	sumKey := newPubKeyBLSBLS12381(&sum)
 	return sumKey, nil
@@ -255,8 +255,7 @@ func RemoveBLSPublicKeys(aggKey sign.PublicKey, keysToRemove []sign.PublicKey) (
 	}
 
 	var resultPoint bls12.PointE2
-	C.E2_subtract_vector((*C.E2)(&resultPoint), (*C.E2)(&aggPKBLS.point),
-		(*C.E2)(&pointsToSubtract[0]), (C.int)(len(pointsToSubtract)))
+	bls12.SubtractE2VectorToAffine(&resultPoint, &aggPKBLS.point, pointsToSubtract)
 
 	resultKey := newPubKeyBLSBLS12381(&resultPoint)
 	return resultKey, nil
@@ -342,7 +341,7 @@ func VerifyBLSSignatureManyMessages(
 		return false, fmt.Errorf("invalid list of public keys: %w", errBLSAggregateEmptyList)
 	}
 	if len(pks) != len(messages) || len(kmac) != len(messages) {
-		return false, common.InvalidInputsErrorf(
+		return false, crypto.InvalidInputsErrorf(
 			"input lists must be equal, messages are %d, keys are %d, hashers are %d",
 			len(messages),
 			len(pks),
@@ -410,13 +409,13 @@ func VerifyBLSSignatureManyMessages(
 			(*C.uchar)(&flatDistinctHashes[0]),
 			(*C.uint32_t)(&lenHashes[0]),
 			(*C.uint32_t)(&pkPerHash[0]),
-			(*C.E2)(&allPks[0]),
+			(*C.E2)(unsafe.Pointer(&allPks[0])),
 		)
 
 	} else {
 		// aggregate hashes per distinct key
 		// using the linearity of the pairing on the G1 variables.
-		distinctPks := make([]pointE2, 0, len(mapPerPk))
+		distinctPks := make([]bls12.PointE2, 0, len(mapPerPk))
 		hashPerPk := make([]uint32, 0, len(mapPerPk))
 		flatHashes := make([]byte, 0)
 		lenHashes := make([]uint32, 0)
@@ -432,7 +431,7 @@ func VerifyBLSSignatureManyMessages(
 		verif = C.bls_verifyPerDistinctKey(
 			(*C.uchar)(&s[0]),
 			(C.int)(len(mapPerPk)),
-			(*C.E2)(&distinctPks[0]),
+			(*C.E2)(unsafe.Pointer(&distinctPks[0])),
 			(*C.uint32_t)(&hashPerPk[0]),
 			(*C.uchar)(&flatHashes[0]),
 			(*C.uint32_t)(&lenHashes[0]))
@@ -491,7 +490,7 @@ func BatchVerifyBLSSignaturesOneMessage(
 	}
 
 	if len(pks) != len(sigs) {
-		return falseSlice, common.InvalidInputsErrorf(
+		return falseSlice, crypto.InvalidInputsErrorf(
 			"keys length %d and signatures length %d are mismatching",
 			len(pks),
 			len(sigs))
@@ -545,7 +544,7 @@ func BatchVerifyBLSSignaturesOneMessage(
 	C.bls_batch_verify(
 		(C.int)(len(verifInt)),
 		(*C.uchar)(&verifInt[0]),
-		(*C.E2)(&pkPoints[0]),
+		(*C.E2)(unsafe.Pointer(&pkPoints[0])),
 		(*C.uchar)(&flatSigs[0]),
 		(*C.uchar)(&h[0]),
 		(C.int)(len(h)),
