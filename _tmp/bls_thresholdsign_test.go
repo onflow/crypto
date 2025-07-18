@@ -31,6 +31,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/crypto/sign"
 )
 
 func TestBLSThresholdSignature(t *testing.T) {
@@ -279,7 +281,7 @@ func testCentralizedStatefulAPI(t *testing.T) {
 		t.Run("constructor errors", func(t *testing.T) {
 			// invalid keys size
 			index := rand.Intn(n)
-			pkSharesInvalid := make([]PublicKey, ThresholdSignMaxSize+1)
+			pkSharesInvalid := make([]sign.PublicKey, ThresholdSignMaxSize+1)
 			tsFollower, err := NewBLSThresholdSignatureInspector(pkGroup, pkSharesInvalid, threshold, thresholdSignatureMessage, thresholdSignatureTag)
 			assert.Error(t, err)
 			assert.True(t, IsInvalidInputsError(err))
@@ -288,7 +290,7 @@ func testCentralizedStatefulAPI(t *testing.T) {
 			seed := make([]byte, KeyGenSeedMinLen)
 			_, err = rand.Read(seed)
 			require.NoError(t, err)
-			skEcdsa, err := GeneratePrivateKey(ECDSAP256, seed)
+			skEcdsa, err := sign.GeneratePrivateKey(sign.ECDSAP256, seed)
 			require.NoError(t, err)
 			tmp := pkShares[0]
 			pkShares[0] = skEcdsa.PublicKey()
@@ -553,11 +555,11 @@ func tsRunChan(proc *testDKGProcessor, sync *sync.WaitGroup, t *testing.T) {
 // This stucture holds the keys and is needed for the stateless test
 type statelessKeys struct {
 	// the current participant private key (a DKG output)
-	myPrivateKey PrivateKey
+	myPrivateKey sign.PrivateKey
 	// the group public key (a DKG output)
-	groupPublicKey PublicKey
+	groupPublicKey sign.PublicKey
 	// the group public key shares (a DKG output)
-	publicKeyShares []PublicKey
+	publicKeyShares []sign.PublicKey
 }
 
 // Centralized test of threshold signature protocol using the threshold key generation.
@@ -575,7 +577,7 @@ func testCentralizedStatelessAPI(t *testing.T) {
 		// signature hasher
 		kmac := NewExpandMsgXOFKMAC128(thresholdSignatureTag)
 		// generate signature shares
-		signShares := make([]Signature, 0, n)
+		signShares := make([]sign.Signature, 0, n)
 		signers := make([]int, 0, n)
 		// fill the signers list and shuffle it
 		for i := 0; i < n; i++ {
@@ -652,7 +654,7 @@ func BenchmarkSignatureReconstruction(b *testing.B) {
 	// signature hasher
 	kmac := NewExpandMsgXOFKMAC128(thresholdSignatureTag)
 	// generate signature shares
-	signShares := make([]Signature, 0, threshold+1)
+	signShares := make([]sign.Signature, 0, threshold+1)
 	signers := make([]int, 0, threshold+1)
 	// create (t+1) signatures of the first randomly chosen signers
 	for i := 0; i < threshold+1; i++ {

@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
-	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.36.0
 	gonum.org/v1/gonum v0.16.0

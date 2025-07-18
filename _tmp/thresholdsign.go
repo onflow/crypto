@@ -21,6 +21,8 @@ package crypto
 import (
 	"errors"
 	"fmt"
+
+	"github.com/onflow/crypto/sign"
 )
 
 // A threshold signature scheme allows a group of participants
@@ -85,7 +87,7 @@ type ThresholdSignatureInspector interface {
 	//   - (false, nil): if `index` is valid but the signature share is invalid
 	//   - (false, InvalidInputsError): if `index` is an invalid index value
 	//   - (false, error): for all other unexpected errors
-	VerifyShare(index int, share Signature) (bool, error)
+	VerifyShare(index int, share sign.Signature) (bool, error)
 
 	// VerifyThresholdSignature verifies the input signature against the stored
 	// message and stored group public key. It does not update the internal state.
@@ -95,7 +97,7 @@ type ThresholdSignatureInspector interface {
 	//   - (true, nil): if the signature is valid
 	//   - (false, nil): if the signature is invalid
 	//   - (false, error): for all other unexpected errors
-	VerifyThresholdSignature(thresholdSignature Signature) (bool, error)
+	VerifyThresholdSignature(thresholdSignature sign.Signature) (bool, error)
 
 	// EnoughShares indicates whether enough shares have been accumulated to reconstruct
 	// a group signature. This function is thread-safe and locks the internal state.
@@ -120,7 +122,7 @@ type ThresholdSignatureInspector interface {
 	//   - (false, nil): if not enough shares were collected and no error occurred
 	//   - (false, InvalidInputsError): if index is invalid
 	//   - (false, duplicatedSignerError): if a signature for the index was previously added
-	TrustedAdd(index int, share Signature) (bool, error)
+	TrustedAdd(index int, share sign.Signature) (bool, error)
 
 	// VerifyAndAdd verifies a signature share (same as `VerifyShare`),
 	// and attempts to add the share to the local pool of shares.
@@ -137,7 +139,7 @@ type ThresholdSignatureInspector interface {
 	//       public key is not considered an invalid input.
 	//     - duplicatedSignerError: if signer was already added.
 	//     - other errors: if an unexpected exception occurred.
-	VerifyAndAdd(index int, share Signature) (bool, bool, error)
+	VerifyAndAdd(index int, share sign.Signature) (bool, bool, error)
 
 	// HasShare checks whether the internal map contains the share of the given index.
 	// This function is thread-safe.
@@ -160,7 +162,7 @@ type ThresholdSignatureInspector interface {
 	//   - (nil, invalidInputsError): if the constructed signature failed to verify against the group public key and stored message.
 	//     This post-verification is required for safety, as `TrustedAdd` allows adding invalid signatures.
 	//   - (nil, error): for any other unexpected error
-	ThresholdSignature() (Signature, error)
+	ThresholdSignature() (sign.Signature, error)
 }
 
 // ThresholdSignatureParticipant is a participant in a threshold signature protocol.
@@ -174,7 +176,7 @@ type ThresholdSignatureParticipant interface {
 	// not update the internal state.
 	// This function is thread-safe.
 	// No error is expected unless an unexpected exception occurs.
-	SignShare() (Signature, error)
+	SignShare() (sign.Signature, error)
 }
 
 // duplicatedSignerError is an error returned when TrustedAdd or VerifyAndAdd encounter

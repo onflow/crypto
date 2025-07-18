@@ -23,6 +23,8 @@ import "C"
 
 import (
 	"fmt"
+
+	"github.com/onflow/crypto/sign"
 )
 
 // Implements Feldman Verifiable Secret Sharing (VSS) using
@@ -183,7 +185,7 @@ func (s *feldmanVSSQualState) NextTimeout() error {
 //     - dkgFailureError if the public key share or group public key is identity.
 //     - dkgInvalidStateTransition if Start() was not called, or NextTimeout() was not called twice
 //     - nil otherwise.
-func (s *feldmanVSSQualState) End() (PrivateKey, PublicKey, []PublicKey, error) {
+func (s *feldmanVSSQualState) End() (sign.PrivateKey, sign.PublicKey, []sign.PublicKey, error) {
 	if !s.running {
 		return nil, nil, nil, dkgInvalidStateTransitionErrorf("dkg protocol %d is not running", s.myIndex)
 	}
@@ -219,7 +221,7 @@ func (s *feldmanVSSQualState) End() (PrivateKey, PublicKey, []PublicKey, error) 
 	Y := newPubKeyBLSBLS12381(&s.vA[0])
 
 	// The participants public keys
-	y := make([]PublicKey, s.size)
+	y := make([]sign.PublicKey, s.size)
 	for i, p := range s.y {
 		y[i] = newPubKeyBLSBLS12381(&p)
 	}
