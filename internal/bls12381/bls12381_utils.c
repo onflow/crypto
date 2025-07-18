@@ -1035,12 +1035,17 @@ void E2_sum_vector_to_affine(E2 *sum, const E2 *y, const int y_len) {
   E2_to_affine(sum, sum);
 }
 
-// Subtracts all G2 array elements `y` from an element `x` and writes the
-// result in res.
-void E2_subtract_vector(E2 *res, const E2 *x, const E2 *y, const int y_len) {
+// Subtracts all G2 array elements `y` from an element `x` and assign the
+// result to res.
+//
+// Result is converted to affine. This is useful for results being used multiple
+// times in pairings. Conversion to affine saves later pre-pairing conversions.
+void E2_subtract_vector_to_affine(E2 *res, const E2 *x, const E2 *y,
+                                  const int y_len) {
   E2_sum_vector(res, y, y_len);
   E2_neg(res, res);
   E2_add(res, x, res);
+  E2_to_affine(res, res);
 }
 
 // maps the bytes to a point in G2.

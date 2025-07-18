@@ -339,13 +339,11 @@ func (s *JointFeldmanState) sumUpQualifiedKeys(qualified int) (*scalar, *pointE2
 		(C.int)(qualified))
 	// sum up Y
 	var jointPublicKey pointE2
-	C.E2_sum_vector_to_affine((*C.E2)(&jointPublicKey),
-		(*C.E2)(&qualifiedPubKey[0]), (C.int)(qualified))
+	bls12.SumE2VectorToAffine(&jointPublicKey, qualifiedPubKey)
 	// sum up []y
 	jointy := make([]pointE2, s.size)
 	for i := 0; i < s.size; i++ {
-		C.E2_sum_vector_to_affine((*C.E2)(&jointy[i]),
-			(*C.E2)(&qualifiedy[i][0]), (C.int)(qualified))
+		bls12.SumE2VectorToAffine(&jointy[i], &qualifiedy[i])
 	}
 	return &jointx, &jointPublicKey, jointy
 }

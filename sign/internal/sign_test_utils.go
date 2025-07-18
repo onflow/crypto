@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/crypto/common"
+	"github.com/onflow/crypto"
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/internal"
 	"github.com/onflow/crypto/sign"
@@ -38,30 +38,30 @@ func TestKeyGenErrors(t *testing.T) {
 	sk, err := sign.GeneratePrivateKey(invalidSigAlgo, seed)
 	assert.Nil(t, sk)
 	assert.Error(t, err)
-	assert.True(t, common.IsInvalidInputsError(err))
+	assert.True(t, crypto.IsInvalidInputsError(err))
 }
 
 func TestHasherErrors(t *testing.T) {
 	t.Run("nilHasher error sanity", func(t *testing.T) {
-		err := common.ErrNilHasher
-		invInpError := common.InvalidInputsErrorf("")
+		err := crypto.ErrNilHasher
+		invInpError := crypto.InvalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, common.IsNilHasherError(err))
-		assert.False(t, common.IsInvalidInputsError(err))
-		assert.False(t, common.IsNilHasherError(invInpError))
-		assert.False(t, common.IsNilHasherError(otherError))
-		assert.False(t, common.IsNilHasherError(nil))
+		assert.True(t, crypto.IsNilHasherError(err))
+		assert.False(t, crypto.IsInvalidInputsError(err))
+		assert.False(t, crypto.IsNilHasherError(invInpError))
+		assert.False(t, crypto.IsNilHasherError(otherError))
+		assert.False(t, crypto.IsNilHasherError(nil))
 	})
 
 	t.Run("nilHasher error sanity", func(t *testing.T) {
-		err := common.InvalidHasherSizeErrorf("")
-		invInpError := common.InvalidInputsErrorf("")
+		err := crypto.InvalidHasherSizeErrorf("")
+		invInpError := crypto.InvalidInputsErrorf("")
 		otherError := fmt.Errorf("some error")
-		assert.True(t, common.IsInvalidHasherSizeError(err))
-		assert.False(t, common.IsInvalidInputsError(err))
-		assert.False(t, common.IsInvalidHasherSizeError(invInpError))
-		assert.False(t, common.IsInvalidHasherSizeError(otherError))
-		assert.False(t, common.IsInvalidHasherSizeError(nil))
+		assert.True(t, crypto.IsInvalidHasherSizeError(err))
+		assert.False(t, crypto.IsInvalidInputsError(err))
+		assert.False(t, crypto.IsInvalidHasherSizeError(invInpError))
+		assert.False(t, crypto.IsInvalidHasherSizeError(otherError))
+		assert.False(t, crypto.IsInvalidHasherSizeError(nil))
 	})
 }
 
@@ -135,12 +135,12 @@ func TestKeyGenSeed(t *testing.T, salg sign.SigningAlgorithm, minLen int, maxLen
 		seed = make([]byte, minLen-1)
 		_, err = sign.GeneratePrivateKey(salg, seed)
 		assert.Error(t, err)
-		assert.True(t, common.IsInvalidInputsError(err))
+		assert.True(t, crypto.IsInvalidInputsError(err))
 		if maxLen > 0 {
 			seed = make([]byte, maxLen+1)
 			_, err = sign.GeneratePrivateKey(salg, seed)
 			assert.Error(t, err)
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 		}
 	})
 
@@ -233,7 +233,7 @@ func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 			bytes := make([]byte, skLens[salg]+1)
 			sk, err := sign.DecodePrivateKey(salg, bytes)
 			require.Error(t, err)
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 			assert.Nil(t, sk)
 
 			// public key
@@ -246,7 +246,7 @@ func TestEncodeDecode(t *testing.T, salg sign.SigningAlgorithm) {
 			bytes = make([]byte, pkLens[salg]+1)
 			pk, err := sign.DecodePublicKey(salg, bytes)
 			require.Error(t, err)
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 			assert.Nil(t, pk)
 		})
 	})

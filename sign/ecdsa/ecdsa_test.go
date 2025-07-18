@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/crypto/common"
+	"github.com/onflow/crypto"
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/sign"
 	"github.com/onflow/crypto/sign/internal"
@@ -90,10 +90,10 @@ func TestECDSAHasher(t *testing.T) {
 		t.Run("Empty hasher", func(t *testing.T) {
 			_, err := sk.Sign(seed, nil)
 			assert.Error(t, err)
-			assert.True(t, common.IsNilHasherError(err))
+			assert.True(t, crypto.IsNilHasherError(err))
 			_, err = sk.PublicKey().Verify(sig, seed, nil)
 			assert.Error(t, err)
-			assert.True(t, common.IsNilHasherError(err))
+			assert.True(t, crypto.IsNilHasherError(err))
 		})
 
 		// hasher with large output size
@@ -110,10 +110,10 @@ func TestECDSAHasher(t *testing.T) {
 			dummy := newDummyHasher(31) // 31 is one byte less than the supported curves' order
 			_, err := sk.Sign(seed, dummy)
 			assert.Error(t, err)
-			assert.True(t, common.IsInvalidHasherSizeError(err))
+			assert.True(t, crypto.IsInvalidHasherSizeError(err))
 			_, err = sk.PublicKey().Verify(sig, seed, dummy)
 			assert.Error(t, err)
-			assert.True(t, common.IsInvalidHasherSizeError(err))
+			assert.True(t, crypto.IsInvalidHasherSizeError(err))
 		})
 	}
 }
@@ -152,7 +152,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			skBytes := make([]byte, ecdsaPrKeyLen[curve])
 			sk, err := sign.DecodePrivateKey(curve, skBytes)
 			require.Error(t, err, "decoding identity private key should fail")
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 			assert.ErrorContains(t, err, "zero private keys are not a valid")
 			assert.Nil(t, sk)
 		})
@@ -166,7 +166,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			require.NoError(t, err)
 			sk, err := sign.DecodePrivateKey(curve, orderBytes)
 			require.Error(t, err)
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 			assert.ErrorContains(t, err, "input is larger than the curve order")
 			assert.Nil(t, sk)
 		})
@@ -179,7 +179,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			pkBytes := make([]byte, ecdsaPubKeyLen[curve])
 			pk, err := sign.DecodePublicKey(curve, pkBytes)
 			require.Error(t, err, "point is not on curve")
-			assert.True(t, common.IsInvalidInputsError(err))
+			assert.True(t, crypto.IsInvalidInputsError(err))
 			assert.ErrorContains(t, err, "input is not a point on curve")
 			assert.Nil(t, pk)
 		})

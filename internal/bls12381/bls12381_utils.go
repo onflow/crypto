@@ -102,7 +102,7 @@ var BLS12381Order = []byte{0x73, 0xED, 0xA7, 0x53, 0x29, 0x9D, 0x7D, 0x48, 0x33,
 
 // header of the point at infinity serializations
 var g1SerHeader byte // g1 (G1 identity)
-var g2SerHeader byte // g2 (G2 identity)
+var G2SerHeader byte // g2 (G2 identity)
 
 // `g1` serialization
 var G1Serialization []byte
@@ -118,9 +118,9 @@ func init() {
 	}
 	G1Serialization = append([]byte{g1SerHeader}, make([]byte, G1BytesLen-1)...)
 	if IsG2Compressed() {
-		g2SerHeader = 0xC0
+		G2SerHeader = 0xC0
 	} else {
-		g2SerHeader = 0x40
+		G2SerHeader = 0x40
 	}
 }
 
@@ -421,6 +421,17 @@ func addE1(res *PointE1, p1 *PointE1, p2 *PointE1) {
 // Addition in E2, used in benchmark
 func addE2(res *PointE2, p1 *PointE2, p2 *PointE2) {
 	C.E2_add((*C.E2)(res), (*C.E2)(p1), (*C.E2)(p2))
+}
+
+// Sum a vector of E2 points and convert the result to affine point
+func SumE2VectorToAffine(sum *PointE2, points []PointE2) {
+	C.E2_sum_vector_to_affine((*C.E2)(sum), (*C.E2)(&points[0]), (C.int)(len(points)))
+}
+
+// Subtracts all G2 array elements `y` from an element `x` and convert the
+// result to affine point
+func SubtractE2VectorToAffine(res *PointE2, x *PointE2, y []PointE2) {
+	C.E2_subtract_vector_to_affine((*C.E2)(res), (*C.E2)(x), (*C.E2)(&y[0]), (C.int)(len(y)))
 }
 
 // modular multiplication in F_r, used in benchmark only

@@ -58,7 +58,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/onflow/crypto/common"
+	"github.com/onflow/crypto"
 	"github.com/onflow/crypto/hash"
 	"github.com/onflow/crypto/internal"
 	bls12 "github.com/onflow/crypto/internal/bls12381"
@@ -268,7 +268,7 @@ func IsBLSSignatureIdentity(s sign.Signature) bool {
 // to not be equal to the identity element of Z_r (resp. G2).
 func (a *blsBLS12381Algo) GeneratePrivateKey(ikm []byte) (sign.PrivateKey, error) {
 	if len(ikm) < sign.KeyGenSeedMinLen || len(ikm) > sign.KeyGenSeedMaxLen {
-		return nil, common.InvalidInputsErrorf(
+		return nil, crypto.InvalidInputsErrorf(
 			"seed length should be at least %d bytes and at most %d bytes",
 			sign.KeyGenSeedMinLen, sign.KeyGenSeedMaxLen)
 	}
@@ -366,7 +366,7 @@ func (a *blsBLS12381Algo) DecodePublicKey(publicKeyBytes []byte) (sign.PublicKey
 
 	// membership check in G2
 	if !pk.point.CheckMembershipG2() {
-		return nil, common.InvalidInputsErrorf("input key is infinity or does not encode a BLS12-381 point in the valid group")
+		return nil, crypto.InvalidInputsErrorf("input key is infinity or does not encode a BLS12-381 point in the valid group")
 	}
 
 	// check point is non-infinity and cache it
