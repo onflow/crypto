@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package common
+package crypto
 
 import (
 	"errors"
