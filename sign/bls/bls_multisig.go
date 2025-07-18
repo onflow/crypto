@@ -16,14 +16,17 @@
  * limitations under the License.
  */
 
-package crypto
+package bls
 
 import (
 	"crypto/rand"
 	"errors"
 	"fmt"
 
+	"github.com/onflow/crypto/common"
 	"github.com/onflow/crypto/hash"
+	"github.com/onflow/crypto/internal"
+	bls12 "github.com/onflow/crypto/internal/bls12381"
 	"github.com/onflow/crypto/sign"
 )
 
@@ -131,9 +134,9 @@ func AggregateBLSSignatures(sigs []sign.Signature) (sign.Signature, error) {
 		(C.int)(len(flatSigs)))
 
 	switch result {
-	case valid:
+	case bls12.Valid:
 		return aggregatedSig, nil
-	case invalid:
+	case bls12.Invalid:
 		return nil, errInvalidSignature
 	default:
 		return nil, fmt.Errorf("aggregating signatures failed")
@@ -158,7 +161,7 @@ func AggregateBLSPrivateKeys(keys []sign.PrivateKey) (sign.PrivateKey, error) {
 		return nil, errBLSAggregateEmptyList
 	}
 
-	scalars := make([]scalar, 0, len(keys))
+	scalars := make([]bls12.Scalar, 0, len(keys))
 	for i, sk := range keys {
 		skBls, ok := sk.(*prKeyBLSBLS12381)
 		if !ok {
@@ -167,7 +170,7 @@ func AggregateBLSPrivateKeys(keys []sign.PrivateKey) (sign.PrivateKey, error) {
 		scalars = append(scalars, skBls.scalar)
 	}
 
-	var sum scalar
+	var sum bls12.Scalar
 	C.Fr_sum_vector((*C.Fr)(&sum), (*C.Fr)(&scalars[0]),
 		(C.int)(len(scalars)))
 	return newPrKeyBLSBLS12381(&sum), nil
@@ -193,7 +196,7 @@ func AggregateBLSPublicKeys(keys []sign.PublicKey) (sign.PublicKey, error) {
 		return nil, errBLSAggregateEmptyList
 	}
 
-	points := make([]pointE2, 0, len(keys))
+	points := make([]bls12.PointE2, 0, len(keys))
 	for i, pk := range keys {
 		pkBLS, ok := pk.(*pubKeyBLSBLS12381)
 		if !ok {
@@ -202,7 +205,7 @@ func AggregateBLSPublicKeys(keys []sign.PublicKey) (sign.PublicKey, error) {
 		points = append(points, pkBLS.point)
 	}
 
-	var sum pointE2
+	var sum bls12.PointE2
 	C.E2_sum_vector_to_affine((*C.E2)(&sum), (*C.E2)(&points[0]),
 		(C.int)(len(points)))
 
@@ -237,7 +240,7 @@ func RemoveBLSPublicKeys(aggKey sign.PublicKey, keysToRemove []sign.PublicKey) (
 		return nil, errNotBLSKey
 	}
 
-	pointsToSubtract := make([]pointE2, 0, len(keysToRemove))
+	pointsToSubtract := make([]bls12.PointE2, 0, len(keysToRemove))
 	for i, pk := range keysToRemove {
 		pkBLS, ok := pk.(*pubKeyBLSBLS12381)
 		if !ok {
@@ -251,7 +254,7 @@ func RemoveBLSPublicKeys(aggKey sign.PublicKey, keysToRemove []sign.PublicKey) (
 		return aggKey, nil
 	}
 
-	var resultPoint pointE2
+	var resultPoint bls12.PointE2
 	C.E2_subtract_vector((*C.E2)(&resultPoint), (*C.E2)(&aggPKBLS.point),
 		(*C.E2)(&pointsToSubtract[0]), (C.int)(len(pointsToSubtract)))
 
@@ -339,7 +342,7 @@ func VerifyBLSSignatureManyMessages(
 		return false, fmt.Errorf("invalid list of public keys: %w", errBLSAggregateEmptyList)
 	}
 	if len(pks) != len(messages) || len(kmac) != len(messages) {
-		return false, invalidInputsErrorf(
+		return false, common.InvalidInputsErrorf(
 			"input lists must be equal, messages are %d, keys are %d, hashers are %d",
 			len(messages),
 			len(pks),
@@ -360,8 +363,8 @@ func VerifyBLSSignatureManyMessages(
 	// The comparison of the maps length minimizes the number of pairings to
 	// compute by aggregating either public keys or the message hashes in
 	// the verification equation.
-	mapPerHash := make(map[string][]pointE2)
-	mapPerPk := make(map[pointE2][][]byte)
+	mapPerHash := make(map[string][]bls12.PointE2)
+	mapPerPk := make(map[bls12.PointE2][][]byte)
 	// Note: mapPerPk is using a cgo structure as map keys which may lead to 2 equal public keys
 	// being considered distinct. This does not make the verification equation wrong but leads to
 	// computing extra pairings. This case is considered unlikely to happen since a caller is likely
@@ -394,7 +397,7 @@ func VerifyBLSSignatureManyMessages(
 		flatDistinctHashes := make([]byte, 0)
 		lenHashes := make([]uint32, 0)
 		pkPerHash := make([]uint32, 0, len(mapPerHash))
-		allPks := make([]pointE2, 0)
+		allPks := make([]bls12.PointE2, 0)
 		for hash, pksVal := range mapPerHash {
 			flatDistinctHashes = append(flatDistinctHashes, []byte(hash)...)
 			lenHashes = append(lenHashes, uint32(len([]byte(hash))))
@@ -436,9 +439,9 @@ func VerifyBLSSignatureManyMessages(
 	}
 
 	switch verif {
-	case invalid:
+	case bls12.Invalid:
 		return false, nil
-	case valid:
+	case bls12.Valid:
 		return true, nil
 	default:
 		return false, fmt.Errorf("signature verification failed")
@@ -488,7 +491,7 @@ func BatchVerifyBLSSignaturesOneMessage(
 	}
 
 	if len(pks) != len(sigs) {
-		return falseSlice, invalidInputsErrorf(
+		return falseSlice, common.InvalidInputsErrorf(
 			"keys length %d and signatures length %d are mismatching",
 			len(pks),
 			len(sigs))
@@ -500,9 +503,9 @@ func BatchVerifyBLSSignaturesOneMessage(
 
 	// flatten the shares (required by the C layer)
 	flatSigs := make([]byte, 0, SignatureLenBLSBLS12381*len(sigs))
-	pkPoints := make([]pointE2, 0, len(pks))
+	pkPoints := make([]bls12.PointE2, 0, len(pks))
 
-	getIdentityPoint := func() pointE2 {
+	getIdentityPoint := func() bls12.PointE2 {
 		pk, _ := IdentityBLSPublicKey().(*pubKeyBLSBLS12381) // second value is guaranteed to be true
 		return pk.point
 	}
@@ -520,7 +523,7 @@ func BatchVerifyBLSSignaturesOneMessage(
 			// However, the boolean return for index `i` is set to `false` and won't be overwritten.
 			returnBool[i] = false
 			pkPoints = append(pkPoints, getIdentityPoint())
-			flatSigs = append(flatSigs, g1Serialization...)
+			flatSigs = append(flatSigs, bls12.G1Serialization...)
 		} else {
 			returnBool[i] = true // default to true
 			pkPoints = append(pkPoints, pkBLS.point)
@@ -533,7 +536,7 @@ func BatchVerifyBLSSignaturesOneMessage(
 	verifInt := make([]byte, len(sigs))
 	// internal non-determministic entropy source required by bls_batch_verify
 	// specific length of the seed is required by bls_batch_verify.
-	seed := make([]byte, (securityBits/8)*len(verifInt))
+	seed := make([]byte, (internal.SecurityBits/8)*len(verifInt))
 	_, err := rand.Read(seed)
 	if err != nil {
 		return falseSlice, fmt.Errorf("generating randoms failed: %w", err)
@@ -550,11 +553,11 @@ func BatchVerifyBLSSignaturesOneMessage(
 	)
 
 	for i, v := range verifInt {
-		if (C.int)(v) != valid && (C.int)(v) != invalid {
+		if (C.int)(v) != bls12.Valid && (C.int)(v) != bls12.Invalid {
 			return falseSlice, fmt.Errorf("batch verification failed")
 		}
 		if returnBool[i] { // only overwrite if not previously set to false
-			returnBool[i] = ((C.int)(v) == valid)
+			returnBool[i] = ((C.int)(v) == bls12.Valid)
 		}
 	}
 	return returnBool, nil
