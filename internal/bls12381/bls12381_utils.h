@@ -139,7 +139,8 @@ void E2_add(E2 *res, const E2 *a, const E2 *b);
 void E2_neg(E2 *, const E2 *);
 void E2_sum_vector(E2 *, const E2 *, const int);
 void E2_sum_vector_to_affine(E2 *, const E2 *, const int);
-void E2_subtract_vector_to_affine(E2 *res, const E2 *x, const E2 *y, const int len);
+void E2_subtract_vector_to_affine(E2 *res, const E2 *x, const E2 *y,
+                                  const int len);
 bool E2_in_G2(const E2 *);
 void unsafe_map_bytes_to_G2(E2 *, const byte *, int);
 void unsafe_map_bytes_to_G2complement(E2 *, const byte *, int);
