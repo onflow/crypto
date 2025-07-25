@@ -34,7 +34,4 @@ int bls_verifyPerDistinctKey(const byte *, const int, const E2 *,
 void bls_batch_verify(const int, byte *, const E2 *, const byte *, const byte *,
                       const int, const byte *);
 
-// BLS based SPoCK
-int bls_spock_verify(const E2 *, const byte *, const E2 *, const byte *);
-
 #endif

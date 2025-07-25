@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package crypto
+package spock
 
 import (
 	crand "crypto/rand"

@@ -36,7 +36,6 @@ endif
 test:
 	CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./...
 
-
 # recurse through all subdirectories and run the argument command "cmd"
 .PHONY: recurse
 exclude ?= ""
