@@ -6,7 +6,7 @@ The primitives and protocols can be used in other projects and are not specific 
 Notes:
    - The package has been audited for security in January 2021 on [this version](https://github.com/onflow/crypto/tree/bc6bbd277994d5d50ca3b777bd6747f555629c18). The package had a major refactor to switch all the BLS12-381 curve implementation to use [BLST](https://github.com/supranational/blst/tree/master/src) starting from version `v0.25.0`. 
    - The package used to live under the [flow-go](https://github.com/onflow/flow-go) repository before being moved out as a separate repository. The move preserved all the module Git history.
-   - The module does not provide security against side channel or fault attacks.
+   - The module does not provide security against side channel or fault injection attacks.
 
 ## Module import
 

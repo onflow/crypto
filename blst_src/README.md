@@ -5,7 +5,11 @@ specifically from the tagged version `v0.3.14`.
  Licensed under the Apache License, Version 2.0, see LICENSE for details.
  SPDX-License-Identifier: Apache-2.0
 
-While BLST exports multiple functions and tools, the implementation in Flow crypto requires access to low level functions. Some of these tools are not exported by BLST, others would need to be used without paying for the cgo cost, and therefore without using the Go bindings in BLST. 
+While BLST exports multiple functions and tools, the implementation in Flow crypto requires access to low level BLS12-381 curve functions. Some of these tools are not exported by BLST, others we want to use without paying for the cgo cost, and therefore without using the Go bindings in BLST.
+
+Higher level protocols are all implemented within Flow crypto and are not using BLST source. Only the BLS12-381 curve
+implementation from BLST is used to benfit from its high performance. All code outisde of `../blst_src` and `../internal/blst` is
+not code re-used from BLST source.
 
 The folder contains:
 - BLST LICENSE file
