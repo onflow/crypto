@@ -37,7 +37,7 @@ jobs:
     - name: Run golangci-lint with cgo
       env:
         CGO_ENABLED: 1
-      uses: golangci/golangci-lint-action@v7
+      uses: golangci/golangci-lint-action@v8
       with:
         version: ${{ env.LINT_VERSION }}
         # https://github.com/golangci/golangci-lint-action/issues/244
@@ -45,7 +45,7 @@ jobs:
     - name: Run golangci-lint without cgo
       env:
         CGO_ENABLED: 0
-      uses: golangci/golangci-lint-action@v7
+      uses: golangci/golangci-lint-action@v8
       with:
         version: ${{ env.LINT_VERSION }}
         args: --build-tags no_cgo
