@@ -68,7 +68,7 @@ CGO_ENABLED=0 go build -tags=no_cgo
 
 ## Algorithms
 
-### Hashing and Message Authentication Code:
+### Hashing and MAC:
 
 `crypto/hash` provides the hashing and MAC algorithms required for Flow. All algorithm implement the generic interface `Hasher`. All digests are of the generic type `Hash`.
 
@@ -104,7 +104,7 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
     * verification of an aggregated signature of multiple messages under multiple public keys.
     * batch verification of multiple signatures of a single message under multiple
     public keys, using a binary tree of aggregations.
-    * SPoCK scheme based on BLS: verifies two signatures have been generated from the same message that is unknown to the verifier.
+    * SPoCK scheme based on BLS: verifies two signatures have been generated from the same secret that is unknown to the verifier.
 
 ### PRNG
 
@@ -137,5 +137,5 @@ All supported Distributed Key Generation protocols are [discrete log based](http
     * implements a complaint mechanism to qualify/disqualify the dealer.
  * Joint Feldman (Pedersen) (requires cgo)
     * distributed generation.
-    * based on multiple parallel instances of Feldman VSS Qual with multiple dealers.
+    * based on parallel instances of Feldman VSS Qual, each with a different dealers.
     * same assumptions about the communication channels as in Feldman VSS.
