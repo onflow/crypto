@@ -137,5 +137,5 @@ All supported Distributed Key Generation protocols are [discrete log based](http
     * implements a complaint mechanism to qualify/disqualify the dealer.
  * Joint Feldman (Pedersen) (requires cgo)
     * distributed generation.
-    * based on parallel instances of Feldman VSS Qual, each with a different dealers.
+    * based on parallel instances of Feldman VSS Qual, each with a different dealer.
     * same assumptions about the communication channels as in Feldman VSS.
