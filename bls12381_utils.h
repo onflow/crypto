@@ -28,7 +28,16 @@
 #include <string.h>
 
 typedef uint8_t byte;
-typedef _Bool bool; // assuming cgo is using a modern enough compiler
+
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__<202311
+typedef _Bool bool; /* it's assumed that cgo calls modern enough compiler */
+# elif !defined(bool)
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__>=199901
+#   define bool _Bool
+#  else
+#   define bool int
+#  endif
+#endif
 
 // minimum targeted security level
 #define SEC_BITS 128
