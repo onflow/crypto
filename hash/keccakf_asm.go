@@ -1,5 +1,4 @@
 //go:build amd64 && !purego && gc
-// +build amd64,!purego,gc
 
 /*
  * Flow Crypto

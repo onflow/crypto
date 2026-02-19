@@ -1,5 +1,4 @@
 //go:build (!amd64 && !386 && !ppc64le) || purego
-// +build !amd64,!386,!ppc64le purego
 
 /*
  * Flow Crypto
