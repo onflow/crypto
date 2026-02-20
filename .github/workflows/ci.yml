@@ -51,6 +51,8 @@ jobs:
         args: --build-tags no_cgo
         # https://github.com/golangci/golangci-lint-action/issues/244
         skip-cache: true
+    - name: Run Go Fix
+      run: make go-fix
     - name: Run incorrect builds
       run: |
         echo "::remove-matcher owner=go::"

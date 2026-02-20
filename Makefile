@@ -80,9 +80,14 @@ go-tidy:
 	go mod tidy -v
 	git diff --exit-code
 
+.PHONY: go-fix
+go-fix:
+	go fix ./...
+	git diff --exit-code
+
 # Go lint
 .PHONY: go-lint
-go-lint: go-tidy
+go-lint: go-tidy go-fix
 	# revive -config revive.toml
 	golangci-lint run -v ./...
 	
