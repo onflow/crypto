@@ -1,5 +1,5 @@
 name: Requesting a Feature or Improvement
-description: For feature requests. Please search for existing issues first. Also see CONTRIBUTING.
+description: For feature requests. Please search for existing issues first.
 labels: [Feature, Feedback]
 assignees: tarakby
 body:
