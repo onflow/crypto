@@ -8,10 +8,10 @@ body:
       value: |
         > **Warning**
         > Do you experience an unexpected result or a crash?
-        > Please do **NOT** report it as a bug!
+        > Please do **NOT** report it as a bug.
         >
         > Instead, report it as a security issue:
-        > https://flow.com/flow-responsible-disclosure
+        > following the instructions in our [guidelines](../../SECURITY.md) to report it responsibly.
   - type: textarea
     attributes:
       label: Current Behavior
