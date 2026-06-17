@@ -223,9 +223,19 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, err
 
 	// compute the crypto/ecdsa public key
 	if curve == elliptic.P256() {
-		// use crypto/ecdh implementation to perform base scalar multiplication
-		// of an ECDH private key, because crypto/elliptic deprecated `ScalarBaseMult`
-		ecdhPriv, err := priv.ECDH()
+		// Perform the base scalar multiplication using crypto/ecdh,
+		// because crypto/elliptic deprecated `ScalarBaseMult`.
+		//
+		// We build the ecdh.PrivateKey directly from the scalar bytes
+		// instead of going through `priv.ECDH()`: since Go 1.26,
+		// ecdsa's `(*PrivateKey).ECDH` serializes the key via `(*PrivateKey).Bytes`,
+		// which reads the public affine coordinates `X`/`Y`.
+		// Those are not set yet at this point (we are computing them),
+		// so that path dereferences nil and panics.
+		// Constructing the ecdh key from the scalar avoids reading `X`/`Y`
+		// and works across Go versions.
+		scalarLen := bitsToBytes(curve.Params().N.BitLen())
+		ecdhPriv, err := ecdh.P256().NewPrivateKey(d.FillBytes(make([]byte, scalarLen)))
 		if err != nil {
 			// at this point, no error is expected because the function can't be called
 			// with a zero scalar modulo `n`
