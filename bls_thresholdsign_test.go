@@ -61,7 +61,7 @@ func testCentralizedStatefulAPI(t *testing.T) {
 		// hasher
 		kmac := NewExpandMsgXOFKMAC128(thresholdSignatureTag)
 		// fill the signers list and shuffle it
-		for i := 0; i < n; i++ {
+		for i := range n {
 			signers = append(signers, i)
 		}
 		rand.Shuffle(n, func(i, j int) {
@@ -343,7 +343,7 @@ func testDistributedStatefulAPI_FeldmanVSS(t *testing.T) {
 	processors := make([]testDKGProcessor, 0, n)
 
 	// create n processors for all participants
-	for current := 0; current < n; current++ {
+	for current := range n {
 		processors = append(processors, testDKGProcessor{
 			current:  current,
 			chans:    chans,
@@ -357,7 +357,7 @@ func testDistributedStatefulAPI_FeldmanVSS(t *testing.T) {
 	}
 
 	// create the participant (buffered) communication channels
-	for i := 0; i < n; i++ {
+	for i := range n {
 		chans[i] = make(chan *message, 2*n)
 	}
 	// start DKG in all participants
@@ -366,7 +366,7 @@ func testDistributedStatefulAPI_FeldmanVSS(t *testing.T) {
 	require.Equal(t, read, KeyGenSeedMinLen)
 	require.NoError(t, err)
 	sync.Add(n)
-	for current := 0; current < n; current++ {
+	for current := range n {
 		err := processors[current].dkg.Start(seed)
 		require.NoError(t, err)
 		go tsDkgRunChan(&processors[current], &sync, t, 2)
@@ -381,7 +381,7 @@ func testDistributedStatefulAPI_FeldmanVSS(t *testing.T) {
 	// Start TS
 	log.Info("TS starts")
 	sync.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go tsRunChan(&processors[i], &sync, t)
 	}
 	// synchronize the main thread to end TS
@@ -403,7 +403,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 		processors := make([]testDKGProcessor, 0, n)
 
 		// create n processors for all participants
-		for current := 0; current < n; current++ {
+		for current := range n {
 			processors = append(processors, testDKGProcessor{
 				current:  current,
 				chans:    chans,
@@ -417,7 +417,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 		}
 
 		// create the participant (buffered) communication channels
-		for i := 0; i < n; i++ {
+		for i := range n {
 			chans[i] = make(chan *message, 2*n)
 		}
 		// start DKG in all participants but the
@@ -426,7 +426,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 		require.Equal(t, read, KeyGenSeedMinLen)
 		require.NoError(t, err)
 		sync.Add(n)
-		for current := 0; current < n; current++ {
+		for current := range n {
 			err := processors[current].dkg.Start(seed)
 			require.NoError(t, err)
 			go tsDkgRunChan(&processors[current], &sync, t, 0)
@@ -436,7 +436,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 		for phase := 1; phase <= 2; phase++ {
 			sync.Wait()
 			sync.Add(n)
-			for current := 0; current < n; current++ {
+			for current := range n {
 				go tsDkgRunChan(&processors[current], &sync, t, phase)
 			}
 		}
@@ -451,7 +451,7 @@ func testDistributedStatefulAPI_JointFeldman(t *testing.T) {
 		// Start TS
 		log.Info("TS starts")
 		sync.Add(n)
-		for current := 0; current < n; current++ {
+		for current := range n {
 			go tsRunChan(&processors[current], &sync, t)
 		}
 		// synchronize the main thread to end TS
@@ -577,7 +577,7 @@ func testCentralizedStatelessAPI(t *testing.T) {
 		signShares := make([]Signature, 0, n)
 		signers := make([]int, 0, n)
 		// fill the signers list and shuffle it
-		for i := 0; i < n; i++ {
+		for i := range n {
 			signers = append(signers, i)
 		}
 		rand.Shuffle(n, func(i, j int) {

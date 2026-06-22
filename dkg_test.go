@@ -181,7 +181,7 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 	chans := make([]chan *message, n)
 	lateChansTimeout1 := make([]chan *message, n)
 	lateChansTimeout2 := make([]chan *message, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		chans[i] = make(chan *message, 5*n)
 		lateChansTimeout1[i] = make(chan *message, 5*n)
 		lateChansTimeout2[i] = make(chan *message, 5*n)
@@ -197,7 +197,7 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 
 	// create n processors for all participants
 	processors := make([]testDKGProcessor, 0, n)
-	for current := 0; current < n; current++ {
+	for current := range n {
 		list := make([]bool, dealers)
 		processors = append(processors, testDKGProcessor{
 			current:           current,
@@ -295,7 +295,7 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 	var sync sync.WaitGroup
 
 	// create DKG in all participants
-	for current := 0; current < n; current++ {
+	for current := range n {
 		var err error
 		processors[current].dkg, err = newDKG(dkg, n, threshold,
 			current, &processors[current], lead)
@@ -314,12 +314,12 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 
 	log.Info("DKG protocol starts")
 
-	for current := 0; current < n; current++ {
+	for current := range n {
 		processors[current].startSync.Add(1)
 		go dkgRunChan(&processors[current], &sync, t, phase)
 	}
 
-	for current := 0; current < n; current++ {
+	for current := range n {
 		// start dkg in parallel
 		// ( one common PRG is used internally for all instances which causes a race
 		//	in generating randoms and leads to non-deterministic keys. If deterministic keys
@@ -340,7 +340,7 @@ func dkgCommonTest(t *testing.T, dkg int, n int, threshold int, test testCase) {
 		// post processing required for timeout edge case tests
 		go timeoutPostProcess(processors, t, phase)
 		sync.Add(n)
-		for current := 0; current < n; current++ {
+		for current := range n {
 			go dkgRunChan(&processors[current], &sync, t, phase)
 		}
 	}
@@ -434,7 +434,7 @@ func dkgRunChan(proc *testDKGProcessor,
 func timeoutPostProcess(processors []testDKGProcessor, t *testing.T, phase int) {
 	switch phase {
 	case 1:
-		for i := 0; i < len(processors); i++ {
+		for i := range processors {
 			go func(i int) {
 				for len(processors[0].lateChansTimeout1[i]) != 0 {
 					// to test timeouted messages, late messages are copied to the main channels
@@ -444,7 +444,7 @@ func timeoutPostProcess(processors []testDKGProcessor, t *testing.T, phase int) 
 			}(i)
 		}
 	case 2:
-		for i := 0; i < len(processors); i++ {
+		for i := range processors {
 			go func(i int) {
 				for len(processors[0].lateChansTimeout2[i]) != 0 {
 					// to test timeouted messages, late messages are copied to the main channels

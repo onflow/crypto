@@ -176,7 +176,7 @@ func TestMapToG1(t *testing.T) {
 // Hashing to G1 bench
 func BenchmarkMapToG1(b *testing.B) {
 	input := make([]byte, expandMsgOutput)
-	for i := 0; i < len(input); i++ {
+	for i := range input {
 		input[i] = byte(i)
 	}
 	b.ResetTimer()
@@ -248,7 +248,7 @@ func TestReadWriteG1(t *testing.T) {
 	// and compare it the original point
 	t.Run("random points", func(t *testing.T) {
 		iterations := 50
-		for i := 0; i < iterations; i++ {
+		for range iterations {
 			var p, q pointE1
 			_, err := prg.Read(seed)
 			unsafeMapToG1(&p, seed)
@@ -326,7 +326,7 @@ func BenchmarkPairing(b *testing.B) {
 
 	pointsG1 := make([]pointE1, pairingsNumber)
 	pointsG2 := make([]pointE2, pairingsNumber)
-	for i := 0; i < pairingsNumber; i++ {
+	for i := range pairingsNumber {
 		unsafeMapToG1(&pointsG1[i], seed[i*frBytesLen:(i+1)*frBytesLen])
 		unsafeMapToG2(&pointsG2[i], seed[i*frBytesLen:(i+1)*frBytesLen])
 	}

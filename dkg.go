@@ -98,7 +98,7 @@ type dkgFailureError struct {
 }
 
 // dkgFailureErrorf constructs a new dkgFailureError
-func dkgFailureErrorf(msg string, args ...interface{}) error {
+func dkgFailureErrorf(msg string, args ...any) error {
 	return &dkgFailureError{
 		error: fmt.Errorf(msg, args...),
 	}
@@ -121,7 +121,7 @@ func (e dkgInvalidStateTransitionError) Unwrap() error {
 }
 
 // dkgInvalidStateTransitionErrorf constructs a new dkgInvalidStateTransitionError
-func dkgInvalidStateTransitionErrorf(msg string, args ...interface{}) error {
+func dkgInvalidStateTransitionErrorf(msg string, args ...any) error {
 	return &dkgInvalidStateTransitionError{
 		error: fmt.Errorf(msg, args...),
 	}

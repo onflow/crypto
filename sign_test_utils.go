@@ -79,7 +79,7 @@ func testGenSignVerify(t *testing.T, salg SigningAlgorithm, halg hash.Hasher) {
 		rand := getPRG(t)
 
 		loops := 50
-		for j := 0; j < loops; j++ {
+		for range loops {
 			n, err := rand.Read(seed)
 			require.Equal(t, n, KeyGenSeedMinLen)
 			require.NoError(t, err)
@@ -179,7 +179,7 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 
 		t.Run("happy path tests", func(t *testing.T) {
 			loops := 50
-			for j := 0; j < loops; j++ {
+			for range loops {
 				// generate a private key
 				seed := make([]byte, KeyGenSeedMinLen)
 				read, err := rand.Read(seed)
@@ -319,7 +319,7 @@ func testKeySize(t *testing.T, sk PrivateKey, skLen int, pkLen int) {
 func benchVerify(b *testing.B, algo SigningAlgorithm, halg hash.Hasher) {
 	b.Run(fmt.Sprintf("verify %s", algo), func(b *testing.B) {
 		seed := make([]byte, 48)
-		for j := 0; j < len(seed); j++ {
+		for j := range seed {
 			seed[j] = byte(j)
 		}
 		sk, err := GeneratePrivateKey(algo, seed)
@@ -346,7 +346,7 @@ func benchVerify(b *testing.B, algo SigningAlgorithm, halg hash.Hasher) {
 func benchSign(b *testing.B, algo SigningAlgorithm, halg hash.Hasher) {
 	b.Run(fmt.Sprintf("Single sign %s", algo), func(b *testing.B) {
 		seed := make([]byte, 48)
-		for j := 0; j < len(seed); j++ {
+		for j := range seed {
 			seed[j] = byte(j)
 		}
 		sk, err := GeneratePrivateKey(algo, seed)
