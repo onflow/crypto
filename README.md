@@ -10,7 +10,7 @@ Notes:
 
 ## Module import
 
-🚧 Flow cryptography package is tested for Go version 1.25.
+🚧 Flow cryptography package is tested for Go version 1.26.
 It is recommended to not build the package with a later Go version.
 The package is not guaranteed to behave as expected with later Go versions. 🚧
 

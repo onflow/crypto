@@ -133,7 +133,7 @@ func (p *genericPRG) Permutation(n int) ([]int, error) {
 		return nil, fmt.Errorf("population size cannot be negative")
 	}
 	items := make([]int, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		j := p.UintN(uint64(i + 1))
 		items[i] = items[j]
 		items[j] = i
@@ -183,7 +183,7 @@ func (p *genericPRG) Samples(n int, m int, swap func(i, j int)) error {
 	if n < m {
 		return fmt.Errorf("sample size (%d) cannot be larger than entire population (%d)", m, n)
 	}
-	for i := 0; i < m; i++ {
+	for i := range m {
 		j := p.UintN(uint64(n - i))
 		swap(i, i+int(j))
 	}

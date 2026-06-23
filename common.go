@@ -45,7 +45,7 @@ func overwrite(data []byte) {
 	_, err := rand.Read(data) // checking err is enough
 	if err != nil {
 		// zero the buffer if randomizing failed
-		for i := 0; i < len(data); i++ {
+		for i := range data {
 			data[i] = 0
 		}
 	}
@@ -63,7 +63,7 @@ func (e invalidInputsError) Unwrap() error {
 }
 
 // invalidInputsErrorf constructs a new invalidInputsError
-func invalidInputsErrorf(msg string, args ...interface{}) error {
+func invalidInputsErrorf(msg string, args ...any) error {
 	return &invalidInputsError{
 		error: fmt.Errorf(msg, args...),
 	}
@@ -97,7 +97,7 @@ func (e invalidHasherSizeError) Unwrap() error {
 }
 
 // invalidHasherSizeErrorf constructs a new invalidHasherSizeError
-func invalidHasherSizeErrorf(msg string, args ...interface{}) error {
+func invalidHasherSizeErrorf(msg string, args ...any) error {
 	return &invalidHasherSizeError{
 		error: fmt.Errorf(msg, args...),
 	}

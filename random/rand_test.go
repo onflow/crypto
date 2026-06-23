@@ -176,7 +176,7 @@ func TestSubPermutation(t *testing.T) {
 		orderingDistribution := make([]float64, subsetSize)
 		testElement := rand.Intn(listSize)
 
-		for i := 0; i < sampleSize; i++ {
+		for range sampleSize {
 			shuffledlist, err := rng.SubPermutation(listSize, subsetSize)
 			require.NoError(t, err)
 			require.Equal(t, len(shuffledlist), subsetSize)
@@ -329,11 +329,11 @@ func TestSamples(t *testing.T) {
 		testElement := rand.Intn(listSize)
 		// Slice to shuffle
 		list := make([]int, 0, listSize)
-		for i := 0; i < listSize; i++ {
+		for i := range listSize {
 			list = append(list, i)
 		}
 
-		for i := 0; i < sampleSize; i++ {
+		for range sampleSize {
 			err = rng.Samples(listSize, samplesSize, func(i, j int) {
 				list[i], list[j] = list[j], list[i]
 			})

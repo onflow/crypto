@@ -140,7 +140,7 @@ func (c *chachaCore) Read(buffer []byte) {
 	} else {
 		// when buffer is large, use is as the message to encrypt,
 		// but this requires clearing it first.
-		for i := 0; i < len(buffer); i++ {
+		for i := range buffer {
 			buffer[i] = 0
 		}
 		message = buffer

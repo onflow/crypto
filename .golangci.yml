@@ -10,6 +10,17 @@ linters:
       - linters:
           - govet
         text: "unsafeptr"  # disable flagging unsafeptr usage
+      # ecdsa.go wraps crypto/ecdsa, whose Sign/Verify still consume the raw
+      # PrivateKey.D and PublicKey.X/Y fields.
+      # Go 1.26 deprecated direct access to those fields, but the recommended
+      # replacement API (ecdsa.ParseRawPrivateKey / ParseUncompressedPublicKey /
+      # (*PrivateKey).Bytes / (*PublicKey).Bytes) supports only the NIST curves and
+      # rejects secp256k1, which this package supports via btcec's custom
+      # elliptic.Curve, so the package has to keep using the low-level fields.
+      - path: (^|/)ecdsa(_test)?\.go$
+        linters:
+          - staticcheck
+        text: "SA1019"
 formatters:
   exclusions:
     paths:

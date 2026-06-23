@@ -107,7 +107,7 @@ func TestSanityKmac128(t *testing.T) {
 	hash := alg.SumHash()
 	assert.Equal(t, expected[0], hash)
 
-	for i := 0; i < len(customizers); i++ {
+	for i := range customizers {
 		alg, err = NewKMAC_128(key, customizers[i], outputSize)
 		require.Nil(t, err)
 		hash = alg.ComputeHash(input)
@@ -183,7 +183,7 @@ func TestHashersAPI(t *testing.T) {
 func TestSHA2(t *testing.T) {
 
 	t.Run("SHA2_256", func(t *testing.T) {
-		for i := 0; i < 5000; i++ {
+		for i := range 5000 {
 			value := make([]byte, i)
 			_, err := rand.Read(value)
 			require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestSHA2(t *testing.T) {
 	})
 
 	t.Run("SHA2_384", func(t *testing.T) {
-		for i := 0; i < 5000; i++ {
+		for i := range 5000 {
 			value := make([]byte, i)
 			_, err := rand.Read(value)
 			require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestSHA2(t *testing.T) {
 // the output of standard Go sha3.
 func TestSHA3(t *testing.T) {
 	t.Run("SHA3_256", func(t *testing.T) {
-		for i := 0; i < 5000; i++ {
+		for i := range 5000 {
 			value := make([]byte, i)
 			_, err := rand.Read(value)
 			require.NoError(t, err)
@@ -239,7 +239,7 @@ func TestSHA3(t *testing.T) {
 	})
 
 	t.Run("SHA3_384", func(t *testing.T) {
-		for i := 0; i < 5000; i++ {
+		for i := range 5000 {
 			value := make([]byte, i)
 			_, err := rand.Read(value)
 			require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestSHA3(t *testing.T) {
 // It compares the hashes of random data of different lengths to
 // the output of Go LegacyKeccak.
 func TestKeccak(t *testing.T) {
-	for i := 0; i < 5000; i++ {
+	for i := range 5000 {
 		value := make([]byte, i)
 		_, err := rand.Read(value)
 		require.NoError(t, err)

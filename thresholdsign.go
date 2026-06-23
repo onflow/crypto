@@ -184,7 +184,7 @@ type duplicatedSignerError struct {
 }
 
 // duplicatedSignerErrorf constructs a new duplicatedSignerError.
-func duplicatedSignerErrorf(msg string, args ...interface{}) error {
+func duplicatedSignerErrorf(msg string, args ...any) error {
 	return &duplicatedSignerError{error: fmt.Errorf(msg, args...)}
 }
 
@@ -201,7 +201,7 @@ type notEnoughSharesError struct {
 }
 
 // notEnoughSharesErrorf constructs a new notEnoughSharesError.
-func notEnoughSharesErrorf(msg string, args ...interface{}) error {
+func notEnoughSharesErrorf(msg string, args ...any) error {
 	return &notEnoughSharesError{error: fmt.Errorf(msg, args...)}
 }
 
