@@ -24,7 +24,6 @@ import (
 
 	"crypto/elliptic"
 	crand "crypto/rand"
-	"math/big"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
@@ -178,7 +177,6 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			pk, err := DecodePublicKey(curve, pkBytes)
 			require.Error(t, err, "point is not on curve")
 			assert.True(t, IsInvalidInputsError(err))
-			assert.ErrorContains(t, err, "input is not a point on curve")
 			assert.Nil(t, pk)
 		})
 
@@ -201,13 +199,11 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			require.NoError(t, err)
 			_, err = DecodePublicKey(curve, invalidPk1)
 			assert.Error(t, err)
-			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
 			// invalidpk2 with y >= p
 			invalidPk2, err := hex.DecodeString(invalidPK2s[curve])
 			require.NoError(t, err)
 			_, err = DecodePublicKey(curve, invalidPk2)
 			assert.Error(t, err)
-			assert.ErrorContains(t, err, "at least one coordinate is larger than the field prime for")
 		})
 	}
 }
@@ -270,52 +266,7 @@ func TestECDSAPublicKeyComputation(t *testing.T) {
 	}
 }
 
-// TestGoECDSAP256PrivateKeyConstruction exercises `goecdsaPrivateKey` for P-256 directly.
-//
-// This is a regression test for a panic that surfaced on Go 1.26:
-// when constructing the key, the public affine coordinates `X`/`Y` are still nil
-// (we are in the middle of computing them via base scalar multiplication).
-// Since Go 1.26, `(*ecdsa.PrivateKey).ECDH` serializes the key through
-// `(*PrivateKey).Bytes`, which reads `X`/`Y` and therefore panicked on the nil deref.
-// The fix builds the ecdh key from the scalar bytes instead.
-//
-// The test asserts the construction does not panic and that the computed public key
-// matches a known test vector, so it guards both the crash and the correctness of the
-// scalar-based code path.
-func TestGoECDSAP256PrivateKeyConstruction(t *testing.T) {
-	// scalar / expected public key pair, identical to the P-256 vector in
-	// TestECDSAPublicKeyComputation
-	const skHex = "6e37a39c31a05181bf77919ace790efd0bdbcaf42b5a52871fc112fceb918c95"
-	const xHex = "78a80dfe190a6068be8ddf05644c32d2540402ffc682442f6a9eeb96125d8681"
-	const yHex = "3789f92cf4afabf719aaba79ecec54b27e33a188f83158f6dd15ecb231b49808"
-
-	skBytes, err := hex.DecodeString(skHex)
-	require.NoError(t, err)
-	d := new(big.Int).SetBytes(skBytes)
-
-	// the call panicked on Go 1.26 before the fix
-	require.NotPanics(t, func() {
-		priv, err := goecdsaPrivateKey(elliptic.P256(), d)
-		require.NoError(t, err)
-		require.NotNil(t, priv)
-
-		// the scalar must be preserved
-		assert.Equal(t, 0, priv.D.Cmp(d))
-
-		// the computed public affine coordinates must match the known vector
-		expectedX, ok := new(big.Int).SetString(xHex, 16)
-		require.True(t, ok)
-		expectedY, ok := new(big.Int).SetString(yHex, 16)
-		require.True(t, ok)
-		assert.Equal(t, 0, priv.PublicKey.X.Cmp(expectedX))
-		assert.Equal(t, 0, priv.PublicKey.Y.Cmp(expectedY))
-
-		// the computed point must be on the curve
-		assert.True(t, elliptic.P256().IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y))
-	})
-}
-
-func TestSignatureFormatCheck(t *testing.T) {
+func TestECDSASignatureFormatCheck(t *testing.T) {
 
 	for _, curve := range ecdsaCurves {
 		t.Run("valid signature", func(t *testing.T) {

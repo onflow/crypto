@@ -19,10 +19,7 @@
 package crypto
 
 import (
-	"crypto/elliptic"
 	"fmt"
-
-	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -83,20 +80,10 @@ func newSigner(algo SigningAlgorithm) (signer, error) {
 // Initialize the context of all algos
 func init() {
 	// ECDSA
-	p256Instance = &(ecdsaAlgo{
-		curve: elliptic.P256(),
-		algo:  ECDSAP256,
-	})
-	secp256k1Instance = &(ecdsaAlgo{
-		curve: btcec.S256(),
-		algo:  ECDSASecp256k1,
-	})
+	initECDSA()
 
 	// BLS
 	initBLS12381()
-	blsInstance = &blsBLS12381Algo{
-		algo: BLSBLS12381,
-	}
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,

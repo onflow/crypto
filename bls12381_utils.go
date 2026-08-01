@@ -117,6 +117,10 @@ func initBLS12381() {
 	// set a global point to infinity
 	C.E2_set_infty((*C.E2)(&g2PublicKey.point))
 	g2PublicKey.isIdentity = true
+
+	blsInstance = &blsBLS12381Algo{
+		algo: BLSBLS12381,
+	}
 }
 
 // String returns a hex-encoded representation of the scalar.
