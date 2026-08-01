@@ -21,13 +21,14 @@ package hash
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha3"
 	"crypto/sha512"
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
+	xsha3 "golang.org/x/crypto/sha3"
 )
 
 // Sanity check of SHA3_256
@@ -260,7 +261,7 @@ func TestKeccak(t *testing.T) {
 		value := make([]byte, i)
 		_, err := rand.Read(value)
 		require.NoError(t, err)
-		k := sha3.NewLegacyKeccak256()
+		k := xsha3.NewLegacyKeccak256()
 		k.Write(value)
 		expected := k.Sum(nil)
 
