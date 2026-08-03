@@ -96,15 +96,7 @@ go-lint: go-tidy go-fix
 test:
 # root package
 	CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,)
-#root package without cgo
-	CGO_ENABLED=0 go test -tags=no_cgo -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,)
 # sub packages
 	go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./hash
 	go test -coverprofile=$(COVER_PROFILE) $(RACE_FLAG) $(if $(JSON_OUTPUT),-json,) $(if $(VERBOSE),-v,) ./random
 
-# test incorrect builds and make sure they fail
-.PHONY: incorrect_builds
-incorrect_builds:
-# both tests should fail
-	! CGO_ENABLED=0 go test
-	! CGO_ENABLED=1 CGO_CFLAGS=$(ADX_FLAG) go test -tags=no_cgo

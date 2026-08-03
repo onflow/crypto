@@ -29,11 +29,6 @@ import "github.com/onflow/crypto"
 
 Building your project with Flow crypto and enabling all the supported algorithms requires using cgo to compile the C code underneath.
 If cgo isn't enabled by default, the `CGO_ENABLED` environment variable should be set to `1`.
-It is also possible to build without cgo (`CGO_ENABLED=0`) but this would disable some primitives (the ones related to BLS).
-
-### Build with cgo
-
-Building with cgo is required to support all the algorithms of the module, including the algorithms based on the BLS12-381 curve.
 
 If the test or target application crashes with a "Caught SIGILL" exception, rebuild with `CGO_CFLAGS` set to `"-O2 -D__BLST_PORTABLE__"` to disable non-portable code.
 The runtime error can happen if the CPU doesn't support certain instructions.
@@ -52,19 +47,6 @@ GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 go build
 #### Vendoring
 
 When using the `go mod vendor` command in your project, [a known issue](https://github.com/golang/go/issues/26366) with the Go vendoring tool prevents cgo dependencies from being copied into your vendor directory. This results in build errors related to the Flow crypto package. External vendoring tools that do copy the entire package files can be used instead of the Go command to resolve the issue.
-
-
-### Build without cgo
-
-It is possible to build without cgo but this requires disabling all primitives based on the BLS12-381 curve (BLS signature, BLS threshold signature, BLS-based DKG, BLS-based SPoCK).
-Refer to [algorithms](#algorithms) and [protocols](#protocols) to check the supported features.
-Calling any of the non-supported primitives would panic.
-In order to avoid accidental builds that result in unwanted crashes, disabling cgo must be confirmed with the `no_cgo` build tag.  
-
-```
-CGO_ENABLED=0 go build -tags=no_cgo
-```
-
 
 ## Algorithms
 
@@ -86,7 +68,7 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
     * ephemeral key is derived from the private key, hash and the system entropy (based on https://golang.org/pkg/crypto/ecdsa/).
     * supports NIST P-256 (secp256r1) and secp256k1 curves.
 
- * BLS (requires cgo)
+ * BLS
     * supports [BLS12-381](https://electriccoin.co/blog/new-snark-curve/) curve.
     * is implementing the minimal-signature-size variant:
     signatures in G1 and public keys in G2.
@@ -114,7 +96,7 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
 
 ### Threshold Signature
 
- * BLS-based threshold signature (requires cgo)
+ * BLS-based threshold signature
     * [non interactive](https://www.iacr.org/archive/pkc2003/25670031/25670031.pdf) threshold signature reconstruction.
     * supports only BLS 12-381 curve with the same features above.
     * (t+1) signatures are required to reconstruct the threshold signature.
@@ -126,16 +108,16 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
 
 All supported Distributed Key Generation protocols are [discrete log based](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.50.2737&rep=rep1&type=pdf) and are implemented for the same BLS setup on the BLS 12-381 curve. The protocols generate key sets for the BLS-based threshold signature.
 
- * Feldman VSS (requires cgo)
+ * Feldman VSS
     * simple verifiable secret sharing with a single dealer.
     * the library does not implement the communication channels between participants. The caller should implement the methods `PrivateSend` (1-to-1 messaging) and `Broadcast` (1-to-n messaging)
     * 1-to-1 messaging must be a private channel, the caller must make sure the channel preserves confidentialiy and authenticates the sender.
     * 1-to-n broadcasting is a reliable broadcast, where honest senders are able to reach all honest receivers, and where all honest receivers end up with the same received messages. The channel should also authenticate the broadcaster.
     * It is recommended that both communication channels are unique per protocol instance. This could be achieved by prepending the messages to send/broadcast by a unique protocol instance ID.
- * Feldman VSS Qual (requires cgo)
+ * Feldman VSS Qual
     * an extension of the simple Feldman VSS.
     * implements a complaint mechanism to qualify/disqualify the dealer.
- * Joint Feldman (Pedersen) (requires cgo)
+ * Joint Feldman (Pedersen)
     * distributed generation.
     * based on parallel instances of Feldman VSS Qual, each with a different dealer.
     * same assumptions about the communication channels as in Feldman VSS.
