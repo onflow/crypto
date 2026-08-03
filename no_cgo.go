@@ -15,9 +15,12 @@ import (
 )
 
 const (
-	SignatureLenBLSBLS12381 = 0
-	PubKeyLenBLSBLS12381    = 0
-	PrKeyLenBLSBLS12381     = 0
+	SignatureLenBLSBLS12381    = 0
+	PubKeyLenBLSBLS12381       = 0
+	PrKeyLenBLSBLS12381        = 0
+	SignatureLenECDSASecp256k1 = 0
+	PrKeyLenECDSASecp256k1     = 0
+	PubKeyLenECDSASecp256k1    = 0
 )
 
 func initBLS12381() {}
@@ -30,7 +33,6 @@ type blsBLS12381Algo struct {
 	algo SigningAlgorithm
 }
 
-// BLS context on the BLS 12-381 curve
 var blsInstance *blsBLS12381Algo
 
 func (a *blsBLS12381Algo) generatePrivateKey(ikm []byte) (PrivateKey, error) {
@@ -191,4 +193,23 @@ func IsNotBLSKeyError(err error) bool {
 
 func IsInvalidSignatureError(err error) bool {
 	panic(withFeature("BLS multi-sig"))
+}
+
+func initECDSASecp256k1() {
+	panic(withFeature("ECDSA SECP256k1"))
+}
+
+type pubKeyECDSASecp256k1 struct{}
+type prKeyECDSASecp256k1 struct{}
+
+func secp256k1DecodePublicKeyCompressed(pkBytes []byte) (*pubKeyECDSASecp256k1, error) {
+	panic(withFeature("ECDSA SECP256k1"))
+}
+
+func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256k1 {
+	panic(withFeature("ECDSA SECP256k1"))
+}
+
+func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp256k1, error) {
+	panic(withFeature("ECDSA SECP256k1"))
 }

@@ -1,3 +1,5 @@
+//go:build cgo && !no_cgo
+
 /*
  * Flow Crypto
  *
