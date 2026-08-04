@@ -93,7 +93,7 @@ func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256
 	sk := &prKeyECDSASecp256k1{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		dBytes:           dBytes,
-		pubKey:           nil, // public key is not constructed
+		pubKey:           nil, // public key is not constructed yet
 	}
 	return sk
 }
@@ -115,8 +115,8 @@ func (sk *prKeyECDSASecp256k1) Sign(msg []byte, hasher hash.Hasher) (Signature, 
 	if err != nil {
 		return nil, err
 	}
-	// truncate the hash to the curve order size, as specified in FIPS 186-4 section 6.4
-	// and as required by the secp256k1 package signing function
+	// truncate the hash to the curve order size, as specified in FIPS 186-4 section 6.4 (nLenSecp256k1 here is a multiple of 8 bits).
+	// Moreover, the secp256k1 package requires the message hash to equal nLenSecp256k1
 	hash = hash[:nLenSecp256k1]
 	signature, err := secp256k1.Sign(hash, sk.dBytes)
 	if err != nil {
@@ -133,8 +133,16 @@ func (sk *prKeyECDSASecp256k1) String() string {
 
 func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp256k1, error) {
 	pLen := bitsToBytes(a.curveP.BitLen())
+
+	if len(XYBytes) != 2*pLen {
+		return nil, invalidInputsErrorf("input has incorrect %s key size, got %d, expects %d",
+			a.algo, len(XYBytes), 2*pLen)
+	}
+
 	x, y := readTwoBigInts(XYBytes, pLen)
+
 	// `IsOnCurve` is not deprecated in btcec's type `KoblitzCurve`
+	// `IsOnCurve` includes checks for x<p and y<p
 	if !secp256k1.S256().IsOnCurve(x, y) {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve")
 	}
@@ -189,13 +197,16 @@ func (pk *pubKeyECDSASecp256k1) Verify(sig Signature, msg []byte, hasher hash.Ha
 		return false, nil
 	}
 
+	// truncate the hash to the curve order size, as specified in FIPS 186-4 section 6.4 (nLenSecp256k1 here is a multiple of 8 bits).
+	// Moreover, the secp256k1 package requires the message hash to equal nLenSecp256k1
+	hash = hash[:nLenSecp256k1]
 	return secp256k1.VerifySignature(pk.pkBytes, hash, sig), nil
 }
 
 // given a private key (d), returns a raw encoding bytes(d) in big endian
 // padded to the private key length
 func (sk *prKeyECDSASecp256k1) rawEncode() []byte {
-	return sk.dBytes
+	return append([]byte(nil), sk.dBytes...)
 }
 
 // Encode returns a byte representation of a private key.
@@ -218,7 +229,7 @@ func (pk *pubKeyECDSASecp256k1) Equals(other PublicKey) bool {
 // x and y are padded to the field size.
 func (pk *pubKeyECDSASecp256k1) rawEncode() []byte {
 	// skip the uncompressed encoding byte
-	return pk.pkBytes[1:]
+	return append([]byte(nil), pk.pkBytes[1:]...)
 }
 
 // Encode returns a byte representation of a public key.
@@ -236,7 +247,6 @@ func (pk *pubKeyECDSASecp256k1) Encode() []byte {
 // the package does not allow constructing infinity points or points not on curve.
 func (pk *pubKeyECDSASecp256k1) EncodeCompressed() []byte {
 	x, y := readTwoBigInts(pk.pkBytes[1:], pLenSecp256k1)
-	// read X and Y from the encoding
 	return secp256k1.CompressPubkey(x, y)
 }
 

@@ -62,10 +62,10 @@ func (a *ecdsaContext) checkAlgoAndComputeHash(msg []byte, hasher hash.Hasher) (
 	}
 
 	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((a.curveN).BitLen())
-	if hasher.Size() < nLen {
+	nLen := (a.curveN).BitLen()
+	if (hasher.Size() << 3) < nLen {
 		return nil, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d, got %d", nLen, hasher.Size())
+			"hasher's bit-size should be at least %d, got %d", nLen, hasher.Size()<<3)
 	}
 
 	h := hasher.ComputeHash(msg)
@@ -118,7 +118,7 @@ func (a *ecdsaContext) mapToPrivateKey(seed []byte) (PrivateKey, error) {
 
 // privateKey returns an ECDSA private key using the
 // input scalar.
-
+//
 // Input scalar d is assumed to be satisfy 0 < d < n before calling this function.
 //
 // The function returns:
@@ -212,8 +212,6 @@ func (a *ecdsaContext) decodePrivateKey(der []byte) (PrivateKey, error) {
 // Error Returns:
 //   - invalidInputsError if the input is not a valid serialization of a public key on the given curve.
 func (a *ecdsaContext) rawDecodePublicKey(input []byte) (PublicKey, error) {
-	// all the curves supported for now have a cofactor equal to 1,
-	// so that checking the point is on curve is enough to make sure it is on the correct subgroup
 	switch a.algo {
 	case ECDSAP256:
 		return publicKeyECDSAP256(a, input)
@@ -222,7 +220,6 @@ func (a *ecdsaContext) rawDecodePublicKey(input []byte) (PublicKey, error) {
 	default:
 		return nil, invalidInputsErrorf("curve is not supported")
 	}
-
 }
 
 func (a *ecdsaContext) decodePublicKey(der []byte) (PublicKey, error) {
