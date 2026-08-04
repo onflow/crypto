@@ -23,6 +23,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -35,7 +36,7 @@ const (
 	pLenP256 = 32
 )
 
-var (
+const (
 	// NIST P256
 	SignatureLenECDSAP256 = 2 * nLenP256
 	PrKeyLenECDSAP256     = nLenP256
@@ -48,10 +49,14 @@ var p256Instance *ecdsaContext
 
 func initECDSAP256() {
 	curve := elliptic.P256()
+	n := curve.Params().N
+	nMinus1 := new(big.Int).Sub(n, one)
+
 	p256Instance = &(ecdsaContext{
-		curveP: curve.Params().P,
-		curveN: curve.Params().N,
-		algo:   ECDSAP256,
+		curveP:     curve.Params().P,
+		curveN:     n,
+		curveNdiv2: new(big.Int).Div(nMinus1, two), // (N-1)/2
+		algo:       ECDSAP256,
 	})
 }
 
