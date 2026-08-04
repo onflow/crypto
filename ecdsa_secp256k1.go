@@ -38,9 +38,11 @@ const (
 
 	nLenSecp256k1 = 32
 	pLenSecp256k1 = 32
+
+	secp256k1Ndiv2Hex = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0"
 )
 
-var (
+const (
 	// SECG secp256k1
 	SignatureLenECDSASecp256k1 = 2 * nLenSecp256k1
 	PrKeyLenECDSASecp256k1     = nLenSecp256k1
@@ -60,10 +62,15 @@ func initECDSASecp256k1() {
 	if !ok {
 		panic("failed to initialize ECDSA with secp256k1 curve")
 	}
+	curveNdiv2, ok := new(big.Int).SetString(secp256k1Ndiv2Hex, 16)
+	if !ok {
+		panic("failed to initialize ECDSA with secp256k1 curve")
+	}
 	secp256k1Instance = &(ecdsaContext{
-		curveP: curveP,
-		curveN: curveN,
-		algo:   ECDSASecp256k1,
+		curveP:     curveP,
+		curveN:     curveN,
+		curveNdiv2: curveNdiv2,
+		algo:       ECDSASecp256k1,
 	})
 }
 
@@ -141,7 +148,6 @@ func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp2
 
 	x, y := readTwoBigInts(XYBytes, pLen)
 
-	// `IsOnCurve` is not deprecated in btcec's type `KoblitzCurve`
 	// `IsOnCurve` includes checks for x<p and y<p
 	if !secp256k1.S256().IsOnCurve(x, y) {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve")
@@ -196,11 +202,13 @@ func (pk *pubKeyECDSASecp256k1) Verify(sig Signature, msg []byte, hasher hash.Ha
 	if len(sig) != 2*nLenSecp256k1 {
 		return false, nil
 	}
+	// normalize the signature to low S. This is required because the secp256k1 package does not accept high S signatures.
+	newSig := secp256k1Instance.signatureNormalizeS(sig)
 
 	// truncate the hash to the curve order size, as specified in FIPS 186-4 section 6.4 (nLenSecp256k1 here is a multiple of 8 bits).
 	// Moreover, the secp256k1 package requires the message hash to equal nLenSecp256k1
 	hash = hash[:nLenSecp256k1]
-	return secp256k1.VerifySignature(pk.pkBytes, hash, sig), nil
+	return secp256k1.VerifySignature(pk.pkBytes, hash, newSig), nil
 }
 
 // given a private key (d), returns a raw encoding bytes(d) in big endian
@@ -250,7 +258,7 @@ func (pk *pubKeyECDSASecp256k1) EncodeCompressed() []byte {
 	return secp256k1.CompressPubkey(x, y)
 }
 
-// p256DecodePublicKeyCompressed returns a non-infinity P-256 public key given the bytes of a compressed
+// secp256k1DecodePublicKeyCompressed returns a non-infinity public key given the bytes of a compressed
 // public key according to X9.62 section 4.3.6.
 // Note that infinity point serialization isn't defined in this package so the input (or output)
 // can never represent an infinity point.

@@ -20,12 +20,12 @@ package crypto
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
-	"crypto/elliptic"
 	crand "crypto/rand"
 
-	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -367,7 +367,7 @@ func TestEllipticUnmarshalSecp256k1(t *testing.T) {
 		require.Equal(t, retrieved.EncodeCompressed(), publicBytes)
 
 		// check that elliptic fails at decompressing them
-		x, y := elliptic.UnmarshalCompressed(btcec.S256(), publicBytes)
+		x, y := secp256k1.DecompressPubkey(publicBytes)
 		require.Nil(t, x)
 		require.Nil(t, y)
 	}
@@ -432,5 +432,73 @@ func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
 		require.NoError(t, err)
 		// test change
 		assert.Equal(t, test.expectedSK, sk.String())
+	}
+}
+
+// TestECDSAHighAndLowS checks that both signature malleability forms are accepted.
+//
+// For a valid signature (r,s), the pair (r,n-s) is also a valid signature of the same
+// message under the same key. The package signature verification accepts both forms and should keep doing so.
+// Rejecting the high-s form would be a breaking change for the applications using this package.
+func TestECDSAHighAndLowS(t *testing.T) {
+
+	var ecdsaContexts = map[SigningAlgorithm]*ecdsaContext{
+		ECDSAP256:      p256Instance,
+		ECDSASecp256k1: secp256k1Instance,
+	}
+
+	for _, curve := range ecdsaCurves {
+		t.Run(curve.String(), func(t *testing.T) {
+			// generate a key and sign a random message
+			seed := make([]byte, KeyGenSeedMinLen)
+			_, err := crand.Read(seed)
+			require.NoError(t, err)
+			sk, err := GeneratePrivateKey(curve, seed)
+			require.NoError(t, err)
+
+			msg := make([]byte, 10)
+			_, err = crand.Read(msg)
+			require.NoError(t, err)
+
+			halg := hash.NewSHA3_256()
+			sig, err := sk.Sign(msg, halg)
+			require.NoError(t, err)
+
+			// extract S and test the first case of S (can be low or high S)
+			_, s := readTwoBigInts(sig, ecdsaSigLen[curve]/2)
+			isLowS := ecdsaContexts[curve].isLowS(s)
+
+			t.Run(fmt.Sprintf("low S equals %v", isLowS), func(t *testing.T) {
+				// the format check must accept both forms
+				wellFormed, err := SignatureFormatCheck(curve, sig)
+				require.NoError(t, err)
+				assert.True(t, wellFormed)
+
+				// verification must accept the first form (can be low or high S)
+				valid, err := sk.PublicKey().Verify(sig, msg, halg)
+				require.NoError(t, err)
+				assert.True(t, valid)
+			})
+
+			// flip S to N-S to check the other case (can be low or high S)
+			t.Run(fmt.Sprintf("low S equals %v", !isLowS), func(t *testing.T) {
+				newSig := ecdsaContexts[curve].signatureFlipS(sig)
+
+				// sanity check
+				_, newS := readTwoBigInts(newSig, ecdsaSigLen[curve]/2)
+				newIsLowS := ecdsaContexts[curve].isLowS(newS)
+				require.Equal(t, !newIsLowS, isLowS, "S didn't flip") // this test is correct because S cannot equal N-S since N is odd
+
+				// the format check must accept both forms
+				wellFormed, err := SignatureFormatCheck(curve, newSig)
+				require.NoError(t, err)
+				assert.True(t, wellFormed)
+
+				// verification must accept the second form (can be low or high S)
+				valid, err := sk.PublicKey().Verify(newSig, msg, halg)
+				require.NoError(t, err)
+				assert.True(t, valid)
+			})
+		})
 	}
 }

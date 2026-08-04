@@ -41,6 +41,8 @@ type ecdsaContext struct {
 	curveP *big.Int
 	// curve order
 	curveN *big.Int
+	// curve order minus 1 divided by 2 (used for signature malleability annalysis)
+	curveNdiv2 *big.Int
 }
 
 const ecEncodingUncompressed = 0x4
@@ -100,6 +102,7 @@ func (a *ecdsaContext) signatureFormatCheck(sig Signature) bool {
 }
 
 var one = new(big.Int).SetInt64(1)
+var two = new(big.Int).SetInt64(2)
 
 // mapToPrivateKey simply maps the input seed to an ECDSA private key
 // The private scalar `d` satisfies 0 < d < n.
@@ -316,4 +319,41 @@ func readTwoBigInts(input []byte, size int) (*big.Int, *big.Int) {
 	a := new(big.Int).SetBytes(input[:size])
 	b := new(big.Int).SetBytes(input[size : 2*size])
 	return a, b
+}
+
+// isLowS returns true if the signature's S is in the lower range (S <= (n-1)/2).
+func (a *ecdsaContext) isLowS(s *big.Int) bool {
+	return a.curveNdiv2.Cmp(s) >= 0
+}
+
+// signatureNormalizeS returns a new signature with S normalized to low S.
+// This is needed when the signature verification requires low S to avoid signature malleability, while the package allows high S signatures to be accepted.
+func (a *ecdsaContext) signatureNormalizeS(sig []byte) []byte {
+	// read S
+	nLen := bitsToBytes(a.curveN.BitLen())
+	s := new(big.Int).SetBytes(sig[nLen:])
+	if a.isLowS(s) {
+		return sig // no need to flip S
+	}
+	// compute N-S
+	sComplement := new(big.Int).Sub(a.curveN, s)
+	// write it into a new signature
+	newSig := make([]byte, len(sig))
+	copy(newSig, sig[:nLen])             // copy R
+	sComplement.FillBytes(newSig[nLen:]) // write S complement
+	return newSig
+}
+
+// Test function only to flip S in a signature. It is used for testing signature malleability
+func (a *ecdsaContext) signatureFlipS(sig []byte) []byte {
+	// read S
+	nLen := bitsToBytes(a.curveN.BitLen())
+	s := new(big.Int).SetBytes(sig[nLen:])
+	// compute N-S
+	sComplement := new(big.Int).Sub(a.curveN, s)
+	// write it into a new signature
+	newSig := make([]byte, len(sig))
+	copy(newSig, sig[:nLen])             // copy R
+	sComplement.FillBytes(newSig[nLen:]) // write S complement
+	return newSig
 }
