@@ -45,7 +45,11 @@ const (
 
 // String returns the string representation of this signing algorithm.
 func (f SigningAlgorithm) String() string {
-	return [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}[f]
+	names := [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}
+	if f < 0 || int(f) >= len(names) {
+		return "UNKNOWN"
+	}
+	return names[f]
 }
 
 // Signature is a generic type, regardless of the signature scheme

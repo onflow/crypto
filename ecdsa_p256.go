@@ -85,7 +85,7 @@ func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error
 	sk := &prKeyECDSAP256{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		goPrKey:          internalSK,
-		pubKey:           nil, // public key is not constructed
+		pubKey:           nil, // public key is not constructed yet
 	}
 	return sk, nil
 }

@@ -243,6 +243,12 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 			assert.True(t, IsInvalidInputsError(err))
 			assert.Nil(t, sk)
 
+			bytes = make([]byte, skLens[salg]-1)
+			sk, err = DecodePrivateKey(salg, bytes)
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.Nil(t, sk)
+
 			// public key
 			pkLens := make(map[SigningAlgorithm]int)
 			pkLens[ECDSAP256] = PubKeyLenECDSAP256
@@ -251,6 +257,12 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 
 			bytes = make([]byte, pkLens[salg]+1)
 			pk, err := DecodePublicKey(salg, bytes)
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.Nil(t, pk)
+
+			bytes = make([]byte, pkLens[salg]-1)
+			pk, err = DecodePublicKey(salg, bytes)
 			require.Error(t, err)
 			assert.True(t, IsInvalidInputsError(err))
 			assert.Nil(t, pk)
