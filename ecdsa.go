@@ -321,27 +321,39 @@ func readTwoBigInts(input []byte, size int) (*big.Int, *big.Int) {
 	return a, b
 }
 
-// isLowS returns true if the signature's S is in the lower range (S <= (n-1)/2).
+// isLowS returns true if the signature's S is in the lower range (S <= (n-1)/2)
 func (a *ecdsaContext) isLowS(s *big.Int) bool {
 	return a.curveNdiv2.Cmp(s) >= 0
 }
 
-// signatureNormalizeS returns a new signature with S normalized to low S.
-// This is needed when the signature verification requires low S to avoid signature malleability, while the package allows high S signatures to be accepted.
-func (a *ecdsaContext) signatureNormalizeS(sig []byte) []byte {
+// signatureNormalizeS returns a signature with S normalized to low S.
+// (same slice is returned if S is already normalized)
+// It assumes len(sig) == 2*nLen where nLen is the byte-length of the curve order.
+// This is needed when the underlying signature verification requires S to be in the lower range (to avoid signature malleability). In this package, verification allows high S signatures to be accepted.
+// The function checks that S is in the correct range [0, n-1] before normalizing it. If S is not in the correct range, the function returns a false boolean. (S will be checked against 0 in the verification function - check against N is inlcuded here)
+// returns:
+//   - newSig, true if S is in the valid range and was normalized to low S
+//   - nil, false if S was not in the correct range
+func (a *ecdsaContext) signatureNormalizeS(sig []byte) ([]byte, bool) {
 	// read S
 	nLen := bitsToBytes(a.curveN.BitLen())
-	s := new(big.Int).SetBytes(sig[nLen:])
-	if a.isLowS(s) {
-		return sig // no need to flip S
+	s := new(big.Int).SetBytes(sig[nLen:]) // S >= 0
+	if a.isLowS(s) {                       // S <= (n-1)/2
+		return sig, true // S is in the valid range and no need to flip it
 	}
-	// compute N-S
-	sComplement := new(big.Int).Sub(a.curveN, s)
+
+	if a.curveN.Cmp(s) <= 0 { // S >= n, invalid signature
+		return nil, false
+	}
+
+	// In the remaining case, (n-1)/2 < S < n and it is safe to flip
+	// i.e n-s is guaranteed to be in the range [1, (n-1)/2]
+	sComplement := new(big.Int).Sub(a.curveN, s) // n-S
 	// write it into a new signature
 	newSig := make([]byte, len(sig))
 	copy(newSig, sig[:nLen])             // copy R
 	sComplement.FillBytes(newSig[nLen:]) // write S complement
-	return newSig
+	return newSig, true
 }
 
 // Test function only to flip S in a signature. It is used for testing signature malleability

@@ -205,7 +205,10 @@ func (pk *pubKeyECDSASecp256k1) Verify(sig Signature, msg []byte, hasher hash.Ha
 	// normalize the signature to low S.
 	// This is required because the secp256k1 package does not accept high S signatures while the package allows them.
 	// Rejecting high S signatures would be a breaking change with prior versions.
-	newSig := secp256k1Instance.signatureNormalizeS(sig)
+	newSig, validS := secp256k1Instance.signatureNormalizeS(sig)
+	if !validS {
+		return false, nil // S value is invalid, return early
+	}
 
 	// truncate the hash to the curve order size, as specified in FIPS 186-4 section 6.4 (nLenSecp256k1 here is a multiple of 8 bits).
 	// Moreover, the secp256k1 package requires the message hash to equal nLenSecp256k1
