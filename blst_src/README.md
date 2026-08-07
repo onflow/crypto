@@ -21,7 +21,7 @@ The folder contains:
 To upgrade the BLST version:
 - [ ] audit all BLST updates, with focus on `<blst>/src`: https://github.com/supranational/blst/compare/v0.3.14...<new_version>
 - [ ] delete all files in this folder `./blst_src/` but `blst_src.c` and `README.md`.
-- [ ] delete all files in `./internal/blst/` but `non_cgo.go`.
+- [ ] delete all files in `./internal/blst/`.
 - [ ] open BLST repository on the new version.
 - [ ] copy all `.c` and `.h` files from `<blst>/src/` into `./blst_src/`.
 - [ ] delete newly copied `./blst_src/server.c`.

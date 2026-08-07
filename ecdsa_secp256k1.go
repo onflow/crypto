@@ -90,12 +90,14 @@ var _ PrivateKey = (*prKeyECDSASecp256k1)(nil)
 type pubKeyECDSASecp256k1 struct {
 	// ECDSA generic public key
 	*pubKeyCommonECDSA
-	// 0x4 || bytes(x) || bytes(y)  (65 bytes) where x and y are the coordinates of the public key point, padded to the field size (32 bytes)
+	// 0x4 || bytes(x) || bytes(y)  (65 bytes) where x and y are the coordinates of the public key point, padded to the field size (32 bytes).
+	// This is the form required by go-ethereum/crypto/secp256k1.
 	pkBytes []byte
 }
 
 var _ PublicKey = (*pubKeyECDSASecp256k1)(nil)
 
+// Input scalar d is assumed to be satisfy 0 < d < n before calling this function.
 func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256k1 {
 	sk := &prKeyECDSASecp256k1{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
@@ -148,14 +150,18 @@ func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp2
 
 	x, y := readTwoBigInts(XYBytes, pLen)
 
-	// `IsOnCurve` includes checks for x<p and y<p
+	// check the coordinates are valid field elements (required for go-ethereum versions prior or equal to v1.16.8)
+	if x.Cmp(a.curveP) >= 0 || y.Cmp(a.curveP) >= 0 {
+		return nil, invalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
+	}
+
+	// `IsOnCurve` includes checks for x<p and y<p (in go-ethereum versions later than v1.16.9)
 	if !secp256k1.S256().IsOnCurve(x, y) {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve")
 	}
 	return &pubKeyECDSASecp256k1{
 		&pubKeyCommonECDSA{secp256k1Instance},
-		append([]byte{ecEncodingUncompressed}, XYBytes...),
-		// XYBytes is already the raw uncompressed encoding `bytes(x) || bytes(y)`
+		secp256k1PkBytes(x, y),
 	}, nil
 }
 
@@ -164,18 +170,27 @@ func (pk *pubKeyECDSASecp256k1) String() string {
 	return pubKeyCommonECDSAString(pk)
 }
 
+// 0x4 || bytes(x) || bytes(y)  (65 bytes) where x and y are the coordinates of the public key point, padded to the field size (32 bytes).
+// This is the form required by the underlying go-ethereum/crypto/secp256k1.
+//
+// The function assumes x and y are valid field elements and the point (x,y) is on curve
+func secp256k1PkBytes(x, y *big.Int) []byte {
+	pkBytes := make([]byte, 1+2*pLenSecp256k1)
+	pkBytes[0] = ecEncodingUncompressed
+	// pad x and y to the field size and concatenate them
+	padToSizeAndConcat(pkBytes[1:], x, y, pLenSecp256k1)
+	return pkBytes
+}
+
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSASecp256k1) PublicKey() PublicKey {
 	// construct the public key once
 	if sk.pubKey == nil {
 		x, y := secp256k1.S256().ScalarBaseMult(sk.dBytes)
-		pkBytes := make([]byte, 1+2*pLenSecp256k1)
-		pkBytes[0] = ecEncodingUncompressed
-		// pad x and y to the field size and concatenate them
-		padToSizeAndConcat(pkBytes[1:], x, y, pLenSecp256k1)
+
 		sk.pubKey = &pubKeyECDSASecp256k1{
 			pubKeyCommonECDSA: &pubKeyCommonECDSA{secp256k1Instance},
-			pkBytes:           pkBytes,
+			pkBytes:           secp256k1PkBytes(x, y),
 		}
 	}
 	return sk.pubKey
@@ -279,12 +294,9 @@ func secp256k1DecodePublicKeyCompressed(pkBytes []byte) (*pubKeyECDSASecp256k1, 
 	if x == nil || y == nil {
 		return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a point on secp256k1", pkBytes)
 	}
-	uncompressedPkBytes := make([]byte, 1+2*pLenSecp256k1)
-	uncompressedPkBytes[0] = ecEncodingUncompressed
-	padToSizeAndConcat(uncompressedPkBytes[1:], x, y, pLenSecp256k1)
 
 	return &pubKeyECDSASecp256k1{
 		&pubKeyCommonECDSA{secp256k1Instance},
-		uncompressedPkBytes,
+		secp256k1PkBytes(x, y),
 	}, nil
 }

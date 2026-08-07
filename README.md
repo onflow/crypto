@@ -65,8 +65,8 @@ All signature schemes use the generic interfaces of `PrivateKey` and `PublicKey`
 
  * ECDSA
     * public keys are compressed or uncompressed.
-    * ephemeral key is derived from the private key, hash and the system entropy (based on https://golang.org/pkg/crypto/ecdsa/).
     * supports NIST P-256 (secp256r1) and secp256k1 curves.
+    * For NIST P-256, ephemeral key is derived from the private key, hash and the system entropy (based on https://golang.org/pkg/crypto/ecdsa/). For secp256k1, ephemeral key is deterministically formed following RFC 6979 (based on github.com/ethereum/go-ethereum/crypto/secp256k1)
 
  * BLS
     * supports [BLS12-381](https://electriccoin.co/blog/new-snark-curve/) curve.

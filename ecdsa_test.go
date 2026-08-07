@@ -185,24 +185,40 @@ func TestECDSAEncodeDecode(t *testing.T) {
 		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
 		//  - public key decoding only accepts reduced x and y
 		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
-			invalidPK1s := map[SigningAlgorithm]string{
-				ECDSASecp256k1: "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
-				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+			onflowCryptoErr := "at least one coordinate is larger than the field prime"
+			goCryptoErr := "invalid P256 element encoding"
+
+			invalidPKs := []struct {
+				signin   SigningAlgorithm
+				pk       string
+				errorMsg string
+			}{
+				{
+					// x >= p
+					ECDSASecp256k1, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+					onflowCryptoErr,
+				}, {
+					ECDSAP256, "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+					goCryptoErr,
+				}, {
+					// y >= p
+					ECDSASecp256k1, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+					onflowCryptoErr,
+				}, {
+					ECDSAP256, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+					goCryptoErr,
+				},
 			}
-			invalidPK2s := map[SigningAlgorithm]string{
-				ECDSASecp256k1: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
-				ECDSAP256:      "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+
+			for _, invalidPK := range invalidPKs {
+				pkBytes, err := hex.DecodeString(invalidPK.pk)
+				require.NoError(t, err)
+				pk, err := DecodePublicKey(invalidPK.signin, pkBytes)
+				require.Error(t, err)
+				assert.True(t, IsInvalidInputsError(err))
+				assert.ErrorContains(t, err, invalidPK.errorMsg)
+				assert.Nil(t, pk)
 			}
-			// invalidpk1 with x >= p
-			invalidPk1, err := hex.DecodeString(invalidPK1s[curve])
-			require.NoError(t, err)
-			_, err = DecodePublicKey(curve, invalidPk1)
-			assert.Error(t, err)
-			// invalidpk2 with y >= p
-			invalidPk2, err := hex.DecodeString(invalidPK2s[curve])
-			require.NoError(t, err)
-			_, err = DecodePublicKey(curve, invalidPk2)
-			assert.Error(t, err)
 		})
 	}
 }

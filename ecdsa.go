@@ -41,7 +41,7 @@ type ecdsaContext struct {
 	curveP *big.Int
 	// curve order
 	curveN *big.Int
-	// curve order minus 1 divided by 2 (used for signature malleability annalysis)
+	// curve order minus 1 divided by 2 (used for signature malleability analysis)
 	curveNdiv2 *big.Int
 }
 
@@ -122,7 +122,7 @@ func (a *ecdsaContext) mapToPrivateKey(seed []byte) (PrivateKey, error) {
 // privateKey returns an ECDSA private key using the
 // input scalar.
 //
-// Input scalar d is assumed to be satisfy 0 < d < n before calling this function.
+// Input scalar d is assumed to satisfy 0 < d < n before calling this function.
 //
 // The function returns:
 //   - (nil, invalidInputsError) if the curve is not supported
@@ -217,7 +217,7 @@ func (a *ecdsaContext) decodePrivateKey(der []byte) (PrivateKey, error) {
 func (a *ecdsaContext) rawDecodePublicKey(input []byte) (PublicKey, error) {
 	switch a.algo {
 	case ECDSAP256:
-		return publicKeyECDSAP256(a, input)
+		return publicKeyECDSAP256(input)
 	case ECDSASecp256k1:
 		return publicKeyECDSASecp256k1(a, input)
 	default:
@@ -330,7 +330,9 @@ func (a *ecdsaContext) isLowS(s *big.Int) bool {
 // (same slice is returned if S is already normalized)
 // It assumes len(sig) == 2*nLen where nLen is the byte-length of the curve order.
 // This is needed when the underlying signature verification requires S to be in the lower range (to avoid signature malleability). In this package, verification allows high S signatures to be accepted.
-// The function checks that S is in the correct range [0, n-1] before normalizing it. If S is not in the correct range, the function returns a false boolean. (S will be checked against 0 in the verification function - check against N is inlcuded here)
+// The function checks that S is in the correct range [0, n-1] before normalizing it.
+// If S is not in the correct range, the function returns a false boolean.
+// (S will be checked against 0 in the verification function - check against N is inlcuded here)
 // returns:
 //   - newSig, true if S is in the valid range and was normalized to low S
 //   - nil, false if S was not in the correct range

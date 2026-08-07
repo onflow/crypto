@@ -82,6 +82,7 @@ type pubKeyECDSAP256 struct {
 
 var _ PublicKey = (*pubKeyECDSAP256)(nil)
 
+// Input scalar d is assumed to satisfy 0 < d < n before calling this function.
 func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error) {
 	internalSK, err := ecdsa.ParseRawPrivateKey(elliptic.P256(), dBytes)
 	if err != nil {
@@ -128,12 +129,13 @@ func (sk *prKeyECDSAP256) String() string {
 }
 
 // returns a publicKeyECDSAP256 from (bytes(x) || bytes(y)) bytes
-func publicKeyECDSAP256(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSAP256, error) {
+func publicKeyECDSAP256(XYBytes []byte) (*pubKeyECDSAP256, error) {
 	// deserialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3)
 	// and includes on curve check.
 	// The bytes serialization for non-infinity points is `0x04 || X || Y` and infinity point should be rejected anyway
 	parsingBytes := append([]byte{ecEncodingUncompressed}, XYBytes...)
 
+	// ParseUncompressedPublicKey includes x<p and y<p checks, and on curve checks
 	internalPK, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), parsingBytes)
 	if err != nil {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve: %w", err)
