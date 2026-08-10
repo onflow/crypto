@@ -549,7 +549,7 @@ func TestECDSAHighAndLowS(t *testing.T) {
 func (a *ecdsaContext) signatureFlipS(sig []byte) []byte {
 	// read S
 	nLen := bitsToBytes(a.curveN.BitLen())
-	s := new(big.Int).SetBytes(sig[nLen:])
+	_, s := readTwoBigInts(sig, nLen)
 	// compute N-S
 	sComplement := new(big.Int).Sub(a.curveN, s)
 	// write it into a new signature

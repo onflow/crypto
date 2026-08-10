@@ -397,8 +397,8 @@ func (a *ecdsaContext) isLowS(s *big.Int) bool {
 func (a *ecdsaContext) signatureNormalizeS(sig []byte) ([]byte, bool) {
 	// read S
 	nLen := bitsToBytes(a.curveN.BitLen())
-	s := new(big.Int).SetBytes(sig[nLen:]) // S >= 0
-	if a.isLowS(s) {                       // S <= (n-1)/2
+	_, s := readTwoBigInts(sig, nLen) // S >= 0
+	if a.isLowS(s) {                  // S <= (n-1)/2
 		return sig, true // S is in the valid range and no need to flip it
 	}
 
