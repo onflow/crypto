@@ -21,6 +21,8 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"sync"
 	"testing"
 
 	crand "crypto/rand"
@@ -70,6 +72,13 @@ func (d *dummyHasher) Write([]byte) (int, error)        { return 0, nil }
 func (d *dummyHasher) SumHash() hash.Hash               { return make([]byte, d.size) }
 func (d *dummyHasher) Reset()                           {}
 
+// dishonestHasher declares a size but computes hashes one byte shorter,
+// simulating a hash.Hasher implementation that breaks the interface contract
+type dishonestHasher struct{ dummyHasher }
+
+func newDishonestHasher(size int) hash.Hasher           { return &dishonestHasher{dummyHasher{size}} }
+func (d *dishonestHasher) ComputeHash([]byte) hash.Hash { return make([]byte, d.size-1) }
+
 func TestECDSAHasher(t *testing.T) {
 	for _, curve := range ecdsaCurves {
 		// generate a key pair
@@ -103,6 +112,17 @@ func TestECDSAHasher(t *testing.T) {
 		// hasher with small output size
 		t.Run("small size hasher is rejected", func(t *testing.T) {
 			dummy := newDummyHasher(31) // 31 is one byte less than the curve order
+			_, err := sk.Sign(seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+			_, err = sk.PublicKey().Verify(sig, seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+		})
+
+		// hasher whose computed hash is shorter than its declared size
+		t.Run("dishonest hasher is rejected without a panic", func(t *testing.T) {
+			dummy := newDishonestHasher(32)
 			_, err := sk.Sign(seed, dummy)
 			assert.Error(t, err)
 			assert.True(t, IsInvalidHasherSizeError(err))
@@ -523,4 +543,155 @@ func TestECDSAHighAndLowS(t *testing.T) {
 			})
 		}
 	})
+}
+
+// Test function only to flip S in a signature. It is used for testing signature malleability
+func (a *ecdsaContext) signatureFlipS(sig []byte) []byte {
+	// read S
+	nLen := bitsToBytes(a.curveN.BitLen())
+	s := new(big.Int).SetBytes(sig[nLen:])
+	// compute N-S
+	sComplement := new(big.Int).Sub(a.curveN, s)
+	// write it into a new signature
+	newSig := make([]byte, len(sig))
+	copy(newSig, sig[:nLen])             // copy R
+	sComplement.FillBytes(newSig[nLen:]) // write S complement
+	return newSig
+}
+
+// TestECDSASecp256k1DeterministicSigning checks deterministic ECDSA signatures
+// on secp256k1 against RFC 6979 known-answer test vectors.
+// The vectors are the community secp256k1/SHA-256 vectors
+// replicated in trezor-crypto and python-ecdsa.
+// The expected signatures are the low-S normalized (r || s) pairs.
+func TestECDSASecp256k1DeterministicSigning(t *testing.T) {
+	vectors := []struct {
+		sk  string
+		msg string
+		sig string
+	}{
+		{
+			sk:  "0000000000000000000000000000000000000000000000000000000000000001",
+			msg: "Satoshi Nakamoto",
+			sig: "934b1ea10a4b3c1757e2b0c017d0b6143ce3c9a7e6a4a49860d7a6ab210ee3d82442ce9d2b916064108014783e923ec36b49743e2ffa1c4496f01a512aafd9e5",
+		},
+		{
+			// the private key is the curve order minus 1
+			sk:  "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140",
+			msg: "Satoshi Nakamoto",
+			sig: "fd567d121db66e382991534ada77a6bd3106f0a1098c231e47993447cd6af2d06b39cd0eb1bc8603e159ef5c20a5c8ad685a45b06ce9bebed3f153d10d93bed5",
+		},
+		{
+			sk:  "f8b8af8ce3c7cca5e300d33939540c10d45ce001b8f252bfbc57ba0342904181",
+			msg: "Alan Turing",
+			sig: "7063ae83e7f62bbb171798131b4a0564b956930092b33b07b395615d9ec7e15c58dfcc1e00a35e1572f366ffe34ba0fc47db1e7189759b9fb233c5b05ab388ea",
+		},
+	}
+
+	for i, v := range vectors {
+		skBytes, err := hex.DecodeString(v.sk)
+		require.NoError(t, err)
+		sk, err := DecodePrivateKey(ECDSASecp256k1, skBytes)
+		require.NoError(t, err)
+
+		sig, err := sk.Sign([]byte(v.msg), hash.NewSHA2_256())
+		require.NoError(t, err)
+		assert.Equal(t, v.sig, hex.EncodeToString(sig), "vector %d", i)
+
+		// the signature must verify under the matching public key
+		valid, err := sk.PublicKey().Verify(sig, []byte(v.msg), hash.NewSHA2_256())
+		require.NoError(t, err)
+		assert.True(t, valid, "vector %d", i)
+	}
+}
+
+// TestECDSAConcurrentPublicKey checks that concurrent calls to PublicKey
+// on the same private key are safe and return equal keys.
+// The test is effective when the race detector is enabled.
+func TestECDSAConcurrentPublicKey(t *testing.T) {
+	for _, curve := range ecdsaCurves {
+		t.Run(curve.String(), func(t *testing.T) {
+			seed := make([]byte, KeyGenSeedMinLen)
+			_, err := crand.Read(seed)
+			require.NoError(t, err)
+			sk, err := GeneratePrivateKey(curve, seed)
+			require.NoError(t, err)
+
+			pks := make([]PublicKey, 10)
+			var wg sync.WaitGroup
+			for i := range pks {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					pks[i] = sk.PublicKey()
+				}()
+			}
+			wg.Wait()
+
+			for _, pk := range pks {
+				require.NotNil(t, pk)
+				assert.True(t, pk.Equals(pks[0]))
+			}
+		})
+	}
+}
+
+// TestECDSANilChecks covers the nil-related edge cases of the public API:
+// decoding errors must return untyped nil interfaces,
+// and Equals with a nil input must return false instead of panicking.
+func TestECDSANilChecks(t *testing.T) {
+	t.Run("decode error paths return untyped nil interfaces", func(t *testing.T) {
+		for _, curve := range ecdsaCurves {
+			sk, err := DecodePrivateKey(curve, make([]byte, ecdsaPrKeyLen[curve]-1))
+			require.Error(t, err)
+			// `assert.Nil` treats a typed-nil pointer inside an interface as nil,
+			// so compare against nil directly instead
+			assert.True(t, sk == nil)
+
+			pk, err := DecodePublicKey(curve, make([]byte, ecdsaPubKeyLen[curve]-1))
+			require.Error(t, err)
+			assert.True(t, pk == nil)
+
+			pk, err = DecodePublicKeyCompressed(curve, make([]byte, ecdsaPubKeyLen[curve]-1))
+			require.Error(t, err)
+			assert.True(t, pk == nil)
+		}
+	})
+
+	t.Run("Equals with a nil input returns false", func(t *testing.T) {
+		for _, curve := range ecdsaCurves {
+			seed := make([]byte, KeyGenSeedMinLen)
+			_, err := crand.Read(seed)
+			require.NoError(t, err)
+			sk, err := GeneratePrivateKey(curve, seed)
+			require.NoError(t, err)
+			assert.False(t, sk.Equals(nil))
+			assert.False(t, sk.PublicKey().Equals(nil))
+		}
+	})
+}
+
+// TestECDSASecp256k1CompressedDecoding checks compressed point decoding on secp256k1
+// using edge-case points where a generic (crypto/elliptic style) decompression
+// either fails or computes a square root that doesn't match secp256k1 arithmetic.
+func TestECDSASecp256k1CompressedDecoding(t *testing.T) {
+	testVectors := []string{
+		"028b10bf56476bf7da39a3286e29df389177a2fa0fca2d73348ff78887515d8da1", // IsOnCurve for elliptic returns false
+		"03d39427f07f680d202fe8504306eb29041aceaf4b628c2c69b0ec248155443166", // odd, IsOnCurve for elliptic returns false
+		"0267d1942a6cbe4daec242ea7e01c6cdb82dadb6e7077092deb55c845bf851433e", // arith of sqrt in elliptic doesn't match secp256k1
+		"0345d45eda6d087918b041453a96303b78c478dce89a4ae9b3c933a018888c5e06", // odd, arith of sqrt in elliptic doesn't match secp256k1
+	}
+
+	for _, testVector := range testVectors {
+		// get the compressed bytes
+		publicBytes, err := hex.DecodeString(testVector)
+		require.NoError(t, err)
+
+		// decompress, check that those are perfectly valid secp256k1 public keys
+		retrieved, err := DecodePublicKeyCompressed(ECDSASecp256k1, publicBytes)
+		require.NoError(t, err)
+
+		// check the compression is canonical by re-compressing to the same bytes
+		require.Equal(t, retrieved.EncodeCompressed(), publicBytes)
+	}
 }
