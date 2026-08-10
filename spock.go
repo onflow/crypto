@@ -32,8 +32,8 @@ import (
 // SPOCKProve generates a spock poof for data under the private key sk.
 //
 // The function returns:
-//   - (false, errNilHasher) if the hasher is nil
-//   - (false, invalidHasherSiseError) if hasher's output size is not 128 bytes
+//   - (nil, errNilHasher) if the hasher is nil
+//   - (nil, invalidHasherSiseError) if hasher's output size is not 128 bytes
 //   - (nil, errNotBLSKey) if input key is not a BLS key
 //   - (nil, error) if an unexpected error occurs
 //   - (proof, nil) otherwise

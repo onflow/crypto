@@ -115,8 +115,8 @@ func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256
 // modified temporarily.
 //
 // The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
+//   - (nil, errNilHasher) if a hasher is nil
+//   - (nil, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
 //   - (nil, error) if an unexpected error occurs
 //   - (signature, nil) otherwise
 func (sk *prKeyECDSASecp256k1) Sign(msg []byte, hasher hash.Hasher) (Signature, error) {

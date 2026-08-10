@@ -104,8 +104,8 @@ func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error
 // modified temporarily.
 //
 // The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
+//   - (nil, errNilHasher) if a hasher is nil
+//   - (nil, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
 //   - (nil, error) if an unexpected error occurs
 //   - (signature, nil) otherwise
 func (sk *prKeyECDSAP256) Sign(msg []byte, hasher hash.Hasher) (Signature, error) {
