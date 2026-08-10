@@ -3,11 +3,12 @@ module github.com/onflow/crypto
 go 1.26.0
 
 require (
+	// Minimum version, not a pin: Go builds with the highest version required across the build.
+	// Keeping this floor low lets consumers choose their own go-ethereum version;
+	// raising it forces the new version on all of them.
+	// Only raise it if this module needs something v1.16.8 lacks,
+	// and audit the changes under go-ethereum/crypto/secp256k1 when doing so.
 	github.com/ethereum/go-ethereum v1.16.8
-	// fixed at this version because flow-go uses this version and Go modules does not allow
-	// multiple versions of the same module.
-	// This will be updated once flow-go updates to a newer version of go-ethereum.
-	// Updates must audit the code changes under github.com/ethereum/go-ethereum/crypto/secp256k1 between the old and new version.
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.54.0
