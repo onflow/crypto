@@ -3,7 +3,7 @@ module github.com/onflow/crypto
 go 1.26.0
 
 require (
-	github.com/ethereum/go-ethereum v1.16.8 
+	github.com/ethereum/go-ethereum v1.16.8
 	// fixed at this version because flow-go uses this version and Go modules does not allow
 	// multiple versions of the same module.
 	// This will be updated once flow-go updates to a newer version of go-ethereum.
