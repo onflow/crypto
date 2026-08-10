@@ -76,8 +76,12 @@ func (a *ecdsaContext) checkAlgoAndComputeHash(msg []byte, hasher hash.Hasher) (
 
 // signatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
-// If FormatCheck returns false then the input is not a valid ECDSA
+// If signatureFormatCheck returns false then the input is not a valid ECDSA
 // signature and will fail a verification against any message and public key.
+//
+// This function is not called for signature verification. Checks of signature
+// components R and S are delegated to the verification functions of the underlying
+// packages.
 func (a *ecdsaContext) signatureFormatCheck(sig Signature) bool {
 	N := a.curveN
 	nLen := bitsToBytes(N.BitLen())
@@ -274,7 +278,7 @@ func pubKeyCommonECDSAString(pk PublicKey) string {
 	return fmt.Sprintf("%#x", pk.Encode())
 }
 
-// Equals test the equality of two private keys
+// Equals tests the equality of two private keys
 func prKeyCommonECDSAEquals(sk, other PrivateKey) bool {
 	// check the algorithm
 	if sk.Algorithm() != other.Algorithm() {
@@ -294,7 +298,7 @@ func (pk *pubKeyCommonECDSA) Size() int {
 	return 2 * bitsToBytes(pk.curveP.BitLen())
 }
 
-// Equals test the equality of two private keys
+// Equals tests the equality of two private keys
 func pubKeyCommonECDSAEquals(pk, other PublicKey) bool {
 	// check the algorithm
 	if pk.Algorithm() != other.Algorithm() {
@@ -312,7 +316,7 @@ func padToSizeAndConcat(output []byte, a, b *big.Int, size int) {
 	b.FillBytes(output[size:])
 }
 
-// Helper function to read two big integers of "size" bytes each from a concatenate input buffer.
+// Helper function to read two big integers of "size" bytes each from a concatenated input buffer.
 // This helper is needed when deserializing.
 // It assumes the input buffer has at least 2*size byte-length.
 func readTwoBigInts(input []byte, size int) (*big.Int, *big.Int) {
@@ -330,9 +334,9 @@ func (a *ecdsaContext) isLowS(s *big.Int) bool {
 // (same slice is returned if S is already normalized)
 // It assumes len(sig) == 2*nLen where nLen is the byte-length of the curve order.
 // This is needed when the underlying signature verification requires S to be in the lower range (to avoid signature malleability). In this package, verification allows high S signatures to be accepted.
-// The function checks that S is in the correct range [0, n-1] before normalizing it.
-// If S is not in the correct range, the function returns a false boolean.
-// (S will be checked against 0 in the verification function - check against N is inlcuded here)
+// The function checks that S is in the range [0, n-1] before normalizing it.
+// If S is not in this range, the function returns a false boolean.
+// (S and R values will be checked by the go-ethereum verification function - only S check against N is included here, S=0 check is deferred to the signature verification)
 // returns:
 //   - newSig, true if S is in the valid range and was normalized to low S
 //   - nil, false if S was not in the correct range

@@ -206,12 +206,12 @@ func (sk *prKeyECDSAP256) Encode() []byte {
 	return sk.rawEncode()
 }
 
-// Equals test the equality of two private keys
+// Equals tests the equality of two private keys
 func (sk *prKeyECDSAP256) Equals(other PrivateKey) bool {
 	return prKeyCommonECDSAEquals(sk, other)
 }
 
-// Equals test the equality of two public keys
+// Equals tests the equality of two public keys
 func (pk *pubKeyECDSAP256) Equals(other PublicKey) bool {
 	return pubKeyCommonECDSAEquals(pk, other)
 }

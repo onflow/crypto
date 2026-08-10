@@ -97,7 +97,7 @@ type pubKeyECDSASecp256k1 struct {
 
 var _ PublicKey = (*pubKeyECDSASecp256k1)(nil)
 
-// Input scalar d is assumed to be satisfy 0 < d < n before calling this function.
+// Input scalar d is assumed to satisfy 0 < d < n before calling this function.
 func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256k1 {
 	sk := &prKeyECDSASecp256k1{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
@@ -150,12 +150,12 @@ func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp2
 
 	x, y := readTwoBigInts(XYBytes, pLen)
 
-	// check the coordinates are valid field elements (required for go-ethereum versions prior or equal to v1.16.8)
+	// check the coordinates are valid field elements (required for go-ethereum versions prior to or equal to v1.16.8)
 	if x.Cmp(a.curveP) >= 0 || y.Cmp(a.curveP) >= 0 {
 		return nil, invalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
 	}
 
-	// `IsOnCurve` includes checks for x<p and y<p (in go-ethereum versions later than v1.16.9)
+	// `IsOnCurve` includes checks for x<p and y<p (in go-ethereum versions from v1.16.9 onwards)
 	if !secp256k1.S256().IsOnCurve(x, y) {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve")
 	}
@@ -243,12 +243,12 @@ func (sk *prKeyECDSASecp256k1) Encode() []byte {
 	return sk.rawEncode()
 }
 
-// Equals test the equality of two private keys
+// Equals tests the equality of two private keys
 func (sk *prKeyECDSASecp256k1) Equals(other PrivateKey) bool {
 	return prKeyCommonECDSAEquals(sk, other)
 }
 
-// Equals test the equality of two public keys
+// Equals tests the equality of two public keys
 func (pk *pubKeyECDSASecp256k1) Equals(other PublicKey) bool {
 	return pubKeyCommonECDSAEquals(pk, other)
 }

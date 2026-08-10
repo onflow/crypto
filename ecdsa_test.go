@@ -50,7 +50,6 @@ var ecdsaSigLen = map[SigningAlgorithm]int{
 
 // ECDSA tests
 func TestECDSA(t *testing.T) {
-
 	for _, curve := range ecdsaCurves {
 		t.Logf("Testing ECDSA for curve %s", curve)
 		// test key generation seed limits
@@ -103,7 +102,7 @@ func TestECDSAHasher(t *testing.T) {
 
 		// hasher with small output size
 		t.Run("small size hasher is rejected", func(t *testing.T) {
-			dummy := newDummyHasher(31) // 31 is one byte less than the supported curves' order
+			dummy := newDummyHasher(31) // 31 is one byte less than the curve order
 			_, err := sk.Sign(seed, dummy)
 			assert.Error(t, err)
 			assert.True(t, IsInvalidHasherSizeError(err))
@@ -178,49 +177,58 @@ func TestECDSAEncodeDecode(t *testing.T) {
 			assert.True(t, IsInvalidInputsError(err))
 			assert.Nil(t, pk)
 		})
-
-		// Test a public key serialization with a point encoded with
-		// x or y not reduced mod p.
-		// This test checks that:
-		//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
-		//  - public key decoding only accepts reduced x and y
-		t.Run("public key with non-reduced coordinates", func(t *testing.T) {
-			onflowCryptoErr := "at least one coordinate is larger than the field prime"
-			goCryptoErr := "invalid P256 element encoding"
-
-			invalidPKs := []struct {
-				signin   SigningAlgorithm
-				pk       string
-				errorMsg string
-			}{
-				{
-					// x >= p
-					ECDSASecp256k1, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
-					onflowCryptoErr,
-				}, {
-					ECDSAP256, "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
-					goCryptoErr,
-				}, {
-					// y >= p
-					ECDSASecp256k1, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
-					onflowCryptoErr,
-				}, {
-					ECDSAP256, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
-					goCryptoErr,
-				},
-			}
-
-			for _, invalidPK := range invalidPKs {
-				pkBytes, err := hex.DecodeString(invalidPK.pk)
-				require.NoError(t, err)
-				pk, err := DecodePublicKey(invalidPK.signin, pkBytes)
-				require.Error(t, err)
-				assert.True(t, IsInvalidInputsError(err))
-				assert.ErrorContains(t, err, invalidPK.errorMsg)
-				assert.Nil(t, pk)
-			}
-		})
 	}
+	// Test a public key serialization with a point encoded with
+	// x or y not reduced mod p.
+	// This test checks that:
+	//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
+	//  - public key decoding only accepts reduced x and y
+	t.Run("public key with non-reduced coordinates", func(t *testing.T) {
+		onflowCryptoErr := "at least one coordinate is larger than the field prime"
+		goCryptoErr := "invalid P256 element encoding"
+
+		invalidPKs := []struct {
+			curve    SigningAlgorithm
+			pk       string
+			errorMsg string
+			// assertions are based on the correct error message.
+			// In particular, the error message in this test must be about the coordinates
+			// being incorrect/non-reduced rather than the point not being on curve.
+			// Future edits must not update the error messages without taking this into account.
+		}{
+			// x >= p  ,  point not on curve
+			{
+				ECDSASecp256k1, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F0000000000000000000000000000000000000000000000000000000000000000",
+				onflowCryptoErr,
+			}, {
+				ECDSAP256, "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000000000000000000000000000000000000000",
+				goCryptoErr,
+			},
+			// y >= p ,  point not on curve
+			{
+				ECDSASecp256k1, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC30",
+				onflowCryptoErr,
+			}, {
+				ECDSAP256, "0000000000000000000000000000000000000000000000000000000000000000FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+				goCryptoErr,
+			},
+			// x >= p ,  point on curve
+			{
+				ECDSASecp256k1, "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc304218f20ae6c646b363db68605822fb14264ca8d2587fdd6fbc750d587e76a7ee",
+				onflowCryptoErr,
+			},
+		}
+
+		for _, invalidPK := range invalidPKs {
+			pkBytes, err := hex.DecodeString(invalidPK.pk)
+			require.NoError(t, err)
+			pk, err := DecodePublicKey(invalidPK.curve, pkBytes)
+			require.Error(t, err)
+			assert.True(t, IsInvalidInputsError(err))
+			assert.ErrorContains(t, err, invalidPK.errorMsg)
+			assert.Nil(t, pk)
+		}
+	})
 }
 
 // TestECDSAEquals tests equal for ECDSA keys
@@ -281,10 +289,10 @@ func TestECDSAPublicKeyComputation(t *testing.T) {
 	}
 }
 
+// TestECDSASignatureFormatCheck tests SignatureFormatCheck.
 func TestECDSASignatureFormatCheck(t *testing.T) {
-
 	for _, curve := range ecdsaCurves {
-		t.Run("valid signature", func(t *testing.T) {
+		t.Run("valid signature check", func(t *testing.T) {
 			len := ecdsaSigLen[curve]
 			sig := Signature(make([]byte, len))
 			_, err := crand.Read(sig)
@@ -310,9 +318,8 @@ func TestECDSASignatureFormatCheck(t *testing.T) {
 			assert.Nil(t, err)
 			assert.False(t, valid)
 		})
-
 		t.Run("zero values", func(t *testing.T) {
-			// signature with a zero s
+			// S=0
 			len := ecdsaSigLen[curve]
 			sig0s := Signature(make([]byte, len))
 			_, err := crand.Read(sig0s[:len/2])
@@ -322,7 +329,7 @@ func TestECDSASignatureFormatCheck(t *testing.T) {
 			assert.Nil(t, err)
 			assert.False(t, valid)
 
-			// signature with a zero r
+			// R=0
 			sig0r := Signature(make([]byte, len))
 			_, err = crand.Read(sig0r[len/2:])
 			require.NoError(t, err)
@@ -330,14 +337,20 @@ func TestECDSASignatureFormatCheck(t *testing.T) {
 			valid, err = SignatureFormatCheck(curve, sig0r)
 			assert.Nil(t, err)
 			assert.False(t, valid)
+
+			// signature with R=S=0
+			sig0 := Signature(make([]byte, len))
+			valid, err = SignatureFormatCheck(curve, sig0)
+			assert.Nil(t, err)
+			assert.False(t, valid)
 		})
 
-		t.Run("large values", func(t *testing.T) {
+		t.Run("non-reduced values", func(t *testing.T) {
 			len := ecdsaSigLen[curve]
 			sigLargeS := Signature(make([]byte, len))
 			_, err := crand.Read(sigLargeS[:len/2])
 			require.NoError(t, err)
-			// make sure s is larger than the curve order
+			// s >= N
 			for i := len / 2; i < len; i++ {
 				sigLargeS[i] = 0xFF
 			}
@@ -349,7 +362,7 @@ func TestECDSASignatureFormatCheck(t *testing.T) {
 			sigLargeR := Signature(make([]byte, len))
 			_, err = crand.Read(sigLargeR[len/2:])
 			require.NoError(t, err)
-			// make sure s is larger than the curve order
+			// R >= N
 			for i := 0; i < len/2; i++ {
 				sigLargeR[i] = 0xFF
 			}
@@ -427,7 +440,7 @@ func TestECDSAKeyGenerationBreakingChange(t *testing.T) {
 //
 // For a valid signature (r,s), the pair (r,n-s) is also a valid signature of the same
 // message under the same key. The package signature verification accepts both forms and should keep doing so.
-// Rejecting the high-s form would be a breaking change for the applications using this package.
+// Rejecting the high-s form would be a breaking change for applications using this package.
 func TestECDSAHighAndLowS(t *testing.T) {
 
 	var ecdsaContexts = map[SigningAlgorithm]*ecdsaContext{
@@ -453,7 +466,7 @@ func TestECDSAHighAndLowS(t *testing.T) {
 				sig, err := sk.Sign(msg, halg)
 				require.NoError(t, err)
 
-				// extract S and test the first case of S (can be low or high S)
+				// extract S and test the current case of S (either low or high)
 				_, s := readTwoBigInts(sig, ecdsaSigLen[curve]/2)
 				isLowS := ecdsaContexts[curve].isLowS(s)
 
@@ -469,7 +482,7 @@ func TestECDSAHighAndLowS(t *testing.T) {
 					assert.True(t, valid)
 				})
 
-				// flip S to N-S to check the other case (can be low or high S)
+				// flip S to N-S to check the other case
 				t.Run(fmt.Sprintf("low S equals %v", !isLowS), func(t *testing.T) {
 					newSig := ecdsaContexts[curve].signatureFlipS(sig)
 
