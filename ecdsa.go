@@ -33,7 +33,8 @@ import (
 	"github.com/onflow/crypto/hash"
 )
 
-// ecdsaContext embeds SigningAlgorithm
+// ecdsaContext holds the signing algorithm and the curve parameters
+// shared by all ECDSA keys on that curve.
 type ecdsaContext struct {
 	// the signing algo
 	algo SigningAlgorithm
@@ -335,7 +336,7 @@ func (pk *pubKeyCommonECDSA) Size() int {
 	return 2 * bitsToBytes(pk.curveP.BitLen())
 }
 
-// Equals tests the equality of two private keys
+// Equals tests the equality of two public keys
 func pubKeyCommonECDSAEquals(pk, other PublicKey) bool {
 	// a nil key is not equal to any key
 	if other == nil {
