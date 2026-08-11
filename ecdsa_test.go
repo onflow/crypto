@@ -21,6 +21,7 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
 	crand "crypto/rand"
@@ -70,6 +71,13 @@ func (d *dummyHasher) Write([]byte) (int, error)        { return 0, nil }
 func (d *dummyHasher) SumHash() hash.Hash               { return make([]byte, d.size) }
 func (d *dummyHasher) Reset()                           {}
 
+// dishonestHasher declares a size but computes hashes one byte shorter,
+// simulating a hash.Hasher implementation that breaks the interface contract
+type dishonestHasher struct{ dummyHasher }
+
+func newDishonestHasher(size int) hash.Hasher           { return &dishonestHasher{dummyHasher{size}} }
+func (d *dishonestHasher) ComputeHash([]byte) hash.Hash { return make([]byte, d.size-1) }
+
 func TestECDSAHasher(t *testing.T) {
 	for _, curve := range ecdsaCurves {
 		// generate a key pair
@@ -103,6 +111,17 @@ func TestECDSAHasher(t *testing.T) {
 		// hasher with small output size
 		t.Run("small size hasher is rejected", func(t *testing.T) {
 			dummy := newDummyHasher(31) // 31 is one byte less than the curve order
+			_, err := sk.Sign(seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+			_, err = sk.PublicKey().Verify(sig, seed, dummy)
+			assert.Error(t, err)
+			assert.True(t, IsInvalidHasherSizeError(err))
+		})
+
+		// hasher whose computed hash is shorter than its declared size
+		t.Run("dishonest hasher is rejected without a panic", func(t *testing.T) {
+			dummy := newDishonestHasher(32)
 			_, err := sk.Sign(seed, dummy)
 			assert.Error(t, err)
 			assert.True(t, IsInvalidHasherSizeError(err))
@@ -523,4 +542,68 @@ func TestECDSAHighAndLowS(t *testing.T) {
 			})
 		}
 	})
+}
+
+// Test function only to flip S in a signature. It is used for testing signature malleability
+func (a *ecdsaContext) signatureFlipS(sig []byte) []byte {
+	// read S
+	nLen := bitsToBytes(a.curveN.BitLen())
+	s := new(big.Int).SetBytes(sig[nLen:])
+	// compute N-S
+	sComplement := new(big.Int).Sub(a.curveN, s)
+	// write it into a new signature
+	newSig := make([]byte, len(sig))
+	copy(newSig, sig[:nLen])             // copy R
+	sComplement.FillBytes(newSig[nLen:]) // write S complement
+	return newSig
+}
+
+// TestECDSASecp256k1DeterministicSigning checks the current ECDSA signatures
+// on secp256k1 against RFC 6979 known test vectors.
+// The vectors are the community secp256k1/SHA-256 vectors
+// replicated in trezor-crypto and python-ecdsa.
+// The expected signatures are low-S normalized.
+//
+// The test only makes sense while the underlying implementation (currently go-ethereum)
+// uses RFC 6979 nonces and outputs low-S signatures.
+// An underlying implementation that does not do both is not required to pass this test,
+// and the test must then be deleted.
+//
+// The package itself does not require or guarantee deterministic or low-S signatures.
+// The test therefore checks the correctness of the current implementation only
+// and does not guarantee any such property in future updates of the package.
+func TestECDSASecp256k1DeterministicSigning(t *testing.T) {
+	vectors := []struct {
+		sk  string
+		msg string
+		sig string
+	}{
+		{
+			sk:  "0000000000000000000000000000000000000000000000000000000000000001",
+			msg: "Satoshi Nakamoto",
+			sig: "934b1ea10a4b3c1757e2b0c017d0b6143ce3c9a7e6a4a49860d7a6ab210ee3d82442ce9d2b916064108014783e923ec36b49743e2ffa1c4496f01a512aafd9e5",
+		},
+		{
+			// the private key is the curve order minus 1
+			sk:  "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140",
+			msg: "Satoshi Nakamoto",
+			sig: "fd567d121db66e382991534ada77a6bd3106f0a1098c231e47993447cd6af2d06b39cd0eb1bc8603e159ef5c20a5c8ad685a45b06ce9bebed3f153d10d93bed5",
+		},
+		{
+			sk:  "f8b8af8ce3c7cca5e300d33939540c10d45ce001b8f252bfbc57ba0342904181",
+			msg: "Alan Turing",
+			sig: "7063ae83e7f62bbb171798131b4a0564b956930092b33b07b395615d9ec7e15c58dfcc1e00a35e1572f366ffe34ba0fc47db1e7189759b9fb233c5b05ab388ea",
+		},
+	}
+
+	for i, v := range vectors {
+		skBytes, err := hex.DecodeString(v.sk)
+		require.NoError(t, err)
+		sk, err := DecodePrivateKey(ECDSASecp256k1, skBytes)
+		require.NoError(t, err)
+
+		sig, err := sk.Sign([]byte(v.msg), hash.NewSHA2_256())
+		require.NoError(t, err)
+		assert.Equal(t, v.sig, hex.EncodeToString(sig), "vector %d", i)
+	}
 }

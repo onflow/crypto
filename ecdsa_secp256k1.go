@@ -31,15 +31,10 @@ import (
 
 // This implementation is not resistant against side-channel attacks or fault attacks.
 
-// curve parameters for SECG secp256k1 https://www.secg.org/sec2-v2.pdf
+// byte lengths of the SECG secp256k1 curve order and prime field https://www.secg.org/sec2-v2.pdf
 const (
-	secp256k1PHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F"
-	secp256k1NHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
-
 	nLenSecp256k1 = 32
 	pLenSecp256k1 = 32
-
-	secp256k1Ndiv2Hex = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0"
 )
 
 const (
@@ -54,22 +49,15 @@ const (
 var secp256k1Instance *ecdsaContext
 
 func initECDSASecp256k1() {
-	curveP, ok := new(big.Int).SetString(secp256k1PHex, 16)
-	if !ok {
-		panic("failed to initialize ECDSA with secp256k1 curve")
-	}
-	curveN, ok := new(big.Int).SetString(secp256k1NHex, 16)
-	if !ok {
-		panic("failed to initialize ECDSA with secp256k1 curve")
-	}
-	curveNdiv2, ok := new(big.Int).SetString(secp256k1Ndiv2Hex, 16)
-	if !ok {
-		panic("failed to initialize ECDSA with secp256k1 curve")
-	}
+	// the curve parameters are read from the underlying go-ethereum implementation,
+	// which the package already relies on for the curve arithmetic itself
+	curve := secp256k1.S256()
+	n := curve.N
+
 	secp256k1Instance = &(ecdsaContext{
-		curveP:     curveP,
-		curveN:     curveN,
-		curveNdiv2: curveNdiv2,
+		curveP:     curve.P,
+		curveN:     n,
+		curveNdiv2: new(big.Int).Rsh(n, 1), // (N-1)/2, since N is odd
 		algo:       ECDSASecp256k1,
 	})
 }
@@ -99,10 +87,23 @@ var _ PublicKey = (*pubKeyECDSASecp256k1)(nil)
 
 // Input scalar d is assumed to satisfy 0 < d < n before calling this function.
 func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256k1 {
+	x, y := secp256k1.S256().ScalarBaseMult(dBytes)
+	// `ScalarBaseMult` returns nil coordinates only if the scalar is zero
+	// or not less than the curve order,
+	// which all callers of `privateKeyECDSASecp256k1` rule out.
+	// The check turns an unexpected invariant break into an explicit panic
+	// instead of a nil dereference inside `secp256k1PkBytes`.
+	if x == nil || y == nil {
+		panic("unexpected error: the private key scalar is invalid")
+	}
+
 	sk := &prKeyECDSASecp256k1{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		dBytes:           dBytes,
-		pubKey:           nil, // public key is not constructed yet
+		pubKey: &pubKeyECDSASecp256k1{
+			pubKeyCommonECDSA: &pubKeyCommonECDSA{secp256k1Instance},
+			pkBytes:           secp256k1PkBytes(x, y),
+		},
 	}
 	return sk
 }
@@ -120,7 +121,7 @@ func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256
 //   - (nil, error) if an unexpected error occurs
 //   - (signature, nil) otherwise
 func (sk *prKeyECDSASecp256k1) Sign(msg []byte, hasher hash.Hasher) (Signature, error) {
-	hash, err := sk.checkAlgoAndComputeHash(msg, hasher)
+	hash, err := sk.checkHasherAndComputeHash(msg, hasher)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +132,10 @@ func (sk *prKeyECDSASecp256k1) Sign(msg []byte, hasher hash.Hasher) (Signature, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign hash: %w", err)
 	}
-	// remove the EC recover byte (last byte)
-	return signature[:SignatureLenECDSASecp256k1], nil
+	// remove the EC recover byte (last byte).
+	// The capacity is clipped so that an append to the returned signature
+	// cannot reach the recovery byte in the shared backing array.
+	return signature[:SignatureLenECDSASecp256k1:SignatureLenECDSASecp256k1], nil
 }
 
 // String returns the hex string representation of the private key
@@ -189,15 +192,6 @@ func secp256k1PkBytes(x, y *big.Int) []byte {
 
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSASecp256k1) PublicKey() PublicKey {
-	// construct the public key once
-	if sk.pubKey == nil {
-		x, y := secp256k1.S256().ScalarBaseMult(sk.dBytes)
-
-		sk.pubKey = &pubKeyECDSASecp256k1{
-			pubKeyCommonECDSA: &pubKeyCommonECDSA{secp256k1Instance},
-			pkBytes:           secp256k1PkBytes(x, y),
-		}
-	}
 	return sk.pubKey
 }
 
@@ -215,7 +209,7 @@ func (sk *prKeyECDSASecp256k1) PublicKey() PublicKey {
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func (pk *pubKeyECDSASecp256k1) Verify(sig Signature, msg []byte, hasher hash.Hasher) (bool, error) {
-	hash, err := pk.checkAlgoAndComputeHash(msg, hasher)
+	hash, err := pk.checkHasherAndComputeHash(msg, hasher)
 	if err != nil {
 		return false, err
 	}

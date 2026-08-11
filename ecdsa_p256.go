@@ -50,12 +50,11 @@ var p256Instance *ecdsaContext
 func initECDSAP256() {
 	curve := elliptic.P256()
 	n := curve.Params().N
-	nMinus1 := new(big.Int).Sub(n, one)
 
 	p256Instance = &(ecdsaContext{
 		curveP:     curve.Params().P,
 		curveN:     n,
-		curveNdiv2: new(big.Int).Div(nMinus1, two), // (N-1)/2
+		curveNdiv2: new(big.Int).Rsh(n, 1), // (N-1)/2, since N is odd
 		algo:       ECDSAP256,
 	})
 }
@@ -91,7 +90,10 @@ func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error
 	sk := &prKeyECDSAP256{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		goPrKey:          internalSK,
-		pubKey:           nil, // public key is not constructed yet
+		pubKey: &pubKeyECDSAP256{
+			pubKeyCommonECDSA: &pubKeyCommonECDSA{p256Instance},
+			goPubKey:          &internalSK.PublicKey,
+		},
 	}
 	return sk, nil
 }
@@ -109,7 +111,7 @@ func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error
 //   - (nil, error) if an unexpected error occurs
 //   - (signature, nil) otherwise
 func (sk *prKeyECDSAP256) Sign(msg []byte, hasher hash.Hasher) (Signature, error) {
-	hash, err := sk.checkAlgoAndComputeHash(msg, hasher)
+	hash, err := sk.checkHasherAndComputeHash(msg, hasher)
 	if err != nil {
 		return nil, err
 	}
@@ -135,10 +137,12 @@ func publicKeyECDSAP256(XYBytes []byte) (*pubKeyECDSAP256, error) {
 	// The bytes serialization for non-infinity points is `0x04 || X || Y` and infinity point should be rejected anyway
 	parsingBytes := append([]byte{ecEncodingUncompressed}, XYBytes...)
 
-	// ParseUncompressedPublicKey includes x<p and y<p checks, and on curve checks
+	// ParseUncompressedPublicKey includes the input length check,
+	// x<p and y<p checks, and on curve checks
 	internalPK, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), parsingBytes)
 	if err != nil {
-		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve: %w", err)
+		return nil, invalidInputsErrorf("input is not a valid %s key of %d bytes: %w",
+			ECDSAP256, 2*pLenP256, err)
 	}
 	return &pubKeyECDSAP256{
 		&pubKeyCommonECDSA{p256Instance},
@@ -153,13 +157,6 @@ func (pk *pubKeyECDSAP256) String() string {
 
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSAP256) PublicKey() PublicKey {
-	// construct the public key once
-	if sk.pubKey == nil {
-		sk.pubKey = &pubKeyECDSAP256{
-			pubKeyCommonECDSA: &pubKeyCommonECDSA{p256Instance},
-			goPubKey:          &sk.goPrKey.PublicKey,
-		}
-	}
 	return sk.pubKey
 }
 
@@ -177,7 +174,7 @@ func (sk *prKeyECDSAP256) PublicKey() PublicKey {
 //   - (false, error) if an unexpected error occurs
 //   - (validity, nil) otherwise
 func (pk *pubKeyECDSAP256) Verify(sig Signature, data []byte, alg hash.Hasher) (bool, error) {
-	h, err := pk.checkAlgoAndComputeHash(data, alg)
+	h, err := pk.checkHasherAndComputeHash(data, alg)
 	if err != nil {
 		return false, err
 	}
@@ -266,17 +263,9 @@ func p256DecodePublicKeyCompressed(pkBytes []byte) (*pubKeyECDSAP256, error) {
 	if x == nil || y == nil {
 		return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a point on P256", pkBytes)
 	}
-	uncompressedPointBytes := make([]byte, 2*pLenP256+1)
-	uncompressedPointBytes[0] = ecEncodingUncompressed
-	padToSizeAndConcat(uncompressedPointBytes[1:], x, y, pLenP256)
-
-	internalPK, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), uncompressedPointBytes)
-	if err != nil {
-		// unexpected error since prior deserialization succeeded
-		return nil, invalidInputsErrorf("unexpected error: input is not a point on curve P-256: %w", err)
-	}
-	return &pubKeyECDSAP256{
-		&pubKeyCommonECDSA{p256Instance},
-		internalPK,
-	}, nil
+	// serialize the coordinates and delegate to the uncompressed decoding,
+	// so that both decoding paths construct the key the same way
+	xyBytes := make([]byte, 2*pLenP256)
+	padToSizeAndConcat(xyBytes, x, y, pLenP256)
+	return publicKeyECDSAP256(xyBytes)
 }
