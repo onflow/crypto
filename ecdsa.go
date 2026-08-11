@@ -21,168 +21,84 @@ package crypto
 // Elliptic Curve Digital Signature Algorithm is implemented as
 // defined in FIPS 186-4 (although the hash functions implemented in this package are SHA2 and SHA3).
 
-// Most of the implementation is Go based and is not optimized for performance.
-
-// This implementation does not include any security against side-channel attacks.
+// This implementation is not resistant against side-channel attacks or fault attacks.
 
 import (
-	"crypto/ecdh"
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"bytes"
 	"crypto/hkdf"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec/v2"
-
 	"github.com/onflow/crypto/hash"
 )
 
-const (
-	// NIST P256
-	SignatureLenECDSAP256 = 64
-	PrKeyLenECDSAP256     = 32
-	// PubKeyLenECDSAP256 is the size of uncompressed points on P256
-	PubKeyLenECDSAP256 = 64
-
-	// SECG secp256k1
-	SignatureLenECDSASecp256k1 = 64
-	PrKeyLenECDSASecp256k1     = 32
-	// PubKeyLenECDSASecp256k1 is the size of uncompressed points on secp256k1
-	PubKeyLenECDSASecp256k1 = 64
-)
-
-// ecdsaAlgo embeds SignAlgo
-type ecdsaAlgo struct {
-	// elliptic curve
-	curve elliptic.Curve
-	// the signing algo and parameters
+// ecdsaContext holds the signing algorithm and the curve parameters
+// shared by all ECDSA keys on that curve.
+type ecdsaContext struct {
+	// the signing algo
 	algo SigningAlgorithm
+	// curve prime field
+	curveP *big.Int
+	// curve order
+	curveN *big.Int
+	// curve order minus 1 divided by 2 (used for signature malleability analysis)
+	curveNdiv2 *big.Int
 }
 
-// ECDSA contexts for each supported curve
-//
-// NIST P-256 curve
-var p256Instance *ecdsaAlgo
+const ecEncodingUncompressed = 0x4
 
-// SECG secp256k1 curve https://www.secg.org/sec2-v2.pdf
-var secp256k1Instance *ecdsaAlgo
+func initECDSA() {
+	// ECDSA with P256
+	initECDSAP256()
+	// ECDSA with secp256k1
+	initECDSASecp256k1()
+}
 
 func bitsToBytes(bits int) int {
 	return (bits + 7) >> 3
 }
 
-// signHash returns the signature of the input hash using the private key receiver.
-// The signature is the concatenation bytes(r) || bytes(s),
-// where `r` and `s` are padded to the curve order size.
-// Current implementation of `sign` is randomized, mixing the entropy from the
-// the system's crypto/rand, the private key and the hash.
-//
-// The caller must make sure that the hash is at least the curve order size.
-func (sk *prKeyECDSA) signHash(h hash.Hash) (Signature, error) {
-	r, s, err := ecdsa.Sign(rand.Reader, sk.goPrKey, h)
-	if err != nil {
-		return nil, fmt.Errorf("ECDSA sign failed: %w", err)
-	}
-	rBytes := r.Bytes()
-	sBytes := s.Bytes()
-	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
-	signature := make([]byte, 2*nLen)
-	// pad the signature with zeroes
-	copy(signature[nLen-len(rBytes):], rBytes)
-	copy(signature[2*nLen-len(sBytes):], sBytes)
-	return signature, nil
-}
-
-// Sign signs an array of bytes
-//
-// The resulting signature is the concatenation bytes(r)||bytes(s),
-// where r and s are padded to the curve order size.
-// The private key is read only while sha2 and sha3 hashers are
-// modified temporarily.
-//
-// The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
-//   - (nil, error) if an unexpected error occurs
-//   - (signature, nil) otherwise
-func (sk *prKeyECDSA) Sign(data []byte, alg hash.Hasher) (Signature, error) {
-	if alg == nil {
+// checkHasherAndComputeHash checks the hasher is valid for ECDSA
+// on the receiver curve and returns the hash of the input message.
+func (a *ecdsaContext) checkHasherAndComputeHash(msg []byte, hasher hash.Hasher) (hash.Hash, error) {
+	if hasher == nil {
 		return nil, errNilHasher
 	}
-	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
-	if alg.Size() < nLen {
+
+	h := hasher.ComputeHash(msg)
+	// check the computed hash is at least the curve order in bytes.
+	// All curve orders supported by the package have a bit-length multiple of 8,
+	// so callers truncate the message hash in bytes
+	// and the check is done in bytes too.
+	// The check uses the computed hash length rather than the hasher's declared size,
+	// so that a hasher implementation computing fewer bytes than it declares
+	// is rejected instead of panicking in the caller's truncation.
+	nLen := bitsToBytes((a.curveN).BitLen())
+	if len(h) < nLen {
 		return nil, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d, got %d", nLen, alg.Size())
+			"hasher's output should be at least %d bytes, got %d bytes", nLen, len(h))
 	}
-
-	h := alg.ComputeHash(data)
-	return sk.signHash(h)
-}
-
-// verifyHash implements ECDSA signature verification
-func (pk *pubKeyECDSA) verifyHash(sig Signature, h hash.Hash) (bool, error) {
-	nLen := bitsToBytes((pk.alg.curve.Params().N).BitLen())
-
-	if len(sig) != 2*nLen {
-		return false, nil
-	}
-
-	var r big.Int
-	var s big.Int
-	r.SetBytes(sig[:nLen])
-	s.SetBytes(sig[nLen:])
-	return ecdsa.Verify(pk.goPubKey, h, &r, &s), nil
-}
-
-// Verify verifies a signature of an input data under the public key.
-//
-// If the input signature slice has an invalid length or fails to deserialize into valid
-// scalars, the function returns false without an error.
-//
-// Public keys are read only, sha2 and sha3 hashers are
-// modified temporarily.
-//
-// The function returns:
-//   - (false, errNilHasher) if a hasher is nil
-//   - (false, invalidHasherSizeError) when the hasher's output size is less than the curve order (currently 32 bytes).
-//   - (false, error) if an unexpected error occurs
-//   - (validity, nil) otherwise
-func (pk *pubKeyECDSA) Verify(sig Signature, data []byte, alg hash.Hasher) (bool, error) {
-	if alg == nil {
-		return false, errNilHasher
-	}
-
-	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((pk.alg.curve.Params().N).BitLen())
-	if alg.Size() < nLen {
-		return false, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d, got %d", nLen, alg.Size())
-	}
-
-	h := alg.ComputeHash(data)
-	return pk.verifyHash(sig, h)
+	return h, nil
 }
 
 // signatureFormatCheck verifies the format of a serialized signature,
 // regardless of messages or public keys.
-// If FormatCheck returns false then the input is not a valid ECDSA
+// If signatureFormatCheck returns false then the input is not a valid ECDSA
 // signature and will fail a verification against any message and public key.
-func (a *ecdsaAlgo) signatureFormatCheck(sig Signature) bool {
-	N := a.curve.Params().N
+//
+// This function is not called for signature verification. Checks of signature
+// components R and S are delegated to the verification functions of the underlying
+// packages.
+func (a *ecdsaContext) signatureFormatCheck(sig Signature) bool {
+	N := a.curveN
 	nLen := bitsToBytes(N.BitLen())
 
 	if len(sig) != 2*nLen {
 		return false
 	}
 
-	var r big.Int
-	var s big.Int
-	r.SetBytes(sig[:nLen])
-	s.SetBytes(sig[nLen:])
+	r, s := readTwoBigInts(sig, nLen)
 
 	if r.Sign() == 0 || s.Sign() == 0 {
 		return false
@@ -199,61 +115,52 @@ func (a *ecdsaAlgo) signatureFormatCheck(sig Signature) bool {
 
 var one = new(big.Int).SetInt64(1)
 
-// goecdsaMapKey maps the input seed to a private key
-// of the Go crypto/ecdsa library.
+// mapToPrivateKey simply maps the input seed to an ECDSA private key
 // The private scalar `d` satisfies 0 < d < n.
-// Returned error is expected to be nil.
-func goecdsaMapKey(curve elliptic.Curve, seed []byte) (*ecdsa.PrivateKey, error) {
+//
+// The function returns:
+//   - (nil, invalidInputsError) if the curve is not supported
+//   - (nil, error) if an unexpected error occurs
+//   - (sk, nil) if key mapping was successful
+func (a *ecdsaContext) mapToPrivateKey(seed []byte) (PrivateKey, error) {
 	d := new(big.Int).SetBytes(seed)
-	n := new(big.Int).Sub(curve.Params().N, one)
-	d.Mod(d, n)
-	d.Add(d, one)
-	return goecdsaPrivateKey(curve, d) // n > d > 0 at this point
+	NminusOne := new(big.Int).Sub(a.curveN, one)
+	d.Mod(d, NminusOne)
+	d.Add(d, one) // n > d > 0 at this point
+	return a.privateKey(d)
 }
 
-// goecdsaPrivateKey creates a Go crypto/ecdsa private key using the
-// input curve and scalar.
-// Input scalar is assumed to be a non-zero integer modulo the curve order `n`.
-// Error returns:
-//   - invalidInputsError if the input curve is unsupported
-func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, error) {
-	priv := new(ecdsa.PrivateKey)
-	priv.D = d
-	priv.PublicKey.Curve = curve
+// privateKey returns an ECDSA private key using the
+// input scalar.
+//
+// Input scalar d is assumed to satisfy 0 < d < n before calling this function.
+//
+// The function returns:
+//   - (nil, invalidInputsError) if the curve is not supported
+//   - (nil, error) if an unexpected error occurs
+//   - (sk, nil) if key mapping was successful
+func (a *ecdsaContext) privateKey(d *big.Int) (PrivateKey, error) {
+	dBytes := make([]byte, bitsToBytes(a.curveN.BitLen()))
+	d.FillBytes(dBytes) // dBytes is the big-endian encoding of d padded to the curve order
 
-	// compute the crypto/ecdsa public key
-	if curve == elliptic.P256() {
-		// Perform the base scalar multiplication using crypto/ecdh,
-		// because crypto/elliptic deprecated `ScalarBaseMult`.
-		//
-		// We build the ecdh.PrivateKey directly from the scalar bytes
-		// instead of going through `priv.ECDH()`: since Go 1.26,
-		// ecdsa's `(*PrivateKey).ECDH` serializes the key via `(*PrivateKey).Bytes`,
-		// which reads the public affine coordinates `X`/`Y`.
-		// Those are not set yet at this point (we are computing them),
-		// so that path dereferences nil and panics.
-		// Constructing the ecdh key from the scalar avoids reading `X`/`Y`
-		// and works across Go versions.
-		scalarLen := bitsToBytes(curve.Params().N.BitLen())
-		ecdhPriv, err := ecdh.P256().NewPrivateKey(d.FillBytes(make([]byte, scalarLen)))
-		if err != nil {
-			// at this point, no error is expected because the function can't be called
-			// with a zero scalar modulo `n`
-			return nil, fmt.Errorf("non expected error when creating an ECDH private key: %w", err)
-		}
-		// crypto/ecdh serialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3).
-		// The bytes returned are `0x04 || X || Y` because the point is guaranteed to be non-infinity
-		ecdhPubBytes := ecdhPriv.PublicKey().Bytes()
-		pLen := bitsToBytes(curve.Params().P.BitLen())
-		priv.PublicKey.X = new(big.Int).SetBytes(ecdhPubBytes[1 : 1+pLen])
-		priv.PublicKey.Y = new(big.Int).SetBytes(ecdhPubBytes[1+pLen:])
-	} else if curve == btcec.S256() {
-		// `ScalarBaseMult` is not deprecated in btcec's type `KoblitzCurve`
-		priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d.Bytes())
-	} else {
+	// build the private key depending on the curve
+	var sk PrivateKey
+	var err error
+	switch a.algo {
+	case ECDSAP256:
+		sk, err = privateKeyECDSAP256(a, dBytes)
+	case ECDSASecp256k1:
+		sk = privateKeyECDSASecp256k1(a, dBytes)
+	default:
 		return nil, invalidInputsErrorf("the curve is not supported")
 	}
-	return priv, nil
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
+	}
+	return sk, nil
 }
 
 // generatePrivateKey generates a private key for ECDSA
@@ -261,7 +168,7 @@ func goecdsaPrivateKey(curve elliptic.Curve, d *big.Int) (*ecdsa.PrivateKey, err
 //
 // It is recommended to use a secure crypto RNG to generate the seed.
 // The seed must have enough entropy.
-func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
+func (a *ecdsaContext) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	if len(seed) < KeyGenSeedMinLen || len(seed) > KeyGenSeedMaxLen {
 		return nil, invalidInputsErrorf("seed byte length should be between %d and %d",
 			KeyGenSeedMinLen, KeyGenSeedMaxLen)
@@ -274,7 +181,7 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	salt := []byte("") // HKDF salt
 	info := ""         // HKDF info
 	// use extra 128 bits to reduce the modular reduction bias
-	nLen := bitsToBytes((a.curve.Params().N).BitLen())
+	nLen := bitsToBytes((a.curveN).BitLen())
 	okmLength := nLen + (securityBits / 8)
 
 	// instantiate HKDF and extract okm
@@ -284,23 +191,19 @@ func (a *ecdsaAlgo) generatePrivateKey(seed []byte) (PrivateKey, error) {
 	}
 	defer overwrite(okm) // overwrite okm
 
-	sk, err := goecdsaMapKey(a.curve, okm)
+	sk, err := a.mapToPrivateKey(okm)
 	if err != nil {
 		// no error is expected at this point
 		return nil, fmt.Errorf("mapping the private key failed: %w", err)
 	}
-	return &prKeyECDSA{
-		alg:     a,
-		goPrKey: sk,
-		pubKey:  nil, // public key is not constructed
-	}, nil
+	return sk, nil
 }
 
-func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
-	n := a.curve.Params().N
+func (a *ecdsaContext) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
+	n := a.curveN
 	nLen := bitsToBytes(n.BitLen())
 	if len(der) != nLen {
-		return nil, invalidInputsErrorf("input has incorrect %s key size", a.algo)
+		return nil, invalidInputsErrorf("input has incorrect %s key size, should be %d", a.algo, nLen)
 	}
 	var d big.Int
 	d.SetBytes(der)
@@ -313,20 +216,16 @@ func (a *ecdsaAlgo) rawDecodePrivateKey(der []byte) (PrivateKey, error) {
 		return nil, invalidInputsErrorf("zero private keys are not a valid %s key", a.algo)
 	}
 
-	priv, err := goecdsaPrivateKey(a.curve, &d) // n > d > 0 at this point
+	sk, err := a.privateKey(&d) // n > d > 0 at this point
 	if err != nil {
 		// error is not expected at this point
 		return nil, fmt.Errorf("building the private key failed: %w", err)
 	}
 
-	return &prKeyECDSA{
-		alg:     a,
-		goPrKey: priv,
-		pubKey:  nil, // public key is not constructed
-	}, nil
+	return sk, nil
 }
 
-func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
+func (a *ecdsaContext) decodePrivateKey(der []byte) (PrivateKey, error) {
 	return a.rawDecodePrivateKey(der)
 }
 
@@ -335,236 +234,174 @@ func (a *ecdsaAlgo) decodePrivateKey(der []byte) (PrivateKey, error) {
 // Note that infinity point serialization isn't defined in this package so the input (or output) can never represent an infinity point.
 // Error Returns:
 //   - invalidInputsError if the input is not a valid serialization of a public key on the given curve.
-func (a *ecdsaAlgo) rawDecodePublicKey(der []byte) (PublicKey, error) {
-	curve := a.curve
-	p := (curve.Params().P)
-	pLen := bitsToBytes(p.BitLen())
-	if len(der) != 2*pLen {
-		return nil, invalidInputsErrorf("input has incorrect %s key size, got %d, expects %d",
-			a.algo, len(der), 2*pLen)
-	}
-	var x, y big.Int
-	x.SetBytes(der[:pLen])
-	y.SetBytes(der[pLen:])
-
-	// check the coordinates are valid field elements
-	if x.Cmp(p) >= 0 || y.Cmp(p) >= 0 {
-		return nil, invalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
-	}
-
-	// all the curves supported for now have a cofactor equal to 1,
-	// so that checking the point is on curve is enough.
-	if curve == elliptic.P256() {
-		// use crypto/ecdh implementation to perform on curve check
-		// because crypto/elliptic deprecated `IsOnCurve`.
-		// ECDH's `NewPublicKey` checks the public key is on curve to avoid falling in small-order groups.
-
-		// crypto/ecdh deserialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3)
-		// except for infinity point.
-		// The bytes serialization for non-zero points is `0x04 || X || Y`
-		ecdhPubBytes := append([]byte{0x4}, der...)
-
-		_, err := ecdh.P256().NewPublicKey(ecdhPubBytes)
-		if err != nil {
-			return nil, invalidInputsErrorf("input is not a point on curve P-256: %w", err)
-		}
-	} else if curve == btcec.S256() {
-		// `IsOnCurve` is not deprecated in btcec's type `KoblitzCurve`
-		if !btcec.S256().IsOnCurve(&x, &y) {
-			return nil, invalidInputsErrorf("input is not a point on curve secp256k1")
-		}
-	} else {
+func (a *ecdsaContext) rawDecodePublicKey(input []byte) (PublicKey, error) {
+	var pk PublicKey
+	var err error
+	switch a.algo {
+	case ECDSAP256:
+		pk, err = publicKeyECDSAP256(input)
+	case ECDSASecp256k1:
+		pk, err = publicKeyECDSASecp256k1(a, input)
+	default:
 		return nil, invalidInputsErrorf("curve is not supported")
 	}
-
-	pk := ecdsa.PublicKey{
-		Curve: a.curve,
-		X:     &x,
-		Y:     &y,
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
 	}
-
-	return &pubKeyECDSA{a, &pk}, nil
+	return pk, nil
 }
 
-func (a *ecdsaAlgo) decodePublicKey(der []byte) (PublicKey, error) {
+func (a *ecdsaContext) decodePublicKey(der []byte) (PublicKey, error) {
 	return a.rawDecodePublicKey(der)
 }
 
 // decodePublicKeyCompressed returns a non-infinity public key given the bytes of a compressed
 // public key according to X9.62 section 4.3.6.
-// The compressed representation uses an extra byte to disambiguate sign.
 // Note that infinity point serialization isn't defined in this package so the input (or output)
 // can never represent an infinity point.
 // Error Returns:
 //   - invalidInputsError if the curve isn't supported or the input isn't a valid key serialization
 //     on the given curve.
-func (a *ecdsaAlgo) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
-	expectedLen := bitsToBytes(a.curve.Params().BitSize) + 1
-	if len(pkBytes) != expectedLen {
-		return nil, invalidInputsErrorf("input length incompatible, expected %d, got %d", expectedLen, len(pkBytes))
-	}
-	var goPubKey *ecdsa.PublicKey
-
-	if a.curve == elliptic.P256() {
-		x, y := elliptic.UnmarshalCompressed(a.curve, pkBytes)
-		if x == nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
-		}
-		goPubKey = new(ecdsa.PublicKey)
-		goPubKey.Curve = a.curve
-		goPubKey.X = x
-		goPubKey.Y = y
-
-	} else if a.curve == btcec.S256() {
-		// use `btcec` because elliptic's `UnmarshalCompressed` doesn't work for SEC Koblitz curves
-		pk, err := btcec.ParsePubKey(pkBytes)
-		if err != nil {
-			return nil, invalidInputsErrorf("input %x isn't a compressed serialization of a %v key", pkBytes, a.algo.String())
-		}
-		// convert to a crypto/ecdsa key
-		goPubKey = pk.ToECDSA()
-	} else {
+func (a *ecdsaContext) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
+	var pk PublicKey
+	var err error
+	switch a.algo {
+	case ECDSAP256:
+		pk, err = p256DecodePublicKeyCompressed(pkBytes)
+	case ECDSASecp256k1:
+		pk, err = secp256k1DecodePublicKeyCompressed(pkBytes)
+	default:
 		return nil, invalidInputsErrorf("the input curve is not supported")
 	}
-	return &pubKeyECDSA{a, goPubKey}, nil
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
+	}
+	return pk, nil
 }
-
-// prKeyECDSA is the private key of ECDSA, it implements the interface PrivateKey
-type prKeyECDSA struct {
-	// the signature algo
-	alg *ecdsaAlgo
-	// ecdsa private key
-	goPrKey *ecdsa.PrivateKey
-	// public key
-	pubKey *pubKeyECDSA
-}
-
-var _ PrivateKey = (*prKeyECDSA)(nil)
 
 // Algorithm returns the algo related to the private key
-func (sk *prKeyECDSA) Algorithm() SigningAlgorithm {
-	return sk.alg.algo
+func (a *ecdsaContext) Algorithm() SigningAlgorithm {
+	return a.algo
+}
+
+type prKeyCommonECDSA struct {
+	// ECDSA context
+	*ecdsaContext
 }
 
 // Size returns the length of the private key in bytes
-func (sk *prKeyECDSA) Size() int {
-	return bitsToBytes((sk.alg.curve.Params().N).BitLen())
+func (sk *prKeyCommonECDSA) Size() int {
+	return bitsToBytes((sk.curveN).BitLen())
 }
 
-// PublicKey returns the public key associated to the private key
-func (sk *prKeyECDSA) PublicKey() PublicKey {
-	// construct the public key once
-	if sk.pubKey == nil {
-		sk.pubKey = &pubKeyECDSA{
-			alg:      sk.alg,
-			goPubKey: &sk.goPrKey.PublicKey,
-		}
-	}
-	return sk.pubKey
-}
-
-// given a private key (d), returns a raw encoding bytes(d) in big endian
-// padded to the private key length
-func (sk *prKeyECDSA) rawEncode() []byte {
-	skBytes := sk.goPrKey.D.Bytes()
-	nLen := bitsToBytes((sk.alg.curve.Params().N).BitLen())
-	skEncoded := make([]byte, nLen)
-	// pad sk with zeroes
-	copy(skEncoded[nLen-len(skBytes):], skBytes)
-	return skEncoded
-}
-
-// Encode returns a byte representation of a private key.
-// a simple raw byte encoding in big endian is used for all curves
-func (sk *prKeyECDSA) Encode() []byte {
-	return sk.rawEncode()
-}
-
-// Equals test the equality of two private keys
-func (sk *prKeyECDSA) Equals(other PrivateKey) bool {
-	// check the key type
-	otherECDSA, ok := other.(*prKeyECDSA)
-	if !ok {
-		return false
-	}
-	// check the curve
-	if sk.alg.curve != otherECDSA.alg.curve {
-		return false
-	}
-	return sk.goPrKey.D.Cmp(otherECDSA.goPrKey.D) == 0
-}
-
-// String returns the hex string representation of the key.
-func (sk *prKeyECDSA) String() string {
+// prKeyCommonECDSAString returns the string representation of an ECDSA private key.
+// It is used by all ECDSA private keys regardless of the curve.
+func prKeyCommonECDSAString(sk PrivateKey) string {
 	return fmt.Sprintf("%#x", sk.Encode())
 }
 
-// pubKeyECDSA is the public key of ECDSA, it implements PublicKey
-type pubKeyECDSA struct {
-	// the signature algo
-	alg *ecdsaAlgo
-	// public key data
-	goPubKey *ecdsa.PublicKey
+// pubKeyCommonECDSAString returns the string representation of an ECDSA public key.
+// It is used by all ECDSA public keys regardless of the curve.
+func pubKeyCommonECDSAString(pk PublicKey) string {
+	return fmt.Sprintf("%#x", pk.Encode())
 }
 
-var _ PublicKey = (*pubKeyECDSA)(nil)
+// Equals tests the equality of two private keys
+func prKeyCommonECDSAEquals(sk, other PrivateKey) bool {
+	// a nil key is not equal to any key
+	if other == nil {
+		return false
+	}
+	// check the algorithm
+	if sk.Algorithm() != other.Algorithm() {
+		return false
+	}
+	// check the scalar
+	return bytes.Equal(sk.Encode(), other.Encode())
+}
 
-// Algorithm returns the the algo related to the private key
-func (pk *pubKeyECDSA) Algorithm() SigningAlgorithm {
-	return pk.alg.algo
+type pubKeyCommonECDSA struct {
+	// ECDSA context
+	*ecdsaContext
 }
 
 // Size returns the length of the public key in bytes
-func (pk *pubKeyECDSA) Size() int {
-	return 2 * bitsToBytes((pk.goPubKey.Params().P).BitLen())
+func (pk *pubKeyCommonECDSA) Size() int {
+	return 2 * bitsToBytes(pk.curveP.BitLen())
 }
 
-// EncodeCompressed returns a compressed encoding according to X9.62 section 4.3.6.
-// This compressed representation uses an extra byte to disambiguate parity.
-// The expected input is a public key (x,y).
-//
-// Receiver point is guaranteed to be on curve and to be non-infinity because
-// the package does not allow constructing infinity points or points not on curve.
-func (pk *pubKeyECDSA) EncodeCompressed() []byte {
-	return elliptic.MarshalCompressed(pk.goPubKey.Curve, pk.goPubKey.X, pk.goPubKey.Y)
-}
-
-// `rawEncode` returns a raw uncompressed encoding `bytes(x) || bytes(y)` given a public key (x,y).
-// x and y are padded to the field size.
-func (pk *pubKeyECDSA) rawEncode() []byte {
-	xBytes := pk.goPubKey.X.Bytes()
-	yBytes := pk.goPubKey.Y.Bytes()
-	Plen := bitsToBytes((pk.alg.curve.Params().P).BitLen())
-	pkEncoded := make([]byte, 2*Plen)
-	// pad the public key coordinates with zeroes
-	copy(pkEncoded[Plen-len(xBytes):], xBytes)
-	copy(pkEncoded[2*Plen-len(yBytes):], yBytes)
-	return pkEncoded
-}
-
-// Encode returns a byte representation of a public key.
-// a simple uncompressed raw encoding X||Y is used for all curves
-// X and Y are the big endian byte encoding of the x and y coordinates of the public key
-func (pk *pubKeyECDSA) Encode() []byte {
-	return pk.rawEncode()
-}
-
-// Equals test the equality of two private keys
-func (pk *pubKeyECDSA) Equals(other PublicKey) bool {
-	// check the key type
-	otherECDSA, ok := other.(*pubKeyECDSA)
-	if !ok {
+// Equals tests the equality of two public keys
+func pubKeyCommonECDSAEquals(pk, other PublicKey) bool {
+	// a nil key is not equal to any key
+	if other == nil {
 		return false
 	}
-	// check the curve
-	if pk.alg.curve != otherECDSA.alg.curve {
+	// check the algorithm
+	if pk.Algorithm() != other.Algorithm() {
 		return false
 	}
-	return (pk.goPubKey.X.Cmp(otherECDSA.goPubKey.X) == 0) &&
-		(pk.goPubKey.Y.Cmp(otherECDSA.goPubKey.Y) == 0)
+	// check the point
+	return bytes.Equal(pk.Encode(), other.Encode())
 }
 
-// String returns the hex string representation of the key.
-func (pk *pubKeyECDSA) String() string {
-	return fmt.Sprintf("%#x", pk.Encode())
+// Helper function to pad two big integers to "size" bytes and concatenate them.
+// This helper is needed in serializations in ECDSA implementation.
+// It assumes the output buffer has at least 2*size byte-length
+func padToSizeAndConcat(output []byte, a, b *big.Int, size int) {
+	a.FillBytes(output[:size])
+	b.FillBytes(output[size : 2*size])
+}
+
+// Helper function to read two big integers of "size" bytes each from a concatenated input buffer.
+// This helper is needed when deserializing.
+// It assumes the input buffer has at least 2*size byte-length.
+func readTwoBigInts(input []byte, size int) (*big.Int, *big.Int) {
+	a := new(big.Int).SetBytes(input[:size])
+	b := new(big.Int).SetBytes(input[size : 2*size])
+	return a, b
+}
+
+// isLowS returns true if the signature's S is in the lower range (S <= (n-1)/2)
+func (a *ecdsaContext) isLowS(s *big.Int) bool {
+	return a.curveNdiv2.Cmp(s) >= 0
+}
+
+// signatureNormalizeS returns a signature with S normalized to low S.
+// (same slice is returned if S is already normalized)
+// It assumes len(sig) == 2*nLen where nLen is the byte-length of the curve order.
+// This is needed when the underlying signature verification requires S to be
+// in the lower range (to avoid signature malleability).
+// In this package, verification allows high S signatures to be accepted.
+// The function checks that S is in the range [0, n-1] before normalizing it.
+// If S is not in this range, the function returns a false boolean.
+// (S and R values will be checked by the go-ethereum verification function - only S check against N is included here, S=0 check is deferred to the signature verification)
+// returns:
+//   - newSig, true if S is in the valid range and was normalized to low S
+//   - nil, false if S was not in the correct range
+func (a *ecdsaContext) signatureNormalizeS(sig []byte) ([]byte, bool) {
+	// read S
+	nLen := bitsToBytes(a.curveN.BitLen())
+	s := new(big.Int).SetBytes(sig[nLen:]) // S >= 0
+	if a.isLowS(s) {                       // S <= (n-1)/2
+		return sig, true // S is in the valid range and no need to flip it
+	}
+
+	if a.curveN.Cmp(s) <= 0 { // S >= n, invalid signature
+		return nil, false
+	}
+
+	// In the remaining case, (n-1)/2 < S < n and it is safe to flip
+	// i.e n-s is guaranteed to be in the range [1, (n-1)/2]
+	sComplement := new(big.Int).Sub(a.curveN, s) // n-S
+	// write it into a new signature
+	newSig := make([]byte, len(sig))
+	copy(newSig, sig[:nLen])             // copy R
+	sComplement.FillBytes(newSig[nLen:]) // write S complement
+	return newSig, true
 }

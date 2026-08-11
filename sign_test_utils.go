@@ -237,11 +237,15 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 			skLens[ECDSASecp256k1] = PrKeyLenECDSASecp256k1
 			skLens[BLSBLS12381] = 32
 
-			bytes := make([]byte, skLens[salg]+1)
-			sk, err := DecodePrivateKey(salg, bytes)
-			require.Error(t, err)
-			assert.True(t, IsInvalidInputsError(err))
-			assert.Nil(t, sk)
+			for _, skLen := range []int{skLens[salg] + 1, skLens[salg] - 1} {
+				bytes := make([]byte, skLen)
+				sk, err := DecodePrivateKey(salg, bytes)
+				require.Error(t, err)
+				assert.True(t, IsInvalidInputsError(err))
+				// `assert.Nil` treats a typed-nil pointer inside an interface as nil,
+				// so compare against nil directly instead
+				assert.True(t, sk == nil)
+			}
 
 			// public key
 			pkLens := make(map[SigningAlgorithm]int)
@@ -249,11 +253,22 @@ func testEncodeDecode(t *testing.T, salg SigningAlgorithm) {
 			pkLens[ECDSASecp256k1] = PubKeyLenECDSASecp256k1
 			pkLens[BLSBLS12381] = 96
 
-			bytes = make([]byte, pkLens[salg]+1)
-			pk, err := DecodePublicKey(salg, bytes)
-			require.Error(t, err)
-			assert.True(t, IsInvalidInputsError(err))
-			assert.Nil(t, pk)
+			for _, pkLen := range []int{pkLens[salg] + 1, pkLens[salg] - 1} {
+				bytes := make([]byte, pkLen)
+				pk, err := DecodePublicKey(salg, bytes)
+				require.Error(t, err)
+				assert.True(t, IsInvalidInputsError(err))
+				assert.True(t, pk == nil)
+
+				// skip if BLS is used and compression isn't supported
+				if salg == BLSBLS12381 && !isG2Compressed() {
+					continue
+				}
+				pk, err = DecodePublicKeyCompressed(salg, bytes)
+				require.Error(t, err)
+				assert.True(t, IsInvalidInputsError(err))
+				assert.True(t, pk == nil)
+			}
 		})
 	})
 }
@@ -295,6 +310,9 @@ func testEquals(t *testing.T, salg SigningAlgorithm, otherSigAlgo SigningAlgorit
 		assert.False(t, pk1.Equals(pk3))
 		assert.False(t, sk1.Equals(sk4))
 		assert.False(t, pk1.Equals(pk4))
+		// a nil key is not equal to any key, and must not cause a panic
+		assert.False(t, sk1.Equals(nil))
+		assert.False(t, pk1.Equals(nil))
 	})
 }
 

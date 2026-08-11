@@ -19,10 +19,7 @@
 package crypto
 
 import (
-	"crypto/elliptic"
 	"fmt"
-
-	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -48,7 +45,11 @@ const (
 
 // String returns the string representation of this signing algorithm.
 func (f SigningAlgorithm) String() string {
-	return [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}[f]
+	names := [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}
+	if f < 0 || int(f) >= len(names) {
+		return "UNKNOWN"
+	}
+	return names[f]
 }
 
 // Signature is a generic type, regardless of the signature scheme
@@ -83,20 +84,10 @@ func newSigner(algo SigningAlgorithm) (signer, error) {
 // Initialize the context of all algos
 func init() {
 	// ECDSA
-	p256Instance = &(ecdsaAlgo{
-		curve: elliptic.P256(),
-		algo:  ECDSAP256,
-	})
-	secp256k1Instance = &(ecdsaAlgo{
-		curve: btcec.S256(),
-		algo:  ECDSASecp256k1,
-	})
+	initECDSA()
 
 	// BLS
 	initBLS12381()
-	blsInstance = &blsBLS12381Algo{
-		algo: BLSBLS12381,
-	}
 }
 
 // SignatureFormatCheck verifies the format of a serialized signature,
