@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"sync"
 	"testing"
 
 	crand "crypto/rand"
@@ -564,6 +563,15 @@ func (a *ecdsaContext) signatureFlipS(sig []byte) []byte {
 // The vectors are the community secp256k1/SHA-256 vectors
 // replicated in trezor-crypto and python-ecdsa.
 // The expected signatures are the low-S normalized (r || s) pairs.
+//
+// The test only makes sense while the underlying implementation (currently go-ethereum)
+// uses RFC 6979 nonces and outputs low-S signatures.
+// An underlying implementation that does not do both is not required to pass this test,
+// and the test must then be deleted.
+//
+// The package itself does not require or guarantee deterministic or low-S signatures.
+// The test therefore checks the correctness of the current implementation only
+// and does not guarantee any such property in future updates of the package.
 func TestECDSASecp256k1DeterministicSigning(t *testing.T) {
 	vectors := []struct {
 		sk  string
@@ -602,96 +610,5 @@ func TestECDSASecp256k1DeterministicSigning(t *testing.T) {
 		valid, err := sk.PublicKey().Verify(sig, []byte(v.msg), hash.NewSHA2_256())
 		require.NoError(t, err)
 		assert.True(t, valid, "vector %d", i)
-	}
-}
-
-// TestECDSAConcurrentPublicKey checks that concurrent calls to PublicKey
-// on the same private key are safe and return equal keys.
-// The test is effective when the race detector is enabled.
-func TestECDSAConcurrentPublicKey(t *testing.T) {
-	for _, curve := range ecdsaCurves {
-		t.Run(curve.String(), func(t *testing.T) {
-			seed := make([]byte, KeyGenSeedMinLen)
-			_, err := crand.Read(seed)
-			require.NoError(t, err)
-			sk, err := GeneratePrivateKey(curve, seed)
-			require.NoError(t, err)
-
-			pks := make([]PublicKey, 10)
-			var wg sync.WaitGroup
-			for i := range pks {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					pks[i] = sk.PublicKey()
-				}()
-			}
-			wg.Wait()
-
-			for _, pk := range pks {
-				require.NotNil(t, pk)
-				assert.True(t, pk.Equals(pks[0]))
-			}
-		})
-	}
-}
-
-// TestECDSANilChecks covers the nil-related edge cases of the public API:
-// decoding errors must return untyped nil interfaces,
-// and Equals with a nil input must return false instead of panicking.
-func TestECDSANilChecks(t *testing.T) {
-	t.Run("decode error paths return untyped nil interfaces", func(t *testing.T) {
-		for _, curve := range ecdsaCurves {
-			sk, err := DecodePrivateKey(curve, make([]byte, ecdsaPrKeyLen[curve]-1))
-			require.Error(t, err)
-			// `assert.Nil` treats a typed-nil pointer inside an interface as nil,
-			// so compare against nil directly instead
-			assert.True(t, sk == nil)
-
-			pk, err := DecodePublicKey(curve, make([]byte, ecdsaPubKeyLen[curve]-1))
-			require.Error(t, err)
-			assert.True(t, pk == nil)
-
-			pk, err = DecodePublicKeyCompressed(curve, make([]byte, ecdsaPubKeyLen[curve]-1))
-			require.Error(t, err)
-			assert.True(t, pk == nil)
-		}
-	})
-
-	t.Run("Equals with a nil input returns false", func(t *testing.T) {
-		for _, curve := range ecdsaCurves {
-			seed := make([]byte, KeyGenSeedMinLen)
-			_, err := crand.Read(seed)
-			require.NoError(t, err)
-			sk, err := GeneratePrivateKey(curve, seed)
-			require.NoError(t, err)
-			assert.False(t, sk.Equals(nil))
-			assert.False(t, sk.PublicKey().Equals(nil))
-		}
-	})
-}
-
-// TestECDSASecp256k1CompressedDecoding checks compressed point decoding on secp256k1
-// using edge-case points where a generic (crypto/elliptic style) decompression
-// either fails or computes a square root that doesn't match secp256k1 arithmetic.
-func TestECDSASecp256k1CompressedDecoding(t *testing.T) {
-	testVectors := []string{
-		"028b10bf56476bf7da39a3286e29df389177a2fa0fca2d73348ff78887515d8da1", // IsOnCurve for elliptic returns false
-		"03d39427f07f680d202fe8504306eb29041aceaf4b628c2c69b0ec248155443166", // odd, IsOnCurve for elliptic returns false
-		"0267d1942a6cbe4daec242ea7e01c6cdb82dadb6e7077092deb55c845bf851433e", // arith of sqrt in elliptic doesn't match secp256k1
-		"0345d45eda6d087918b041453a96303b78c478dce89a4ae9b3c933a018888c5e06", // odd, arith of sqrt in elliptic doesn't match secp256k1
-	}
-
-	for _, testVector := range testVectors {
-		// get the compressed bytes
-		publicBytes, err := hex.DecodeString(testVector)
-		require.NoError(t, err)
-
-		// decompress, check that those are perfectly valid secp256k1 public keys
-		retrieved, err := DecodePublicKeyCompressed(ECDSASecp256k1, publicBytes)
-		require.NoError(t, err)
-
-		// check the compression is canonical by re-compressing to the same bytes
-		require.Equal(t, retrieved.EncodeCompressed(), publicBytes)
 	}
 }

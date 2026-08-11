@@ -24,7 +24,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"sync"
 
 	"github.com/onflow/crypto/hash"
 )
@@ -66,9 +65,6 @@ type prKeyECDSAP256 struct {
 	*prKeyCommonECDSA
 	// go ecdsa standard lib private key
 	goPrKey *ecdsa.PrivateKey
-	// pubKeyOnce guards the lazy construction of pubKey,
-	// making concurrent calls to PublicKey safe
-	pubKeyOnce sync.Once
 	// public key
 	pubKey *pubKeyECDSAP256
 }
@@ -94,7 +90,10 @@ func privateKeyECDSAP256(a *ecdsaContext, dBytes []byte) (*prKeyECDSAP256, error
 	sk := &prKeyECDSAP256{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		goPrKey:          internalSK,
-		pubKey:           nil, // public key is not constructed yet
+		pubKey: &pubKeyECDSAP256{
+			pubKeyCommonECDSA: &pubKeyCommonECDSA{p256Instance},
+			goPubKey:          &internalSK.PublicKey,
+		},
 	}
 	return sk, nil
 }
@@ -133,20 +132,17 @@ func (sk *prKeyECDSAP256) String() string {
 
 // returns a publicKeyECDSAP256 from (bytes(x) || bytes(y)) bytes
 func publicKeyECDSAP256(XYBytes []byte) (*pubKeyECDSAP256, error) {
-	if len(XYBytes) != 2*pLenP256 {
-		return nil, invalidInputsErrorf("input has incorrect %s key size, got %d, expects %d",
-			ECDSAP256, len(XYBytes), 2*pLenP256)
-	}
-
 	// deserialization uses SEC1 version 2 (https://www.secg.org/sec1-v2.pdf section 2.3.3)
 	// and includes on curve check.
 	// The bytes serialization for non-infinity points is `0x04 || X || Y` and infinity point should be rejected anyway
 	parsingBytes := append([]byte{ecEncodingUncompressed}, XYBytes...)
 
-	// ParseUncompressedPublicKey includes x<p and y<p checks, and on curve checks
+	// ParseUncompressedPublicKey includes the input length check,
+	// x<p and y<p checks, and on curve checks
 	internalPK, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), parsingBytes)
 	if err != nil {
-		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve: %w", err)
+		return nil, invalidInputsErrorf("input is not a valid %s key of %d bytes: %w",
+			ECDSAP256, 2*pLenP256, err)
 	}
 	return &pubKeyECDSAP256{
 		&pubKeyCommonECDSA{p256Instance},
@@ -161,13 +157,6 @@ func (pk *pubKeyECDSAP256) String() string {
 
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSAP256) PublicKey() PublicKey {
-	// construct the public key once
-	sk.pubKeyOnce.Do(func() {
-		sk.pubKey = &pubKeyECDSAP256{
-			pubKeyCommonECDSA: &pubKeyCommonECDSA{p256Instance},
-			goPubKey:          &sk.goPrKey.PublicKey,
-		}
-	})
 	return sk.pubKey
 }
 

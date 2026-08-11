@@ -21,7 +21,6 @@ package crypto
 import (
 	"fmt"
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 
@@ -32,11 +31,8 @@ import (
 
 // This implementation is not resistant against side-channel attacks or fault attacks.
 
-// curve parameters for SECG secp256k1 https://www.secg.org/sec2-v2.pdf
+// byte lengths of the SECG secp256k1 curve order and prime field https://www.secg.org/sec2-v2.pdf
 const (
-	secp256k1PHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F"
-	secp256k1NHex = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
-
 	nLenSecp256k1 = 32
 	pLenSecp256k1 = 32
 )
@@ -53,24 +49,15 @@ const (
 var secp256k1Instance *ecdsaContext
 
 func initECDSASecp256k1() {
-	curveP, ok := new(big.Int).SetString(secp256k1PHex, 16)
-	if !ok {
-		panic("failed to initialize ECDSA with secp256k1 curve")
-	}
-	curveN, ok := new(big.Int).SetString(secp256k1NHex, 16)
-	if !ok {
-		panic("failed to initialize ECDSA with secp256k1 curve")
-	}
-	// cross-check the hard-coded SEC2 constants against the constants
-	// of the underlying go-ethereum implementation,
-	// so that a typo in either place is caught at initialization
-	if curveP.Cmp(secp256k1.S256().P) != 0 || curveN.Cmp(secp256k1.S256().N) != 0 {
-		panic("secp256k1 curve constants do not match the underlying go-ethereum implementation")
-	}
+	// the curve parameters are read from the underlying go-ethereum implementation,
+	// which the package already relies on for the curve arithmetic itself
+	curve := secp256k1.S256()
+	n := curve.N
+
 	secp256k1Instance = &(ecdsaContext{
-		curveP:     curveP,
-		curveN:     curveN,
-		curveNdiv2: new(big.Int).Rsh(curveN, 1), // (N-1)/2, since N is odd
+		curveP:     curve.P,
+		curveN:     n,
+		curveNdiv2: new(big.Int).Rsh(n, 1), // (N-1)/2, since N is odd
 		algo:       ECDSASecp256k1,
 	})
 }
@@ -81,9 +68,6 @@ type prKeyECDSASecp256k1 struct {
 	*prKeyCommonECDSA
 	// bytes(D) of private scalar D in big endian, padded to the curve order size (32 bytes)
 	dBytes []byte
-	// pubKeyOnce guards the lazy construction of pubKey,
-	// making concurrent calls to PublicKey safe
-	pubKeyOnce sync.Once
 	// public key
 	pubKey *pubKeyECDSASecp256k1
 }
@@ -103,10 +87,23 @@ var _ PublicKey = (*pubKeyECDSASecp256k1)(nil)
 
 // Input scalar d is assumed to satisfy 0 < d < n before calling this function.
 func privateKeyECDSASecp256k1(a *ecdsaContext, dBytes []byte) *prKeyECDSASecp256k1 {
+	x, y := secp256k1.S256().ScalarBaseMult(dBytes)
+	// `ScalarBaseMult` returns nil coordinates only if the scalar is zero
+	// or not less than the curve order,
+	// which all callers of `privateKeyECDSASecp256k1` rule out.
+	// The check turns an unexpected invariant break into an explicit panic
+	// instead of a nil dereference inside `secp256k1PkBytes`.
+	if x == nil || y == nil {
+		panic("unexpected error: the private key scalar is invalid")
+	}
+
 	sk := &prKeyECDSASecp256k1{
 		prKeyCommonECDSA: &prKeyCommonECDSA{a},
 		dBytes:           dBytes,
-		pubKey:           nil, // public key is not constructed yet
+		pubKey: &pubKeyECDSASecp256k1{
+			pubKeyCommonECDSA: &pubKeyCommonECDSA{secp256k1Instance},
+			pkBytes:           secp256k1PkBytes(x, y),
+		},
 	}
 	return sk
 }
@@ -195,23 +192,6 @@ func secp256k1PkBytes(x, y *big.Int) []byte {
 
 // PublicKey returns the public key associated to the private key
 func (sk *prKeyECDSASecp256k1) PublicKey() PublicKey {
-	// construct the public key once
-	sk.pubKeyOnce.Do(func() {
-		x, y := secp256k1.S256().ScalarBaseMult(sk.dBytes)
-		// `ScalarBaseMult` returns nil coordinates only if the scalar is zero
-		// or not less than the curve order,
-		// which all constructors of `prKeyECDSASecp256k1` rule out.
-		// The check turns an unexpected invariant break into an explicit panic
-		// instead of a nil dereference inside `secp256k1PkBytes`.
-		if x == nil || y == nil {
-			panic("unexpected error: the private key scalar is invalid")
-		}
-
-		sk.pubKey = &pubKeyECDSASecp256k1{
-			pubKeyCommonECDSA: &pubKeyCommonECDSA{secp256k1Instance},
-			pkBytes:           secp256k1PkBytes(x, y),
-		}
-	})
 	return sk.pubKey
 }
 

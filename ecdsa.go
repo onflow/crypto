@@ -65,18 +65,15 @@ func (a *ecdsaContext) checkHasherAndComputeHash(msg []byte, hasher hash.Hasher)
 		return nil, errNilHasher
 	}
 
-	// check hasher's size is at least the curve order in bytes
-	nLen := bitsToBytes((a.curveN).BitLen())
-	if hasher.Size() < nLen {
-		return nil, invalidHasherSizeErrorf(
-			"hasher's size should be at least %d bytes, got %d bytes", nLen, hasher.Size())
-	}
-
 	h := hasher.ComputeHash(msg)
-	// guard against hasher implementations that compute fewer bytes
-	// than their declared size,
-	// since callers truncate the hash to the curve order size
-	// and would panic on a shorter slice
+	// check the computed hash is at least the curve order in bytes.
+	// All curve orders supported by the package have a bit-length multiple of 8,
+	// so callers truncate the message hash in bytes
+	// and the check is done in bytes too.
+	// The check uses the computed hash length rather than the hasher's declared size,
+	// so that a hasher implementation computing fewer bytes than it declares
+	// is rejected instead of panicking in the caller's truncation.
+	nLen := bitsToBytes((a.curveN).BitLen())
 	if len(h) < nLen {
 		return nil, invalidHasherSizeErrorf(
 			"hasher's output should be at least %d bytes, got %d bytes", nLen, len(h))
@@ -146,21 +143,23 @@ func (a *ecdsaContext) privateKey(d *big.Int) (PrivateKey, error) {
 	d.FillBytes(dBytes) // dBytes is the big-endian encoding of d padded to the curve order
 
 	// build the private key depending on the curve
+	var sk PrivateKey
+	var err error
 	switch a.algo {
 	case ECDSAP256:
-		sk, err := privateKeyECDSAP256(a, dBytes)
-		if err != nil {
-			// return an untyped nil,
-			// otherwise the returned interface is non-nil
-			// although it holds a nil pointer
-			return nil, err
-		}
-		return sk, nil
+		sk, err = privateKeyECDSAP256(a, dBytes)
 	case ECDSASecp256k1:
-		return privateKeyECDSASecp256k1(a, dBytes), nil
+		sk = privateKeyECDSASecp256k1(a, dBytes)
 	default:
 		return nil, invalidInputsErrorf("the curve is not supported")
 	}
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
+	}
+	return sk, nil
 }
 
 // generatePrivateKey generates a private key for ECDSA
@@ -235,28 +234,23 @@ func (a *ecdsaContext) decodePrivateKey(der []byte) (PrivateKey, error) {
 // Error Returns:
 //   - invalidInputsError if the input is not a valid serialization of a public key on the given curve.
 func (a *ecdsaContext) rawDecodePublicKey(input []byte) (PublicKey, error) {
+	var pk PublicKey
+	var err error
 	switch a.algo {
 	case ECDSAP256:
-		pk, err := publicKeyECDSAP256(input)
-		if err != nil {
-			// return an untyped nil,
-			// otherwise the returned interface is non-nil
-			// although it holds a nil pointer
-			return nil, err
-		}
-		return pk, nil
+		pk, err = publicKeyECDSAP256(input)
 	case ECDSASecp256k1:
-		pk, err := publicKeyECDSASecp256k1(a, input)
-		if err != nil {
-			// return an untyped nil,
-			// otherwise the returned interface is non-nil
-			// although it holds a nil pointer
-			return nil, err
-		}
-		return pk, nil
+		pk, err = publicKeyECDSASecp256k1(a, input)
 	default:
 		return nil, invalidInputsErrorf("curve is not supported")
 	}
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
+	}
+	return pk, nil
 }
 
 func (a *ecdsaContext) decodePublicKey(der []byte) (PublicKey, error) {
@@ -271,28 +265,23 @@ func (a *ecdsaContext) decodePublicKey(der []byte) (PublicKey, error) {
 //   - invalidInputsError if the curve isn't supported or the input isn't a valid key serialization
 //     on the given curve.
 func (a *ecdsaContext) decodePublicKeyCompressed(pkBytes []byte) (PublicKey, error) {
+	var pk PublicKey
+	var err error
 	switch a.algo {
 	case ECDSAP256:
-		pk, err := p256DecodePublicKeyCompressed(pkBytes)
-		if err != nil {
-			// return an untyped nil,
-			// otherwise the returned interface is non-nil
-			// although it holds a nil pointer
-			return nil, err
-		}
-		return pk, nil
+		pk, err = p256DecodePublicKeyCompressed(pkBytes)
 	case ECDSASecp256k1:
-		pk, err := secp256k1DecodePublicKeyCompressed(pkBytes)
-		if err != nil {
-			// return an untyped nil,
-			// otherwise the returned interface is non-nil
-			// although it holds a nil pointer
-			return nil, err
-		}
-		return pk, nil
+		pk, err = secp256k1DecodePublicKeyCompressed(pkBytes)
 	default:
 		return nil, invalidInputsErrorf("the input curve is not supported")
 	}
+	if err != nil {
+		// return an untyped nil,
+		// otherwise the returned interface is non-nil
+		// although it holds a nil pointer
+		return nil, err
+	}
+	return pk, nil
 }
 
 // Algorithm returns the algo related to the private key
