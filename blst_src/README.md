@@ -1,5 +1,5 @@
 All files in this folder contain source files copied from the BLST repo https://github.com/supranational/blst, 
-specifically from the tagged version `v0.3.14`.
+specifically from the tagged version `v0.3.17`.
 
  Copyright Supranational LLC
  Licensed under the Apache License, Version 2.0, see LICENSE for details.
@@ -18,8 +18,8 @@ The folder contains:
 - all `<blst>/build`   (assembly generated files).
 - this `README` file.
 
-To upgrade the BLST version:
-- [ ] audit all BLST updates, with focus on `<blst>/src`: https://github.com/supranational/blst/compare/v0.3.14...<new_version>
+Follow these steps from the root of the package to upgrade the BLST version: 
+- [ ] audit all BLST updates, with focus on `<blst>/src`: https://github.com/supranational/blst/compare/v0.3.17...<new_version>
 - [ ] delete all files in this folder `./blst_src/` but `blst_src.c` and `README.md`.
 - [ ] delete all files in `./internal/blst/`.
 - [ ] open BLST repository on the new version.

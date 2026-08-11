@@ -301,8 +301,12 @@ func KeyGenV5(ikm []byte, salt []byte, optional ...[]byte) *SecretKey {
 	if len(optional) > 0 {
 		info = optional[0]
 	}
+	saltLen := len(salt)
+	if saltLen == 0 {
+		salt = []byte{0}
+	}
 	C.blst_keygen_v5(&sk.cgo, (*C.byte)(&ikm[0]), C.size_t(len(ikm)),
-		(*C.byte)(&salt[0]), C.size_t(len(salt)),
+		(*C.byte)(&salt[0]), C.size_t(saltLen),
 		ptrOrNil(info), C.size_t(len(info)))
 	// Postponing secret key zeroing till garbage collection can be too
 	// late to be effective, but every little bit helps...
@@ -368,14 +372,6 @@ func PairingAsFp12(ctx Pairing) *Fp12 {
 	var pt Fp12
 	C.go_pairing_as_fp12(&pt.cgo, &ctx[0])
 	return &pt
-}
-
-func (pt *Fp12) asPtr() *C.blst_fp12 {
-	if pt != nil {
-		return &pt.cgo
-	}
-
-	return nil
 }
 
 func Fp12One() Fp12 {
@@ -472,6 +468,14 @@ func (pt1 *Fp12) Equals(pt2 *Fp12) bool {
 	return *pt1 == *pt2
 }
 
+func (pt *Fp12) asPtr() *C.blst_fp12 {
+	if pt != nil {
+		return &pt.cgo
+	}
+
+	return nil
+}
+
 func ptrOrNil(bytes []byte) *C.byte {
 	var ptr *C.byte
 	if len(bytes) > 0 {
@@ -487,14 +491,6 @@ func ptrOrNil(bytes []byte) *C.byte {
 //
 // PublicKey
 //
-
-func (pt *P1Affine) asPtr() *C.blst_p1_affine {
-	if pt != nil {
-		return &pt.cgo
-	}
-
-	return nil
-}
 
 func (pk *P1Affine) From(s *Scalar) *P1Affine {
 	C.blst_sk_to_pk2_in_g1(nil, &pk.cgo, &s.cgo)
@@ -604,7 +600,7 @@ func (sig *P2Affine) AggregateVerify(sigGroupcheck bool,
 
 // Aggregate verify with compressed signature and public keys
 // Uses a dummy signature to get the correct type
-func (_ *P2Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
+func (*P2Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
 	pks [][]byte, pksVerify bool, msgs []Message, dst []byte,
 	optional ...bool) bool { // useHash bool, usePksAsAugs bool
 
@@ -810,7 +806,7 @@ func (sig *P2Affine) FastAggregateVerify(sigGroupcheck bool,
 	return sig.Verify(sigGroupcheck, pkAff, false, msg, dst, optional...)
 }
 
-func (_ *P2Affine) MultipleAggregateVerify(sigs []*P2Affine,
+func (*P2Affine) MultipleAggregateVerify(sigs []*P2Affine,
 	sigsGroupcheck bool, pks []*P1Affine, pksVerify bool,
 	msgs []Message, dst []byte, randFn func(*Scalar), randBits int,
 	optional ...interface{}) bool { // useHash
@@ -1096,14 +1092,6 @@ func (agg *P2Aggregate) coreAggregate(getter aggGetterP2, groupcheck bool,
 // PublicKey
 //
 
-func (pt *P2Affine) asPtr() *C.blst_p2_affine {
-	if pt != nil {
-		return &pt.cgo
-	}
-
-	return nil
-}
-
 func (pk *P2Affine) From(s *Scalar) *P2Affine {
 	C.blst_sk_to_pk2_in_g2(nil, &pk.cgo, &s.cgo)
 	return pk
@@ -1212,7 +1200,7 @@ func (sig *P1Affine) AggregateVerify(sigGroupcheck bool,
 
 // Aggregate verify with compressed signature and public keys
 // Uses a dummy signature to get the correct type
-func (_ *P1Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
+func (*P1Affine) AggregateVerifyCompressed(sig []byte, sigGroupcheck bool,
 	pks [][]byte, pksVerify bool, msgs []Message, dst []byte,
 	optional ...bool) bool { // useHash bool, usePksAsAugs bool
 
@@ -1418,7 +1406,7 @@ func (sig *P1Affine) FastAggregateVerify(sigGroupcheck bool,
 	return sig.Verify(sigGroupcheck, pkAff, false, msg, dst, optional...)
 }
 
-func (_ *P1Affine) MultipleAggregateVerify(sigs []*P1Affine,
+func (*P1Affine) MultipleAggregateVerify(sigs []*P1Affine,
 	sigsGroupcheck bool, pks []*P2Affine, pksVerify bool,
 	msgs []Message, dst []byte, randFn func(*Scalar), randBits int,
 	optional ...interface{}) bool { // useHash
@@ -1721,6 +1709,10 @@ func PairingMulNAggregatePkInG1(ctx Pairing, PK *P1Affine, pkValidate bool,
 		aug = optional[0]
 	}
 
+	if randBits > 256 {
+		panic("scalar length mismatch")
+	}
+
 	r := C.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(&ctx[0],
 		PK.asPtr(), C.bool(pkValidate),
 		sig.asPtr(), C.bool(sigGroupcheck),
@@ -1771,7 +1763,7 @@ func (p1 *P1Affine) InG1() bool {
 	return bool(C.blst_p1_affine_in_g1(&p1.cgo))
 }
 
-func (_ *P1Affine) BatchUncompress(in [][]byte) []*P1Affine {
+func (*P1Affine) BatchUncompress(in [][]byte) []*P1Affine {
 	// Allocate space for all of the resulting points. Later we'll save pointers
 	// and return those so that the result could be used in other functions,
 	// such as MultipleAggregateVerify.
@@ -2172,6 +2164,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 		case P1Affines:
 			pointsBySlice[0] = &val[0].cgo
 			p_points = &pointsBySlice[0]
+		default: // type is already vetted
 		}
 
 		scalarsBySlice := [2]*C.byte{nil, nil}
@@ -2191,6 +2184,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 			}
 		case []*Scalar:
 			p_scalars = &scalars[0]
+		default: // type is already vetted
 		}
 
 		var ret P1
@@ -2206,18 +2200,19 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 		return &ret
 	}
 
-	if npoints < 32 {
+	if npoints < 32 || npoints < numThreads {
 		if numThreads > npoints {
 			numThreads = npoints
 		}
 
+		acc := make([]P1, numThreads)
+
 		curItem := uint32(0)
-		msgs := make(chan P1, numThreads)
+		var wg sync.WaitGroup
+		wg.Add(numThreads)
 
 		for tid := 0; tid < numThreads; tid++ {
-			go func() {
-				var acc P1
-
+			go func(acc *P1) {
 				for {
 					workItem := int(atomic.AddUint32(&curItem, 1) - 1)
 					if workItem >= npoints {
@@ -2232,6 +2227,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 						point = &val[workItem]
 					case P1Affines:
 						point = &val[workItem]
+					default: // type is already vetted
 					}
 
 					var scalar *C.byte
@@ -2248,20 +2244,22 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 						}
 					case []*Scalar:
 						scalar = scalars[workItem]
+					default: // type is already vetted
 					}
 
 					C.go_p1_mult_n_acc(&acc.cgo, &point.cgo.x, true,
 						scalar, C.size_t(nbits))
 				}
 
-				msgs <- acc
-			}()
+				wg.Done()
+			}(&acc[tid])
 		}
 
-		ret := <-msgs
+		wg.Wait()
+
+		ret := acc[0]
 		for tid := 1; tid < numThreads; tid++ {
-			point := <-msgs
-			C.blst_p1_add_or_double(&ret.cgo, &ret.cgo, &point.cgo)
+			C.blst_p1_add_or_double(&ret.cgo, &ret.cgo, &acc[tid].cgo)
 		}
 
 		for i := range scalars {
@@ -2338,6 +2336,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 				case P1Affines:
 					pointsBySlice[0] = &val[x].cgo
 					p_points = &pointsBySlice[0]
+				default: // type is already vetted
 				}
 
 				var p_scalars **C.byte
@@ -2356,6 +2355,7 @@ func P1AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P1 {
 					}
 				case []*Scalar:
 					p_scalars = &scalars[x]
+				default: // type is already vetted
 				}
 
 				C.blst_p1s_tile_pippenger(&grid[workItem].point.cgo,
@@ -2528,6 +2528,10 @@ func PairingMulNAggregatePkInG2(ctx Pairing, PK *P2Affine, pkValidate bool,
 		aug = optional[0]
 	}
 
+	if randBits > 256 {
+		panic("scalar length mismatch")
+	}
+
 	r := C.blst_pairing_chk_n_mul_n_aggr_pk_in_g2(&ctx[0],
 		PK.asPtr(), C.bool(pkValidate),
 		sig.asPtr(), C.bool(sigGroupcheck),
@@ -2578,7 +2582,7 @@ func (p2 *P2Affine) InG2() bool {
 	return bool(C.blst_p2_affine_in_g2(&p2.cgo))
 }
 
-func (_ *P2Affine) BatchUncompress(in [][]byte) []*P2Affine {
+func (*P2Affine) BatchUncompress(in [][]byte) []*P2Affine {
 	// Allocate space for all of the resulting points. Later we'll save pointers
 	// and return those so that the result could be used in other functions,
 	// such as MultipleAggregateVerify.
@@ -2979,6 +2983,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 		case P2Affines:
 			pointsBySlice[0] = &val[0].cgo
 			p_points = &pointsBySlice[0]
+		default: // type is already vetted
 		}
 
 		scalarsBySlice := [2]*C.byte{nil, nil}
@@ -2998,6 +3003,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 			}
 		case []*Scalar:
 			p_scalars = &scalars[0]
+		default: // type is already vetted
 		}
 
 		var ret P2
@@ -3013,18 +3019,19 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 		return &ret
 	}
 
-	if npoints < 32 {
+	if npoints < 32 || npoints < numThreads {
 		if numThreads > npoints {
 			numThreads = npoints
 		}
 
+		acc := make([]P2, numThreads)
+
 		curItem := uint32(0)
-		msgs := make(chan P2, numThreads)
+		var wg sync.WaitGroup
+		wg.Add(numThreads)
 
 		for tid := 0; tid < numThreads; tid++ {
-			go func() {
-				var acc P2
-
+			go func(acc *P2) {
 				for {
 					workItem := int(atomic.AddUint32(&curItem, 1) - 1)
 					if workItem >= npoints {
@@ -3039,6 +3046,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 						point = &val[workItem]
 					case P2Affines:
 						point = &val[workItem]
+					default: // type is already vetted
 					}
 
 					var scalar *C.byte
@@ -3055,20 +3063,22 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 						}
 					case []*Scalar:
 						scalar = scalars[workItem]
+					default: // type is already vetted
 					}
 
 					C.go_p2_mult_n_acc(&acc.cgo, &point.cgo.x, true,
 						scalar, C.size_t(nbits))
 				}
 
-				msgs <- acc
-			}()
+				wg.Done()
+			}(&acc[tid])
 		}
 
-		ret := <-msgs
+		wg.Wait()
+
+		ret := acc[0]
 		for tid := 1; tid < numThreads; tid++ {
-			point := <-msgs
-			C.blst_p2_add_or_double(&ret.cgo, &ret.cgo, &point.cgo)
+			C.blst_p2_add_or_double(&ret.cgo, &ret.cgo, &acc[tid].cgo)
 		}
 
 		for i := range scalars {
@@ -3145,6 +3155,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 				case P2Affines:
 					pointsBySlice[0] = &val[x].cgo
 					p_points = &pointsBySlice[0]
+				default: // type is already vetted
 				}
 
 				var p_scalars **C.byte
@@ -3163,6 +3174,7 @@ func P2AffinesMult(pointsIf interface{}, scalarsIf interface{}, nbits int) *P2 {
 					}
 				case []*Scalar:
 					p_scalars = &scalars[x]
+				default: // type is already vetted
 				}
 
 				C.blst_p2s_tile_pippenger(&grid[workItem].point.cgo,
@@ -3547,12 +3559,28 @@ func (e1 *P1Affine) Equals(e2 *P1Affine) bool {
 	return bool(C.blst_p1_affine_is_equal(&e1.cgo, &e2.cgo))
 }
 
+func (pt *P1Affine) asPtr() *C.blst_p1_affine {
+	if pt != nil {
+		return &pt.cgo
+	}
+
+	return nil
+}
+
 func (e1 *P1) Equals(e2 *P1) bool {
 	return bool(C.blst_p1_is_equal(&e1.cgo, &e2.cgo))
 }
 
 func (e1 *P2Affine) Equals(e2 *P2Affine) bool {
 	return bool(C.blst_p2_affine_is_equal(&e1.cgo, &e2.cgo))
+}
+
+func (pt *P2Affine) asPtr() *C.blst_p2_affine {
+	if pt != nil {
+		return &pt.cgo
+	}
+
+	return nil
 }
 
 func (e1 *P2) Equals(e2 *P2) bool {
@@ -3585,15 +3613,18 @@ func breakdown(nbits, window, ncpus int) (nx int, ny int, wnd int) {
 				wnd = window
 			}
 		}
-	} else {
+	} else if window > 3 {
 		nx = 2
 		wnd = window - 2
-		for (nbits/wnd+1)*nx < ncpus {
+		for wnd > 1 && (nbits/wnd+1)*nx < ncpus {
 			nx += 1
 			wnd = window - bits.Len(3*uint(nx)/2)
 		}
 		nx -= 1
 		wnd = window - bits.Len(3*uint(nx)/2)
+	} else {
+		nx = 1
+		wnd = window
 	}
 	ny = nbits/wnd + 1
 	wnd = nbits/ny + 1
