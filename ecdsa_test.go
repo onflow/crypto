@@ -203,7 +203,7 @@ func TestECDSAEncodeDecode(t *testing.T) {
 	//  - public key decoding handles input x-coordinates with x and y larger than p (doesn't result in an exception)
 	//  - public key decoding only accepts reduced x and y
 	t.Run("public key with non-reduced coordinates", func(t *testing.T) {
-		onflowCryptoErr := "at least one coordinate is larger than the field prime"
+		onflowCryptoErr := "input point has invalid coordinates or is not on curve"
 		goCryptoErr := "invalid P256 element encoding"
 
 		invalidPKs := []struct {
