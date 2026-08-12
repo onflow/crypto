@@ -6,7 +6,7 @@ require (
 	// Minimum version, not a pin: Go builds with the highest version required across the build.
 	// Keeping this floor low lets consumers choose their own go-ethereum version;
 	// raising it forces the new version on all of them.
-	// Only raise it if this module needs something v1.16.8 lacks,
+	// Only raise it if this module needs something the current version lacks,
 	// and audit the changes under go-ethereum/crypto/secp256k1 when doing so.
 	github.com/ethereum/go-ethereum v1.17.4
 	github.com/sirupsen/logrus v1.9.3
