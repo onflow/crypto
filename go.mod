@@ -8,7 +8,7 @@ require (
 	// raising it forces the new version on all of them.
 	// Only raise it if this module needs something v1.16.8 lacks,
 	// and audit the changes under go-ethereum/crypto/secp256k1 when doing so.
-	github.com/ethereum/go-ethereum v1.17.0
+	github.com/ethereum/go-ethereum v1.17.4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.54.0
