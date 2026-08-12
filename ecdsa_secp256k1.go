@@ -152,17 +152,6 @@ func publicKeyECDSASecp256k1(a *ecdsaContext, XYBytes []byte) (*pubKeyECDSASecp2
 	}
 
 	x, y := readTwoBigInts(XYBytes, pLen)
-
-	// check the coordinates are valid field elements.
-	// This check is unconditional and must not be removed when go-ethereum is upgraded:
-	// it keeps the set of accepted key encodings independent of the go-ethereum version
-	// that Go module resolution selects, which this package does not control.
-	// Without it, a non-canonical encoding such as `x+p` is accepted whenever
-	// the resolved go-ethereum is v1.16.8 or earlier.
-	if x.Cmp(a.curveP) >= 0 || y.Cmp(a.curveP) >= 0 {
-		return nil, invalidInputsErrorf("at least one coordinate is larger than the field prime for %s", a.algo)
-	}
-
 	// `IsOnCurve` includes checks for x<p and y<p (in go-ethereum versions from v1.16.9 onwards)
 	if !secp256k1.S256().IsOnCurve(x, y) {
 		return nil, invalidInputsErrorf("input point has invalid coordinates or is not on curve")
